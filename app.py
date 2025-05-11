@@ -1,10 +1,13 @@
 from flask import Flask, render_template, request, jsonify, flash, redirect, url_for, session
-from flask_sqlalchemy import SQLAlchemy
 import os
 from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
 import logging
 from datetime import datetime
+import tempfile
+
+# Import models and database
+from models import db, Customer, Quote, Job, PdfData
 
 # Import utility modules
 from utils.pdf_extractor import extract_data_from_pdf
@@ -36,8 +39,8 @@ app.config['ALLOWED_EXTENSIONS'] = {'pdf'}
 # Ensure upload directory exists
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
-# Initialize database
-db = SQLAlchemy(app)
+# Initialize database with app
+db.init_app(app)
 
 # Initialize RFMS API client
 rfms_api = RfmsApi(
@@ -46,12 +49,6 @@ rfms_api = RfmsApi(
     username=os.getenv('RFMS_USERNAME'),
     api_key=os.getenv('RFMS_API_KEY')
 )
-
-# Import models after db initialization to avoid circular imports
-from models.customer import Customer
-from models.quote import Quote
-from models.job import Job
-from models.pdf_data import PdfData
 
 # Helper functions
 def allowed_file(filename):
@@ -62,7 +59,68 @@ def allowed_file(filename):
 @app.route('/')
 def index():
     """Render the main dashboard page."""
-    return render_template('index.html')
+    # Get recent PDF uploads
+    recent_pdfs = PdfData.query.order_by(PdfData.created_at.desc()).limit(5).all()
+    
+    # Calculate stats
+    total_uploads = PdfData.query.count()
+    processed_uploads = PdfData.query.filter_by(processed=True).count()
+    quotes_created = Quote.query.count()
+    jobs_created = Job.query.count()
+    
+    stats = {
+        'total_uploads': total_uploads,
+        'processed_uploads': processed_uploads,
+        'quotes_created': quotes_created,
+        'jobs_created': jobs_created
+    }
+    
+    return render_template('index.html', recent_pdfs=recent_pdfs, stats=stats)
+
+@app.route('/upload-pdf', methods=['POST'])
+def upload_pdf_api():
+    """Handle PDF upload and extraction via API endpoint."""
+    if 'pdf_file' not in request.files:
+        logger.warning("No file part in upload request.")
+        return jsonify({"error": "No file part"}), 400
+    
+    file = request.files['pdf_file']
+    
+    if file.filename == '':
+        logger.warning("No selected file in upload request.")
+        return jsonify({"error": "No selected file"}), 400
+    
+    if file and allowed_file(file.filename):
+        filename = secure_filename(file.filename)
+        # Create a temporary file path or use BytesIO directly if extractor supports it
+        # Since the extractor takes a file path, saving to a temporary file is necessary
+        
+        # Use a temporary file that will be automatically deleted
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp_file:
+            file.save(tmp_file.name)
+            temp_path = tmp_file.name
+            
+        try:
+            # Extract data from PDF using the utility function
+            extracted_data = extract_data_from_pdf(temp_path)
+            logger.info(f"Successfully extracted data for {filename}")
+            
+            # Clean up the temporary file
+            os.remove(temp_path)
+            
+            # Return the extracted data as JSON
+            return jsonify(extracted_data), 200
+        
+        except Exception as e:
+            logger.error(f"Error extracting data from PDF {filename}: {str(e)}")
+            # Clean up the temporary file in case of error
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
+            return jsonify({"error": f"Error extracting data: {str(e)}"}), 500
+    
+    else:
+        logger.warning(f"Invalid file type uploaded: {file.filename}")
+        return jsonify({"error": "Invalid file type. Please upload a PDF."}), 400
 
 @app.route('/upload', methods=['POST'])
 def upload_pdf():
@@ -195,6 +253,166 @@ def check_api_status():
     except Exception as e:
         logger.error(f"API status check failed: {str(e)}")
         return jsonify({"status": "offline", "error": str(e)}), 500
+
+@app.route('/api/export-to-rfms', methods=['POST'])
+def export_to_rfms():
+    """Export customer, job, and order data to RFMS API."""
+    try:
+        # Get the data from the request
+        data = request.json
+        
+        if not data:
+            logger.warning("No data provided for RFMS export")
+            return jsonify({"error": "No data provided for export"}), 400
+        
+        # Validate that we have the necessary data sections
+        required_sections = ['sold_to', 'ship_to', 'job_details']
+        for section in required_sections:
+            if section not in data:
+                logger.warning(f"Missing required section: {section}")
+                return jsonify({"error": f"Missing required section: {section}"}), 400
+        
+        logger.info("Starting export to RFMS")
+        
+        # 1. Create or update the Ship To customer in RFMS
+        ship_to_data = data['ship_to']
+        logger.info(f"Creating/updating Ship To customer: {ship_to_data.get('name')}")
+        
+        try:
+            ship_to_result = rfms_api.create_customer(ship_to_data)
+            ship_to_customer_id = ship_to_result.get('id')
+            logger.info(f"Ship To customer created/updated with ID: {ship_to_customer_id}")
+        except Exception as e:
+            logger.error(f"Error creating Ship To customer: {str(e)}")
+            return jsonify({"error": f"Error creating Ship To customer: {str(e)}"}), 500
+        
+        # 2. Get the Sold To customer ID (assumes it was already obtained via search)
+        sold_to_data = data['sold_to']
+        sold_to_customer_id = sold_to_data.get('id')
+        
+        if not sold_to_customer_id:
+            logger.warning("Missing Sold To customer ID")
+            return jsonify({"error": "Missing Sold To customer ID"}), 400
+        
+        # 3. Create the job in RFMS
+        job_data = data['job_details']
+        
+        # If alternate_contact is present, append to description
+        alt_contact = data.get('alternate_contact', {})
+        description = job_data.get('description_of_works', '')
+        # Add all alternate contacts from the list
+        alt_contacts_list = data.get('alternate_contacts', [])
+        notes_lines = []
+        if alt_contact and (alt_contact.get('name') or alt_contact.get('phone') or alt_contact.get('phone2') or alt_contact.get('email')):
+            best_contact_str = f"Best Contact: {alt_contact.get('name', '')} {alt_contact.get('phone', '')}"
+            if alt_contact.get('phone2'):
+                best_contact_str += f", {alt_contact.get('phone2')}"
+            if alt_contact.get('email'):
+                best_contact_str += f" ({alt_contact.get('email')})"
+            notes_lines.append(best_contact_str)
+        for contact in alt_contacts_list:
+            if contact.get('name') or contact.get('phone') or contact.get('phone2') or contact.get('email'):
+                line = f"{contact.get('type', 'Contact')}: {contact.get('name', '')} {contact.get('phone', '')}"
+                if contact.get('phone2'):
+                    line += f", {contact.get('phone2')}"
+                if contact.get('email'):
+                    line += f" ({contact.get('email')})"
+                notes_lines.append(line)
+        if notes_lines:
+            description += '\n' + '\n'.join(notes_lines)
+        
+        # Prepare the job data for the API
+        po_number = job_data.get('po_number', '')
+        dollar_value = job_data.get('dollar_value', 0)
+        # Build lines array as specified
+        lines = [{
+            'productId': f'PO#$$',
+            'colorId': f'PO#$$',
+            'quantity': dollar_value,
+            'priceLevel': 'Price4'
+        }]
+        prepared_job_data = {
+            'storeNumber': 1,
+            'privateNotes': 'PRIVATE',
+            'publicNotes': job_data.get('description_of_works', ''),
+            'workOrderNotes': description,
+            'salesperson1': 'Zoran Vekic',
+            'salesperson2': '',
+            'userOrderTypeId': 3,
+            'serviceTypeId': 1,
+            'contractTypeId': 1,
+            'lines': lines,
+            'po_number': po_number,
+            'job_number': job_data.get('job_number'),
+            'sold_to_customer_id': sold_to_customer_id,
+            'ship_to_customer_id': ship_to_customer_id,
+            'dollar_value': dollar_value,
+            # Additional fields as required by your RFMS API
+        }
+        
+        logger.info(f"Creating job in RFMS: {prepared_job_data.get('po_number')}")
+        
+        try:
+            # Create the main job
+            job_result = rfms_api.create_job(prepared_job_data)
+            job_id = job_result.get('id')
+            logger.info(f"Job created in RFMS with ID: {job_id}")
+            
+            result = {
+                'success': True,
+                'message': 'Successfully exported data to RFMS',
+                'ship_to_customer': ship_to_result,
+                'job': job_result
+            }
+            
+            # 4. Handle billing group/second PO if applicable
+            billing_group_data = data.get('billing_group')
+            if billing_group_data and billing_group_data.get('is_billing_group'):
+                logger.info("Processing second job for billing group")
+                
+                po_prefix = job_data.get('actual_job_number', '')
+                po_suffix = billing_group_data.get('po_suffix', '')
+                second_value = billing_group_data.get('second_value', 0)
+                
+                if not po_suffix or second_value <= 0:
+                    logger.warning("Invalid second job data: missing suffix or value ≤ 0")
+                    return jsonify({"error": "Invalid second job data"}), 400
+                
+                # Create a copy of the job data for the second job
+                second_job_data = prepared_job_data.copy()
+                second_job_data['po_number'] = f"{po_prefix}-{po_suffix}"
+                second_job_data['dollar_value'] = second_value
+                
+                logger.info(f"Creating second job in RFMS: {second_job_data.get('po_number')}")
+                
+                try:
+                    # Create the second job
+                    second_job_result = rfms_api.create_job(second_job_data)
+                    second_job_id = second_job_result.get('id')
+                    logger.info(f"Second job created in RFMS with ID: {second_job_id}")
+                    
+                    # Add both jobs to a billing group
+                    logger.info(f"Adding jobs to billing group: {job_id}, {second_job_id}")
+                    billing_group_result = rfms_api.add_to_billing_group([job_id, second_job_id])
+                    
+                    # Add the second job and billing group results to the API response
+                    result['second_job'] = second_job_result
+                    result['billing_group'] = billing_group_result
+                    
+                except Exception as e:
+                    logger.error(f"Error creating second job or billing group: {str(e)}")
+                    # Still return success for the first job, but include the error
+                    result['second_job_error'] = str(e)
+            
+            return jsonify(result)
+            
+        except Exception as e:
+            logger.error(f"Error creating job in RFMS: {str(e)}")
+            return jsonify({"error": f"Error creating job in RFMS: {str(e)}"}), 500
+        
+    except Exception as e:
+        logger.error(f"Error during RFMS export: {str(e)}")
+        return jsonify({"error": f"Error during RFMS export: {str(e)}"}), 500
 
 @app.route('/clear_data', methods=['POST'])
 def clear_data():

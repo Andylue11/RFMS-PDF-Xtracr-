@@ -1,154 +1,246 @@
-{% extends "base.html" %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RFMS PDF Xtracr</title>
+    <!-- Tailwind CSS CDN for rapid prototyping -->
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <script src="{{ url_for('static', filename='js/main.js') }}" defer></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <style>
+        body { background: #2c2c2c; }
+        .bg-charcoal { background: #2c2c2c; }
+        .text-atoz-green { color: #009966; }
+        .bg-atoz-green { background: #009966; }
+        .text-atoz-yellow { color: #ffe066; }
+        .bg-atoz-yellow { background: #ffe066; }
+        .text-heavy { font-weight: 800; }
+        .input-dark { background: #fff; color: #222; border: 1px solid #bbb; font-weight: 600; font-size: 1.1rem; padding: 0.4rem 0.7rem; }
+        .input-dark:focus { border-color: #7ed957; }
+        label { font-weight: 700; font-size: 1.1rem; }
+        .section-title { font-size: 1.2rem; letter-spacing: 0.02em; }
+        .compact-section { padding: 1.2rem 1.2rem; margin-bottom: 1rem; }
+        .compact-grid { gap: 1.2rem; }
+        .compact-btn { padding: 0.6rem 1.3rem; font-size: 1.1rem; }
+    </style>
+</head>
+<body class="bg-charcoal text-white font-sans">
+    <!-- CHECKPOINT_20240512 -->
+    <div class="max-w-6xl mx-auto p-2">
+        <!-- Header with Logo -->
+        <header class="flex items-center justify-between py-1 border-b border-gray-700 mb-2">
+            <div class="flex items-center">
+                <img src="{{ url_for('static', filename='customcolor_logo_transparent_background.jpeg') }}" alt="A to Z Flooring Solutions Logo" class="mr-2" style="max-height:80px; width:auto; object-fit:contain; background:#2c2c2c; border-radius:8px; display:block;">
+                <span style="font-family: 'Montserrat', 'Arial', sans-serif; font-weight: 900; font-size: 2.8rem; color: #00b686; line-height: 80px; height: 80px; display: inline-flex; align-items: center; margin-left: 18px; letter-spacing: 0.04em; white-space: nowrap;">RFMS PDF XTRACR</span>
+            </div>
+            <div class="flex items-center" style="margin-top:65px;">
+                <span id="api-status-indicator" class="block w-3 h-3 rounded-full bg-gray-400 mr-2"></span>
+                <span id="api-status-text" class="text-xs text-gray-300">RFMS API: Checking...</span>
+            </div>
+        </header>
 
-{% block title %}Dashboard - RFMS PDF XTRACR{% endblock %}
-
-{% block content %}
-<div class="bg-white shadow-md rounded-lg p-6 mb-6">
-    <h2 class="text-xl font-semibold mb-4">Upload Purchase Order PDF</h2>
-    
-    <form action="{{ url_for('upload_pdf') }}" method="post" enctype="multipart/form-data" class="space-y-4">
-        <div class="flex items-center justify-center w-full">
-            <label for="pdf_file" class="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100">
-                <div class="flex flex-col items-center justify-center pt-5 pb-6">
-                    <svg class="w-8 h-8 mb-3 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
-                    <p class="mb-2 text-sm text-gray-500"><span class="font-semibold">Click to upload</span> or drag and drop</p>
-                    <p class="text-xs text-gray-500">PDF files only (MAX. 16MB)</p>
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start" style="align-items: flex-start;">
+            <!-- Column A -->
+            <div class="flex flex-col space-y-0" style="margin-top:0;">
+                <section id="upload-section" class="bg-charcoal rounded-lg shadow compact-section mb-0 pb-0 border-4 border-white" style="margin-bottom:-6px; padding-bottom:2px;">
+                    <h2 class="section-title text-heavy mb-1 text-atoz-green">Upload Purchase Order PDF</h2>
+                    <input type="file" id="pdf-upload" accept=".pdf" class="input-dark rounded w-full mb-1">
+                    <button id="upload-button" class="w-full bg-atoz-green text-black font-bold compact-btn rounded hover:bg-atoz-yellow transition">Upload and Extract</button>
+                </section>
+                <section id="po-number-section" class="bg-charcoal rounded-lg shadow compact-section mb-0 pb-0 border-4 border-white" style="margin-bottom:-6px; padding-bottom:2px;">
+                    <label for="po-number" class="block mb-1">Purchase Order Number</label>
+                    <input type="text" id="po-number" class="input-dark rounded w-full mb-1 text-lg">
+                </section>
+                <section id="po-value-section" class="bg-charcoal rounded-lg shadow compact-section mb-0 pb-0 border-4 border-white" style="margin-bottom:-6px; padding-bottom:2px;">
+                    <label for="dollar-value" class="block mb-1">Purchase Order Value ($)</label>
+                    <input type="number" id="dollar-value" step="0.01" class="input-dark rounded w-full mb-1 text-lg">
+                </section>
+                <section id="work-details-section" class="bg-charcoal rounded-lg shadow compact-section mb-0 pb-0 border-4 border-white" style="margin-bottom:-6px; padding-bottom:2px;">
+                    <h2 class="section-title text-heavy mb-0 text-atoz-green">Work Order Details</h2>
+                    <div class="mb-0" style="margin-bottom:2px;">
+                        <label for="supervisor-name" class="block">Supervisor Name</label>
+                        <input type="text" id="supervisor-name" class="input-dark rounded w-full">
+                    </div>
+                    <div class="mb-0" style="margin-bottom:2px;">
+                        <label for="supervisor-phone" class="block">Supervisor Phone Number</label>
+                        <input type="text" id="supervisor-phone" class="input-dark rounded w-full">
+                    </div>
+                    <div class="mb-0" style="margin-bottom:2px;">
+                        <label for="actual-job-number" class="block">Job Number</label>
+                        <input type="text" id="actual-job-number" class="input-dark rounded w-full" readonly>
+                    </div>
+                </section>
+            </div>
+            <!-- Column B -->
+            <div class="flex flex-col justify-start" style="margin-top:0;">
+                <div class="bg-charcoal rounded-lg shadow compact-section mb-0 pb-0 border-4 border-white">
+                    <h2 class="section-title text-heavy mb-1 text-atoz-yellow">Sold To (RFMS Customer)</h2>
+                    <div class="flex items-center mb-1">
+                        <input type="text" id="builder-search-input" placeholder="Enter Customer ID or Builder Name" class="input-dark rounded w-full mr-2">
+                        <button id="search-builder-button" class="bg-atoz-yellow text-black font-bold compact-btn rounded hover:bg-atoz-green transition">Search Builders</button>
+                    </div>
+                    <div id="sold-to-fields" class="space-y-1">
+                        <div>
+                            <label for="sold-to-name">Name</label>
+                            <input type="text" id="sold-to-name" class="input-dark rounded w-full">
+                        </div>
+                        <div>
+                            <label for="sold-to-address1">Address Line 1</label>
+                            <input type="text" id="sold-to-address1" class="input-dark rounded w-full">
+                        </div>
+                        <div>
+                            <label for="sold-to-address2">Address Line 2</label>
+                            <input type="text" id="sold-to-address2" class="input-dark rounded w-full">
+                        </div>
+                        <div class="grid grid-cols-3 gap-2">
+                            <div>
+                                <label for="sold-to-city">City</label>
+                                <input type="text" id="sold-to-city" class="input-dark rounded w-full">
+                            </div>
+                            <div>
+                                <label for="sold-to-state">State</label>
+                                <input type="text" id="sold-to-state" class="input-dark rounded w-full">
+                            </div>
+                            <div>
+                                <label for="sold-to-zip">Postcode</label>
+                                <input type="text" id="sold-to-zip" class="input-dark rounded w-full">
+                            </div>
+                        </div>
+                        <div>
+                            <label for="sold-to-country">Country</label>
+                            <input type="text" id="sold-to-country" class="input-dark rounded w-full">
+                        </div>
+                        <div>
+                            <label for="sold-to-phone">Phone</label>
+                            <input type="text" id="sold-to-phone" class="input-dark rounded w-full">
+                        </div>
+                        <div>
+                            <label for="sold-to-email">Email</label>
+                            <input type="email" id="sold-to-email" class="input-dark rounded w-full">
+                        </div>
+                    </div>
                 </div>
-                <input id="pdf_file" name="pdf_file" type="file" class="hidden" accept=".pdf" required />
-            </label>
+            </div>
+            <!-- Column C -->
+            <div class="flex flex-col space-y-0" style="margin-top:0;">
+                <div class="bg-charcoal rounded-lg shadow compact-section mb-0 pb-0 border-4 border-white">
+                    <h2 class="section-title text-heavy mb-1 text-atoz-yellow">Ship To (PDF Extracted)</h2>
+                    <div id="ship-to-fields" class="space-y-1">
+                        <div>
+                            <label for="ship-to-name">Name</label>
+                            <input type="text" id="ship-to-name" class="input-dark rounded w-full">
+                        </div>
+                        <div>
+                            <label for="ship-to-address1">Address Line 1</label>
+                            <input type="text" id="ship-to-address1" class="input-dark rounded w-full">
+                        </div>
+                        <div>
+                            <label for="ship-to-address2">Address Line 2</label>
+                            <input type="text" id="ship-to-address2" class="input-dark rounded w-full">
+                        </div>
+                        <div class="grid grid-cols-3 gap-2">
+                            <div>
+                                <label for="ship-to-city">City</label>
+                                <input type="text" id="ship-to-city" class="input-dark rounded w-full">
+                            </div>
+                            <div>
+                                <label for="ship-to-state">State</label>
+                                <input type="text" id="ship-to-state" class="input-dark rounded w-full">
+                            </div>
+                            <div>
+                                <label for="ship-to-zip">Postcode</label>
+                                <input type="text" id="ship-to-zip" class="input-dark rounded w-full">
+                            </div>
+                        </div>
+                        <div>
+                            <label for="ship-to-country">Country</label>
+                            <input type="text" id="ship-to-country" class="input-dark rounded w-full">
+                        </div>
+                        <div>
+                            <label for="ship-to-phone">Phone Numbers</label>
+                            <textarea id="ship-to-phone" rows="2" class="input-dark rounded w-full"></textarea>
+                        </div>
+                        <div>
+                            <label for="ship-to-email">Email Address</label>
+                            <input type="email" id="ship-to-email" class="input-dark rounded w-full">
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
-        
-        <div class="flex justify-end">
-            <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition">Upload and Process</button>
-        </div>
-    </form>
-</div>
-
-<div class="grid md:grid-cols-2 gap-6">
-    <!-- Recent Uploads -->
-    <div class="bg-white shadow-md rounded-lg p-6">
-        <h2 class="text-xl font-semibold mb-4">Recent Uploads</h2>
-        
-        <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-gray-200">
-                <thead class="bg-gray-50">
-                    <tr>
-                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">File</th>
-                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">PO Number</th>
-                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
-                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
-                    </tr>
-                </thead>
-                <tbody class="bg-white divide-y divide-gray-200">
-                    {% for pdf in recent_pdfs %}
-                    <tr>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ pdf.filename }}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ pdf.po_number }}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${{ pdf.dollar_value }}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {% if pdf.processed %}
-                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">Processed</span>
-                            {% else %}
-                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">Pending</span>
-                            {% endif %}
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            <a href="{{ url_for('preview_data', pdf_id=pdf.id) }}" class="text-blue-600 hover:text-blue-900">View</a>
-                        </td>
-                    </tr>
-                    {% else %}
-                    <tr>
-                        <td colspan="5" class="px-6 py-4 text-sm text-gray-500 text-center">No recent uploads found</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+        <!-- Row 2: Description of Works (A+B) and Alternate Contacts (C) in the same row -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start mt-0">
+            <div class="lg:col-span-2">
+                <div class="bg-charcoal rounded-lg shadow compact-section mb-0 pb-1 border-4 border-white" style="margin-top:-18px;">
+                    <label for="description-of-works" class="block">Description of Works</label>
+                    <textarea id="description-of-works" rows="9" class="input-dark rounded w-full text-lg" style="min-height: 200px;"></textarea>
+                    <div class="flex items-center mt-1">
+                        <input type="checkbox" id="billing-group-checkbox" class="h-6 w-6 text-atoz-green border-gray-300 rounded mr-3">
+                        <label for="billing-group-checkbox" class="text-base font-bold">This PO is part of a billing group / has a second PO?</label>
+                    </div>
+                    <div id="secondary-po-details" class="grid grid-cols-2 gap-2 mt-1 hidden">
+                        <div>
+                            <label for="secondary-po-suffix" class="block">Secondary PO Suffix (Two Digits)</label>
+                            <div class="flex items-center mt-1">
+                                <span id="secondary-po-prefix" class="text-gray-300 mr-1">[Job Number]-</span>
+                                <input type="text" id="secondary-po-suffix" maxlength="2" class="input-dark rounded w-16">
+                            </div>
+                        </div>
+                        <div>
+                            <label for="second-po-dollar-value" class="block">Second PO Value ($)</label>
+                            <input type="number" id="second-po-dollar-value" step="0.01" class="input-dark rounded w-full">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="lg:col-span-1 flex flex-col space-y-0">
+                <div class="bg-gray-800 rounded-lg shadow compact-section border-4 border-white mb-0 pb-1" style="margin-top:-50px; min-height: 125px;">
+                    <label class="block text-atoz-yellow text-heavy mb-2 text-lg" for="alternate-contact-name">Best Contact / Real Estate Agent / Site Contact / Authorised Contact</label>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mt-1">
+                        <div class="col-span-1 md:col-span-3">
+                            <label for="alternate-contact-name" class="block mb-1">Name / Business / Address</label>
+                            <textarea id="alternate-contact-name" rows="3" class="input-dark rounded w-full text-lg" placeholder="Full name, business, address if needed" style="min-height:110px;"></textarea>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label for="alternate-contact-phone">Phone 1</label>
+                                <input type="text" id="alternate-contact-phone" placeholder="Phone 1" class="input-dark rounded w-full text-lg">
+                            </div>
+                            <div>
+                                <label for="alternate-contact-phone2">Phone 2</label>
+                                <input type="text" id="alternate-contact-phone2" placeholder="Phone 2 (optional)" class="input-dark rounded w-full text-lg">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="text-xs text-gray-400 mt-2">If present and different from main customer, this will be included in Work Order Notes as Best Contact.</div>
+                </div>
+                <!-- Action Buttons under alternate contacts (column C) -->
+                <section id="action-buttons" class="flex justify-center space-x-2 mt-2">
+                    <button id="commit-data-button" class="bg-atoz-yellow text-black font-bold compact-btn rounded hover:bg-atoz-green transition">Commit Data</button>
+                    <button id="export-to-rfms-button" class="bg-atoz-green text-black font-bold compact-btn rounded hover:bg-atoz-yellow transition">Export to RFMS</button>
+                </section>
+            </div>
         </div>
     </div>
-    
-    <!-- Quick Stats -->
-    <div class="bg-white shadow-md rounded-lg p-6">
-        <h2 class="text-xl font-semibold mb-4">Quick Stats</h2>
-        
-        <div class="grid grid-cols-2 gap-4">
-            <div class="bg-gray-50 p-4 rounded-md">
-                <p class="text-sm text-gray-500">Total Uploads</p>
-                <p class="text-2xl font-bold">{{ stats.total_uploads }}</p>
-            </div>
-            <div class="bg-gray-50 p-4 rounded-md">
-                <p class="text-sm text-gray-500">Processed</p>
-                <p class="text-2xl font-bold">{{ stats.processed_uploads }}</p>
-            </div>
-            <div class="bg-gray-50 p-4 rounded-md">
-                <p class="text-sm text-gray-500">Quotes Created</p>
-                <p class="text-2xl font-bold">{{ stats.quotes_created }}</p>
-            </div>
-            <div class="bg-gray-50 p-4 rounded-md">
-                <p class="text-sm text-gray-500">Jobs Created</p>
-                <p class="text-2xl font-bold">{{ stats.jobs_created }}</p>
-            </div>
-        </div>
-    </div>
-</div>
-{% endblock %}
-
-{% block scripts %}
-<script>
-    // Check API status on page load
-    document.addEventListener('DOMContentLoaded', function() {
-        fetch('/api/check_status')
-            .then(response => response.json())
-            .then(data => {
-                const indicator = document.getElementById('api-status-indicator');
-                const text = document.getElementById('api-status-text');
-                
-                if (data.status === 'online') {
-                    indicator.classList.remove('bg-gray-400', 'bg-red-500');
-                    indicator.classList.add('bg-green-500');
-                    text.textContent = 'RFMS API: Online';
-                    text.classList.remove('text-gray-600', 'text-red-600');
-                    text.classList.add('text-green-600');
+    <div id="notification-area"></div>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const billingGroupCheckbox = document.getElementById('billing-group-checkbox');
+            const secondaryPoDetails = document.getElementById('secondary-po-details');
+            billingGroupCheckbox.addEventListener('change', function() {
+                if (this.checked) {
+                    secondaryPoDetails.classList.remove('hidden');
                 } else {
-                    indicator.classList.remove('bg-gray-400', 'bg-green-500');
-                    indicator.classList.add('bg-red-500');
-                    text.textContent = 'RFMS API: Offline';
-                    text.classList.remove('text-gray-600', 'text-green-600');
-                    text.classList.add('text-red-600');
+                    secondaryPoDetails.classList.add('hidden');
+                    document.getElementById('secondary-po-suffix').value = '';
+                    document.getElementById('second-po-dollar-value').value = '';
                 }
-            })
-            .catch(error => {
-                console.error('Error checking API status:', error);
-                const indicator = document.getElementById('api-status-indicator');
-                const text = document.getElementById('api-status-text');
-                
-                indicator.classList.remove('bg-gray-400', 'bg-green-500');
-                indicator.classList.add('bg-red-500');
-                text.textContent = 'RFMS API: Error';
-                text.classList.remove('text-gray-600', 'text-green-600');
-                text.classList.add('text-red-600');
             });
-    });
-    
-    // File upload preview
-    const fileInput = document.getElementById('pdf_file');
-    if (fileInput) {
-        fileInput.addEventListener('change', function(e) {
-            const fileName = e.target.files[0]?.name;
-            if (fileName) {
-                const fileInfo = document.createElement('p');
-                fileInfo.textContent = `Selected file: ${fileName}`;
-                fileInfo.classList.add('mt-2', 'text-sm', 'text-gray-600');
-                
-                // Remove any existing file info
-                const existingInfo = fileInput.parentElement.querySelector('p.mt-2');
-                if (existingInfo) {
-                    existingInfo.remove();
-                }
-                
-                fileInput.parentElement.appendChild(fileInfo);
-            }
+            document.getElementById('actual-job-number').addEventListener('input', function() {
+                document.getElementById('secondary-po-prefix').textContent = this.value + '-';
+            });
         });
-    }
-</script>
-{% endblock %} 
+    </script>
+</body>
+</html> 

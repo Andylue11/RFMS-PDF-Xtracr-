@@ -61,7 +61,13 @@ def extract_data_from_pdf(file_path):
         'material_breakdown': '',
         'labor_breakdown': '',
         'rooms': '',
-        'raw_text': ''
+        'raw_text': '',
+        # --- Add alternate/best contact fields ---
+        'alternate_contact_name': '',
+        'alternate_contact_phone': '',
+        'alternate_contact_email': '',
+        # --- New: list of all alternate contacts ---
+        'alternate_contacts': [],  # Each: {type, name, phone, email}
     }
     
     # Try different extraction methods in order of reliability
@@ -365,6 +371,60 @@ def parse_extracted_text(text, extracted_data):
                 break
             except ValueError:
                 continue
+    
+    # --- Extract all alternate contacts (Best, Real Estate, Site, Authorised) ---
+    contact_types = [
+        ('Best Contact', r"BEST\s+CONTACT\s+DETAILS"),
+        ('Real Estate Agent', r"REAL\s+ESTATE\s+AGENT"),
+        ('Site Contact', r"SITE\s+CONTACT"),
+        ('Authorised Contact', r"AUTHORI[ZS]ED\s+CONTACT")
+    ]
+    main_customer_name = extracted_data.get('customer_name', '').strip().lower()
+    for label, regex in contact_types:
+        section = re.search(rf"{regex}([\s\S]+?)(?=SUPERVISOR|JOB\s+DETAILS|$)", text, re.IGNORECASE)
+        if section:
+            contact_text = section.group(1)
+            # Name
+            name_match = re.search(r"Name:?[ \t]*([A-Za-z\s]+?)(?=\n|$)", contact_text, re.IGNORECASE)
+            name = name_match.group(1).strip() if name_match else ''
+            # Phone
+            phone_match = re.search(r"(Mobile|Phone|Contact):?[ \t]*([\d\(\)\-\s]+)", contact_text, re.IGNORECASE)
+            phone = phone_match.group(2).strip() if phone_match else ''
+            # Email
+            email_match = re.search(r"Email:?[ \t]*([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})", contact_text, re.IGNORECASE)
+            email = email_match.group(1).strip() if email_match else ''
+            # Only add if name is different from main customer
+            if name and name.lower() != main_customer_name:
+                extracted_data['alternate_contacts'].append({
+                    'type': label,
+                    'name': name,
+                    'phone': phone,
+                    'email': email
+                })
+            # For UI, still populate the first found as alternate_contact_*
+            if label in ('Best Contact', 'Real Estate Agent') and not extracted_data['alternate_contact_name'] and name and name.lower() != main_customer_name:
+                extracted_data['alternate_contact_name'] = name
+                extracted_data['alternate_contact_phone'] = phone
+                extracted_data['alternate_contact_email'] = email
+
+    # --- Explicitly extract 'Authorised Contact' and 'Site Contact' as alternates even if not in a section ---
+    for label in ['Authorised Contact', 'Site Contact']:
+        # Match lines like 'Authorised Contact: Name' or 'Site Contact: Name'
+        pattern = rf'{label}:?\s*([A-Za-z\s]+)\n?(\(H\)\s*\d+)?\s*(\(M\)\s*\d+)?'
+        matches = re.findall(pattern, text, re.IGNORECASE)
+        for match in matches:
+            name = match[0].strip()
+            phone1 = match[1].replace('(H)', '').strip() if match[1] else ''
+            phone2 = match[2].replace('(M)', '').strip() if match[2] else ''
+            # Only add if name is not empty and not the main customer
+            if name and name.lower() != main_customer_name:
+                extracted_data['alternate_contacts'].append({
+                    'type': label,
+                    'name': name,
+                    'phone': phone1,
+                    'phone2': phone2,
+                    'email': ''
+                })
 
 
 def extract_contact_details(text, extracted_data):
