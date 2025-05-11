@@ -1,0 +1,77 @@
+Changing a Service
+
+Product Information 1
+
+Extended Information 2
+
+Product Code
+
+Manufacturer
+
+Supplier
+Service
+Service Number
+Priv Supplier
+Private Service
+Priv Service Number
+
+Units
+FOB Point
+Unit Cost
+Load
+
+Load Pergent
+USER LABEL PO#SS
+
+Status
+Inactive Date
+
+53
+
+CHARGED SERVICE
+
+A TO Z FLOORING SOLUTIONS
+A TO Z FLOORING SOLUTIONS
+PO# TOTAL ALLOWANCE SS
+PO#SS
+A TO Z FLOORING SOLUTIONS
+PO# TOTAL ALLOWANCE SS
+
+PO#SS
+
+EA
+
+F8
+
+F8
+
+F8
+
+F8
+
+F8
+
+$1.0000
+$0.0000
+
+0.0000
+
+Input Date
+Trans Date
+
+10/05/25
+10/05/25
+
+%
+
+ACTIVE
+
+F8
+
+F8
+
+(More
+
+V OK
+
+X Cancel

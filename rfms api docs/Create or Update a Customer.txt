@@ -1,0 +1,107 @@
+import http.client
+import json
+
+conn = http.client.HTTPSConnection("api.rfms.online")
+payload = json.dumps({
+  "customerType": "Builders",
+  "entryType": "Customer",
+  "customerAddress": {
+    "lastName": "DOE",
+    "firstName": "JOHN",
+    "address1": "1234 MAIN ST",
+    "address2": "STE 33",
+    "city": "ANYTOWN",
+    "state": "CA",
+    "postalCode": "91332",
+    "county": "LOS ANGELES"
+  },
+  "shipToAddress": {
+    "lastName": "DOE",
+    "firstName": "JOHN",
+    "address1": "1234 MAIN ST",
+    "address2": "STE 33",
+    "city": "ANYTOWN",
+    "state": "CA",
+    "postalCode": "91332",
+    "county": "LOS ANGELES"
+  },
+  "phone1": "661-555-1212",
+  "phone2": "818-298-0000",
+  "email": "john.doe@gmail.com",
+  "taxStatus": "Tax",
+  "taxMethod": "SalesTax",
+  "preferredSalesperson1": "BOB",
+  "preferredSalesperson2": ""
+})
+headers = {
+  'Content-Type': 'application/json'
+}
+conn.request("POST", "/v2/customer", payload, headers)
+res = conn.getresponse()
+data = res.read()
+print(data.decode("utf-8"))
+
+POST
+Create or Update a Customer
+https://api.rfms.online/v2/customer/
+Create a new customer or update an existing one. When creating a new customer the customerId element should be omitted.
+
+Some of the values must match a valid selection. For example, customerType must match one of several specific values. To see the available values, GET /customers (see above.)
+
+For users who have the correct parameters enabled, an association to a member (Main) or client (Branch) type referral may be made by including the following field(s):
+
+Plain Text
+{
+    "referralType": "client", //or "member"
+    "referralMemberId" 1234 //required if referralType is "client", otherwise exclude from request body
+}
+For users that are associated with CCA/DRIVE, the lmsId field may be specified among the other elements like so:
+
+Plain Text
+{
+    "customerType": BUILDERS,
+    "lmsId": "ABA123",
+    "customerAddress": {...}
+}
+AUTHORIZATION
+Basic Auth
+This request is using Basic Auth from collectionRFMS API 2
+HEADERS
+Content-Type
+application/json
+
+Body
+raw
+View More
+{
+  "customerType": Builders,
+  "entryType": "Customer",          
+  "customerAddress": {
+    "lastName": "DOE",
+    "firstName": "JOHN",
+    "address1": "1234 MAIN ST",
+    "address2": "STE 33",
+    "city": "ANYTOWN",
+    "state": "CA",
+    "postalCode": "91332",
+    "county": "LOS ANGELES"
+  },
+  "shipToAddress": {
+    "lastName": "DOE",
+    "firstName": "JOHN",
+    "address1": "1234 MAIN ST",
+    "address2": "STE 33",
+    "city": "ANYTOWN",
+    "state": "CA",
+    "postalCode": "91332",
+    "county": "LOS ANGELES"
+  },
+  "phone1": "0402741848",
+  "phone2": "0403746334",
+  "email": "john.doe@gmail.com",
+  "taxStatus": "Tax",               
+  "taxMethod": "SalesTax",          
+  "preferredSalesperson1": Zoran Vekic,
+  "preferredSalesperson2": "",
+  "storeNumber": 01
+}

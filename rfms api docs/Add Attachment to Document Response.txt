@@ -1,0 +1,7 @@
+{
+  "documentNumber": "ES903371",
+  "documentType": "Quote",
+  "fileExtension": "jpg",
+  "description": "Describe attachment contents here",
+  "fileData": "Insert Base64 Encoded File here"
+}

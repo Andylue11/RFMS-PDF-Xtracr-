@@ -1,0 +1,36 @@
+import http.client
+import json
+
+conn = http.client.HTTPSConnection("api.rfms.online")
+payload = json.dumps({
+  "number": "CG903368",
+  "poNumber": "987654",
+  "adSource": "BILLBOARD",
+  "quoteDate": "2019-07-01",
+  "estimatedDeliveryDate": "2019-08-01",
+  "jobNumber": "ABC123",
+  "soldTo": {
+    "customerType": "DECORATOR"
+  },
+  "storeNumber": 50,
+  "privateNotes": "PRIVATE",
+  "publicNotes": "PUBLIC",
+  "workOrderNotes": "WORK ORDER NOTES",
+  "salesperson1": "JOHN",
+  "salesperson2": "FRANK",
+  "userOrderTypeId": 2,
+  "serviceTypeId": 1,
+  "contractTypeId": 1,
+  "timeSlot": 2,
+  "isOccupied": False,
+  "phase": "2",
+  "model": "The Dystopian",
+  "unit": "101"
+})
+headers = {
+  'Content-Type': 'application/json'
+}
+conn.request("POST", "/v2/quote", payload, headers)
+res = conn.getresponse()
+data = res.read()
+print(data.decode("utf-8"))

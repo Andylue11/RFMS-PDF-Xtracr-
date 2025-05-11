@@ -1,0 +1,40 @@
+import http.client
+import json
+
+conn = http.client.HTTPSConnection("api.rfms.online")
+payload = json.dumps({
+  "category": "Order",
+  "poNumber": "987654",
+  "quoteDate": "2020-06-01",
+  "estimatedDeliveryDate": "2020-10-11",
+  "jobNumber": "987ZEF",
+  "soldTo": {
+    "lastName": "DOE",
+    "firstName": "JOHN",
+    "address1": "1234 MAIN ST",
+    "address2": "STE 33",
+    "city": "ANYTOWN",
+    "state": "CA",
+    "postalCode": "91332",
+    "county": "LOS ANGELES"
+  },
+  "storeNumber": 50,
+  "privateNotes": "PRIVATE",
+  "publicNotes": "PUBLIC",
+  "salesperson1": "JOHN",
+  "lines": [
+    {
+      "productId": 992048,
+      "colorId": 7814430,
+      "quantity": 12,
+      "priceLevel": "Price3"
+    }
+  ]
+})
+headers = {
+  'Content-Type': 'application/json'
+}
+conn.request("POST", "/v2/order/create", payload, headers)
+res = conn.getresponse()
+data = res.read()
+print(data.decode("utf-8"))

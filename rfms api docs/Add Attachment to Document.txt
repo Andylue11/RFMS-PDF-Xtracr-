@@ -1,0 +1,12 @@
+import http.client
+import json
+
+conn = http.client.HTTPSConnection("api.rfms.online")
+payload = ''
+headers = {
+  'Content-Type': 'application/json'
+}
+conn.request("POST", "/v2/attachment", payload, headers)
+res = conn.getresponse()
+data = res.read()
+print(data.decode("utf-8"))

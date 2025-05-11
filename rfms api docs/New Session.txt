@@ -1,0 +1,15 @@
+python
+import http.client
+import mimetypes
+from codecs import encode
+
+conn = http.client.HTTPSConnection("api.rfms.online")
+boundary = ''
+payload = ''
+headers = {
+   'Content-type': 'multipart/form-data; boundary={}'.format(boundary) 
+}
+conn.request("POST", "/v2/session/begin", payload, headers)
+res = conn.getresponse()
+data = res.read()
+print(data.decode("utf-8"))

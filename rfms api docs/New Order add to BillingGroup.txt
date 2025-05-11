@@ -1,0 +1,27 @@
+{
+"billingGroup": {
+        "description": "Project 15 - 34 NW Blvd",
+        "contactList": [
+            {
+                "name": "Yevgeniy Zhakarov",
+                "phone": "432-223-1212",
+                "email": "yevgen@nextgen.com",
+                "other": "zhenya@flyingcarpets.com"
+            },
+            {
+                "name": "Alex Smith",
+                "phone": "000-000-0010",
+                "email": "smith@floor.com"
+            },
+            {
+                "name": "Leonard Bernstein",
+                "email": "lenny@classicalcarpets.com"
+            },
+            {
+                "name": "Vartan Nersisyan",
+                "phone": "333-222-1111",
+                "other": "vnersisyan@flyingcarpet.com"
+            }
+        ]
+    }
+}

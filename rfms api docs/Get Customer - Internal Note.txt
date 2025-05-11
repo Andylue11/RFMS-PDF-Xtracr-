@@ -1,0 +1,16 @@
+import http.client
+import json
+import mimetypes
+from codecs import encode
+
+conn = http.client.HTTPSConnection("api.rfms.online")
+boundary = ''
+payload = ''
+headers = {
+  'Content-Type': 'application/json',
+  'Content-type': 'multipart/form-data; boundary={}'.format(boundary)
+}
+conn.request("GET", "/v2/customer/{{customerId}}", payload, headers)
+res = conn.getresponse()
+data = res.read()
+print(data.decode("utf-8"))

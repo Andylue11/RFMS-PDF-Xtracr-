@@ -1,0 +1,8 @@
+Specifying an Order Type
+If the creation of an opportunity is to be associated with a new order, the way to specify a non web order is as follows. Otherwise, the order will be considered a web order
+
+Plain Text
+{
+  "createOrder": true,
+  "orderType": "Order"
+}

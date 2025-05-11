@@ -1,0 +1,13 @@
+{
+    "files.autoSave": "onFocusChange",
+    "files.autoSaveWhenNoErrors": true,
+    "files.watcherInclude": [
+        ""
+    ],
+    "accessibility.underlineLinks": true,
+    "git.autofetch": true,
+    "git.supportCancellation": true,
+    "json.schemas": [
+        
+    ]
+}

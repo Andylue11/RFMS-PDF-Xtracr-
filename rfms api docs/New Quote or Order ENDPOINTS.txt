@@ -1,0 +1,41 @@
+{
+    "poNumber": "987654",
+    "adSource": BUILDERS CUSTOMER,
+    "quoteDate": "2019-07-01",
+    "estimatedDeliveryDate": "2019-08-01",
+## The job number ENDPOINT is used for the Supervisors details extracted from the Purchase order PDF ##    
+"jobNumber": "SUPERVISOR NAME & NUMBER",
+    "soldTo": { 
+	    "lastName": "DOE",
+	    "firstName": "JOHN",
+	    "address1": "1234 MAIN ST",
+	    "address2": "STE 33",
+	    "city": "ANYTOWN",
+	    "state": "CA",
+	    "postalCode": "91332",
+	    "county": ""
+    },
+    "storeNumber": 01,
+    "privateNotes": "PRIVATE",
+    "publicNotes": "PUBLIC",
+    "workOrderNotes": "WORK ORDER NOTES",
+    "salesperson1": ZORAN VEKIC,
+    "salesperson2": "FRANK",
+    "userOrderTypeId": 1,
+    "serviceTypeId": 1,
+    "contractTypeId": 1,
+    "timeSlot": 2,
+    "isOccupied": false,
+    "phase": "1",
+    "model": "The Dystopian",
+    "unit": "101",    
+    "lines": [
+    	{
+    		"productId": PO#$$,
+    		"colorId": NIL,
+    		"quantity": "VAR$",
+    		"priceLevel": NIL,
+            "lineGroupId": 53
+    	}
+	]
+}

@@ -1,0 +1,52 @@
+import http.client
+import json
+
+conn = http.client.HTTPSConnection("api.rfms.online")
+payload = json.dumps({
+  "createOrder": False,
+  "notes": "SAMPLE NOTES",
+  "estimatedDeliveryDate": "3/1/2019",
+  "measureDate": "4/12/2020",
+  "timeSlot": 1,
+  "storeNumber": 32,
+  "adSource": "INTERNET",
+  "customerType": "COMMERCIAL",
+  "entryType": "Customer",
+  "customerAddress": {
+    "businessName": "ACME",
+    "lastName": "DOE",
+    "firstName": "JOHN",
+    "address1": "1234 MAIN ST",
+    "address2": "STE 33",
+    "city": "ANYTOWN",
+    "state": "CA",
+    "postalCode": "91332",
+    "county": "LOS ANGELES"
+  },
+  "shipToAddress": {
+    "lastName": "DOE",
+    "firstName": "JOHN",
+    "address1": "1234 MAIN ST",
+    "address2": "STE 33",
+    "city": "ANYTOWN",
+    "state": "CA",
+    "postalCode": "91332",
+    "county": "LOS ANGELES"
+  },
+  "phone1": "661-555-1212",
+  "phone2": "818-298-0000",
+  "email": "john.doe@gmail.com",
+  "taxStatus": "Tax",
+  "taxMethod": "SalesTax",
+  "preferredSalesperson1": "BOB",
+  "preferredSalesperson2": "",
+  "poNumber": "12346",
+  "jobNumber": "X22333"
+})
+headers = {
+  'Content-Type': 'application/json'
+}
+conn.request("POST", "/v2/opportunity", payload, headers)
+res = conn.getresponse()
+data = res.read()
+print(data.decode("utf-8"))

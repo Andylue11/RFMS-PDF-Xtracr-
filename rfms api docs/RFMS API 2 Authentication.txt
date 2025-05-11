@@ -1,0 +1,45 @@
+RFMS API 2
+Access your RFMS Business Management System data within your own application using a standard REST API.
+
+Note that we do not consider adding keys to response objects a breaking change, so the shape of objects may change without notice. However, existing keys will not be changed nor removed without notice. 
+
+Standard Response
+Calling a method for results always returns a structure like this:
+
+Plain Text
+{
+  "status": "success",
+  "result": {}
+}
+status indicates whether or not the store has replied. A value of "success" means it has and the results are included as the "result" element. A value of "waiting" means the message response has not yet arrived. Finally, "failed" means the database rejected the request, a reason will be included as the result.
+
+AUTHORIZATION
+Basic Auth
+Username
+<username>
+
+Password
+<password>
+
+POST
+Request Bus ID
+https://api.rfms.online/v2/session/request
+Before a TPD can access data at a member store, the store must opt-in to sharing their data with the TPD. This API method allows the TPD to request opt-in for one or more stores.
+
+When calling this method, the TPD should use their provided ID and password as credentials using Basic Auth. They also POST the JSON values shown below.
+
+The rfmsBusId is an integer value commonly known as the RFMS Business ID that the TPD is expected to already have and identifies the company. The text in the "reason" parameter will be displayed to the member store when they are asked to opt-in to allowing this access to their data.
+
+AUTHORIZATION
+Basic Auth
+This request is using Basic Auth from collectionRFMS API 2
+HEADERS
+Content-Type
+application/json
+
+Body
+raw
+{
+  "rfmsBusId": 99999,
+  "reason": "PRACTICE: To provide access to TPD's App"
+}

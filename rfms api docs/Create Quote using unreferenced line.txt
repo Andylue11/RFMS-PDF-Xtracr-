@@ -1,0 +1,47 @@
+import http.client
+import json
+
+conn = http.client.HTTPSConnection("api.rfms.online")
+payload = json.dumps({
+  "poNumber": "987654",
+  "adSource": "BILLBOARD",
+  "quoteDate": "2019-07-01",
+  "estimatedDeliveryDate": "2019-08-01",
+  "jobNumber": "ABC123",
+  "soldTo": {
+    "lastName": "DOE",
+    "firstName": "JOHN",
+    "address1": "1234 MAIN ST",
+    "address2": "STE 33",
+    "city": "ANYTOWN",
+    "state": "CA",
+    "postalCode": "91332",
+    "county": "LOS ANGELES"
+  },
+  "storeNumber": 50,
+  "privateNotes": "PRIVATE",
+  "publicNotes": "PUBLIC",
+  "workOrderNotes": "WORK ORDER NOTES",
+  "salesperson1": "JOHN",
+  "salesperson2": "FRANK",
+  "lines": [
+    {
+      "productCode": "02",
+      "styleName": "CLASSIC SHAG",
+      "colorName": "MELLOW YELLOW",
+      "supplierName": "WILLIAMS",
+      "saleUnits": "SY",
+      "unitPrice": 8.99,
+      "quantity": 90,
+      "notes": "hello",
+      "lineStatus": "None"
+    }
+  ]
+})
+headers = {
+  'Content-Type': 'application/json'
+}
+conn.request("POST", "/v2/quote/create", payload, headers)
+res = conn.getresponse()
+data = res.read()
+print(data.decode("utf-8"))

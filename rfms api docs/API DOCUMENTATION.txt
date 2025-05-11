@@ -1,0 +1,121 @@
+RFMS API 2
+Access your RFMS Business Management System data within your own application using a standard REST API.
+
+Note that we do not consider adding keys to response objects a breaking change, so the shape of objects may change without notice. However, existing keys will not be changed nor removed without notice. 
+
+Standard Response
+Calling a method for results always returns a structure like this:
+
+Plain Text
+{
+  "status": "success",
+  "result": {}
+}
+status indicates whether or not the store has replied. A value of "success" means it has and the results are included as the "result" element. A value of "waiting" means the message response has not yet arrived. Finally, "failed" means the database rejected the request, a reason will be included as the result.
+
+AUTHORIZATION
+Basic Auth
+Username
+<username>
+
+Password
+<password>
+
+GET
+Sync Settings
+https://api.rfms.online/v2/cacherefresh
+Sync all store setttings.
+
+Note: This method is very taxing on the server and should be used sparingly and with intent.
+
+AUTHORIZATION
+Basic Auth
+This request is using Basic Auth from collectionRFMS API 2
+Example Request
+Sync Settings
+python
+import http.client
+
+conn = http.client.HTTPSConnection("api.rfms.online")
+payload = ''
+headers = {}
+conn.request("GET", "/v2/cacherefresh", payload, headers)
+res = conn.getresponse()
+data = res.read()
+print(data.decode("utf-8"))
+Example Response
+Body
+Headers (0)
+No response body
+This request doesn't return any response body
+API Data Pass Through
+AUTHORIZATION
+Basic Auth
+This folder is using Basic Auth from collectionRFMS API 2
+POST
+API Pass Through
+https://api.rfms.online/v2/passthrough
+This method allows for making raw data queries directly to RFMS.
+
+The format of the query is as follows:
+
+json
+{
+   "methodName": "RfmsMethod",
+   "requestPayload": {
+      //data query here
+   }
+}
+AUTHORIZATION
+Basic Auth
+This request is using Basic Auth from collectionRFMS API 2
+Body
+raw (json)
+json
+{
+    "methodName": "Method.Name",
+    "requestPayload": {
+        "username": "Username",
+        "legacy": false
+    }
+}
+Example Request
+Raw Query
+View More
+python
+import http.client
+
+conn = http.client.HTTPSConnection("api.rfms.online")
+payload = "{\r\n    \"methodName\": \"Inventory.ReceiveFromInvoice\",\r\n    \"requestPayload\": {\r\n    \"username\": \"JSolanto\",\r\n    \"legacy\": false,\r\n    \"inventoryCosting\": {\r\n        \"Supplier\": \"84 LUMBER COMPANY\",\r\n        \"InvoiceNumber\": \"\",\r\n        \"DueDate\": {\r\n            \"Year\": 2024,\r\n            \"Month\": 6,\r\n            \"Day\": 24\r\n        },\r\n        \"DiscountRate\": 0.0,\r\n        \"Freight\": 0.33,\r\n        \"FreightIsDiscountable\": false,\r\n        \"ExtraCost1\": 0.0,\r\n        \"ExtraCost1IsDiscountable\": false,\r\n        \"ExtraCost2\": 0.0,\r\n        \"ExtraCost2IsDiscountable\": false,\r\n        \"InventoryDataRows\": [\r\n            {\r\n                \"Seqnum\": 0,\r\n                \"Store\": 32,\r\n                \"ProductCode\": \"01\",\r\n                \"RollItemNumber\": \"\",\r\n                \"ItemSequenceNumber\": 0,\r\n                \"Supplier\": \"84 LUMBER COMPANY\",\r\n                \"PrivateSupplier\": \"84 LUMBER COMPANY\",\r\n                \"StyleItem\": \"FOO1\",\r\n                \"ColorDescription\": \"BAR1\",\r\n                \"Width\": \"12\",\r\n                \"Length\": \"100\",\r\n                \"InitialAmount\": 100,\r\n                \"InitialQuantity\": 1200,\r\n                \"Used\": 0,\r\n                \"Reserved\": 0,\r\n                \"Available\": 100,\r\n                \"AvailableQuantity\": 1200,\r\n                \"DateReceived\": {\r\n                    \"Year\": 2024,\r\n                    \"Month\": 6,\r\n                    \"Day\": 26\r\n                },\r\n                \"InvoiceNumber\": \"\",\r\n                \"GrossCost\": 4,\r\n                \"NetCost\": 4,\r\n                \"Freight\": 0,\r\n                \"Load\": 0.22,\r\n                \"Units\": \"SF\",\r\n                \"DyeLot\": \"DYE\",\r\n                \"LadingNumber\": \"\",\r\n                \"SerialNumber\": \"SERIAL\",\r\n                \"PONumber\": \"\",\r\n                \"Sidemark\": \"SIDEMARK\",\r\n                \"StyleNumber\": \"PFOOSTYLE\",\r\n                \"ColorNumber\": \"PCOLORNUM\",\r\n                \"PriceListSeqNum\": 0,\r\n                \"ColorSeqNum\": 0,\r\n                \"UnitPrice\": 3.20,\r\n                \"TotalValue\": 4800,\r\n                \"UseTotalValue\": false,\r\n                \"Sku\": \" \",\r\n                \"ManufacturerSKU\": \" \",\r\n                \"Manufacturer\": \"DALTILE\",\r\n                \"Location\": \"LOCATON\",\r\n                \"InventoryType\": \"Roll\",\r\n                \"InitialTotalValue\": 4800,\r\n                \"CanConsolidate\": false,\r\n                \"Collection\": \"COLLECTION\",\r\n                \"PrivateCollection\": \"\",\r\n                \"Builder\": \"\",\r\n                \"SubDivision\": \"\",\r\n                \"Block\": \"\",\r\n                \"Lot\": \"\",\r\n                \"POSeqNum\": 0,\r\n                \"ItemWidth\": \"\",\r\n                \"ItemLength\": \"\",\r\n                \"SoftReserve\": 0,\r\n                \"Receiving_Backing\": 444,\r\n                \"Receiving_Quality\": 6,\r\n                \"Receiving_RollCut\": \"Roll\",\r\n                \"Receiving_FiberType\": 117,\r\n                \"Receiving_StyleType\": 0,\r\n                \"Receiving_ColorType\": 5,\r\n                \"Receiving_Weight\": 2,\r\n                \"Receiving_Pile\": 2,\r\n                \"Receiving_ToxicityNumber\": \"PODPIN\",\r\n                \"Receiving_Comments\": \"COMMENT\",\r\n                \"Receiving_UserReal1\": 3.33,\r\n                \"Receiving_ASNItemSeqNum\": 0,\r\n                \"Receiving_RunLot\": \"RUN\",\r\n                \"Receiving_PrintTags\": false,\r\n                \"Receiving_SatisfyPo\": false,\r\n                \"Receiving_Load\": 1.98\r\n            }\r\n        ],\r\n        \"Payable\": null,\r\n        \"ApplyProductFreightFactor\": false\r\n    }\r\n    }\r\n}"
+headers = {}
+conn.request("POST", "/v2/passthrough", payload, headers)
+res = conn.getresponse()
+data = res.read()
+print(data.decode("utf-8"))
+200 OK
+Example Response
+Body
+Headers (10)
+View More
+json
+{
+  "status": "success",
+  "result": "OK",
+  "detail": {
+    "DidCosting": true,
+    "IsError": true,
+    "ReceivingResults": {
+      "Method": "UpdateOrderLines",
+      "Code": 0,
+      "Message": "Receiving complete",
+      "IsError": false,
+      "ReceivedRollsItems": [
+        {
+          "RollLadingNumber": "31",
+          "PONumber": "",
+          "IsRoll": true,
+          "SeqNumSystemRefNum": 123
+        }
+      ]
+    },
+    "CostingResults": {

@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - RFMS PDF XTRACR{% endblock %}
+
+{% block content %}
+<div class="bg-white shadow-md rounded-lg p-6 mb-6">
+    <h2 class="text-xl font-semibold mb-4">Upload Purchase Order PDF</h2>
+    
+    <form action="{{ url_for('upload_pdf') }}" method="post" enctype="multipart/form-data" class="space-y-4">
+        <div class="flex items-center justify-center w-full">
+            <label for="pdf_file" class="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100">
+                <div class="flex flex-col items-center justify-center pt-5 pb-6">
+                    <svg class="w-8 h-8 mb-3 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
+                    <p class="mb-2 text-sm text-gray-500"><span class="font-semibold">Click to upload</span> or drag and drop</p>
+                    <p class="text-xs text-gray-500">PDF files only (MAX. 16MB)</p>
+                </div>
+                <input id="pdf_file" name="pdf_file" type="file" class="hidden" accept=".pdf" required />
+            </label>
+        </div>
+        
+        <div class="flex justify-end">
+            <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition">Upload and Process</button>
+        </div>
+    </form>
+</div>
+
+<div class="grid md:grid-cols-2 gap-6">
+    <!-- Recent Uploads -->
+    <div class="bg-white shadow-md rounded-lg p-6">
+        <h2 class="text-xl font-semibold mb-4">Recent Uploads</h2>
+        
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">File</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">PO Number</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for pdf in recent_pdfs %}
+                    <tr>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ pdf.filename }}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ pdf.po_number }}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${{ pdf.dollar_value }}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {% if pdf.processed %}
+                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">Processed</span>
+                            {% else %}
+                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">Pending</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            <a href="{{ url_for('preview_data', pdf_id=pdf.id) }}" class="text-blue-600 hover:text-blue-900">View</a>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="5" class="px-6 py-4 text-sm text-gray-500 text-center">No recent uploads found</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <!-- Quick Stats -->
+    <div class="bg-white shadow-md rounded-lg p-6">
+        <h2 class="text-xl font-semibold mb-4">Quick Stats</h2>
+        
+        <div class="grid grid-cols-2 gap-4">
+            <div class="bg-gray-50 p-4 rounded-md">
+                <p class="text-sm text-gray-500">Total Uploads</p>
+                <p class="text-2xl font-bold">{{ stats.total_uploads }}</p>
+            </div>
+            <div class="bg-gray-50 p-4 rounded-md">
+                <p class="text-sm text-gray-500">Processed</p>
+                <p class="text-2xl font-bold">{{ stats.processed_uploads }}</p>
+            </div>
+            <div class="bg-gray-50 p-4 rounded-md">
+                <p class="text-sm text-gray-500">Quotes Created</p>
+                <p class="text-2xl font-bold">{{ stats.quotes_created }}</p>
+            </div>
+            <div class="bg-gray-50 p-4 rounded-md">
+                <p class="text-sm text-gray-500">Jobs Created</p>
+                <p class="text-2xl font-bold">{{ stats.jobs_created }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Check API status on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        fetch('/api/check_status')
+            .then(response => response.json())
+            .then(data => {
+                const indicator = document.getElementById('api-status-indicator');
+                const text = document.getElementById('api-status-text');
+                
+                if (data.status === 'online') {
+                    indicator.classList.remove('bg-gray-400', 'bg-red-500');
+                    indicator.classList.add('bg-green-500');
+                    text.textContent = 'RFMS API: Online';
+                    text.classList.remove('text-gray-600', 'text-red-600');
+                    text.classList.add('text-green-600');
+                } else {
+                    indicator.classList.remove('bg-gray-400', 'bg-green-500');
+                    indicator.classList.add('bg-red-500');
+                    text.textContent = 'RFMS API: Offline';
+                    text.classList.remove('text-gray-600', 'text-green-600');
+                    text.classList.add('text-red-600');
+                }
+            })
+            .catch(error => {
+                console.error('Error checking API status:', error);
+                const indicator = document.getElementById('api-status-indicator');
+                const text = document.getElementById('api-status-text');
+                
+                indicator.classList.remove('bg-gray-400', 'bg-green-500');
+                indicator.classList.add('bg-red-500');
+                text.textContent = 'RFMS API: Error';
+                text.classList.remove('text-gray-600', 'text-green-600');
+                text.classList.add('text-red-600');
+            });
+    });
+    
+    // File upload preview
+    const fileInput = document.getElementById('pdf_file');
+    if (fileInput) {
+        fileInput.addEventListener('change', function(e) {
+            const fileName = e.target.files[0]?.name;
+            if (fileName) {
+                const fileInfo = document.createElement('p');
+                fileInfo.textContent = `Selected file: ${fileName}`;
+                fileInfo.classList.add('mt-2', 'text-sm', 'text-gray-600');
+                
+                // Remove any existing file info
+                const existingInfo = fileInput.parentElement.querySelector('p.mt-2');
+                if (existingInfo) {
+                    existingInfo.remove();
+                }
+                
+                fileInput.parentElement.appendChild(fileInfo);
+            }
+        });
+    }
+</script>
+{% endblock %} 

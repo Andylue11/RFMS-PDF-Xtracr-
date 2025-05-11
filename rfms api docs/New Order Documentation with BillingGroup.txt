@@ -1,0 +1,72 @@
+POST
+Create Order
+https://api.rfms.online/v2/order/create
+This method requires the "Enterprise" level of the API product. Requests from other level API accounts will return Unauthorized.
+
+In order to specify a non-web order, the following JSON must be included in the body of the request. Otherwise, a newly created order will be considered a Web Order.
+
+Plain Text
+{
+  "category": "Order"
+}
+When creating referenced lines, only the productId, colorId, quantity, and price (either unitPrice or priceLevel) are needed. Optionally, unitCost can be set. The other attributes will be looked up from the product catalog and used automatically. Width can also be set, but this will result in an unreferenced line.
+
+If a soldTo.customerId is provided, that customer will be fetched from the store and soldTo and shipTo information will be filled out using that customer. Any information provided in the API call for soldTo or shipTo will then be used to override the values from the store.
+
+For Prosource users, ECProductId and ECColorId fields may be included instead of the default productId and colorId fields for adding lines. See Create Quote for a detailed example.
+
+Billing Groups
+To add a new billing group to a new order, provide a general description, as well as contact information (up to four contacts may be added) in the following format:
+
+View More
+Plain Text
+{
+"billingGroup": {
+        "description": "Project 15 - 34 NW Blvd",
+        "contactList": [
+            {
+                "name": "Yevgeniy Zhakarov",
+                "phone": "432-223-1212",
+                "email": "yevgen@nextgen.com",
+                "other": "zhenya@flyingcarpets.com"
+            },
+            {
+                "name": "Alex Smith",
+                "phone": "000-000-0010",
+                "email": "smith@floor.com"
+            },
+            {
+                "name": "Leonard Bernstein",
+                "email": "lenny@classicalcarpets.com"
+            },
+            {
+                "name": "Vartan Nersisyan",
+                "phone": "333-222-1111",
+                "other": "vnersisyan@flyingcarpet.com"
+            }
+        ]
+    }
+}
+Each contact object may contain these optional fields: "name", "phone", "email", "other"
+
+To create a new order and add an existing billing group to it, input the invoice number of an order that already contains the existing group, like the following example shows:
+
+Plain Text
+{
+    "billingGroup": {
+        "parentOrder": "CG003616"
+    }
+}
+Adding Work Order Lines
+When adding work order lines to a specific line, keep in mind that the quantity needs to match (or in the case of multiple work order lines - add up to) the total quantity as defined in the order line. See Example under Create Quote - Create Quote with Work Order Lines for more details on the structure of the request.
+
+AUTHORIZATION
+Basic Auth
+This request is using Basic Auth from collectionRFMS API 2
+HEADERS
+Content-Type
+application/json
+
+Body
+raw
+View More
