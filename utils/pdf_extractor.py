@@ -42,6 +42,7 @@ def extract_data_from_pdf(file_path):
         'home_phone': '',
         'email': '',
         'customer_type': 'Builders',  # Default as specified in requirements
+        'extra_phones': [],  # Store additional phone numbers
         
         # Purchase Order Information
         'po_number': '',
@@ -49,7 +50,8 @@ def extract_data_from_pdf(file_path):
         'dollar_value': 0,
         
         # Job Information
-        'job_number': '',
+        'job_number': '',  # This will be filled with supervisor name + mobile
+        'actual_job_number': '',  # Keep the actual job number separately
         'supervisor_name': '',
         'supervisor_mobile': '',
         'supervisor_email': '',
@@ -120,16 +122,19 @@ def clean_extracted_data(extracted_data):
     if extracted_data['address']:
         extracted_data['address'] = re.sub(r'\n.*$', '', extracted_data['address'])
     
-    # Clean up business name
-    if extracted_data['business_name']:
-        # Try to extract from SUBCONTRACTOR DETAILS section if available
-        if "A TO Z FLOORING" in extracted_data['raw_text']:
-            extracted_data['business_name'] = "A TO Z FLOORING SOLUTIONS"
-        else:
-            extracted_data['business_name'] = re.sub(r'\s+Job\s+Number.*$', '', extracted_data['business_name'])
-            extracted_data['business_name'] = re.sub(r'\s+SOLUTIONS.*$', '', extracted_data['business_name'])
-            extracted_data['business_name'] = re.sub(r'.*Subcontract agreement between the Builder and ', '', extracted_data['business_name'])
-            extracted_data['business_name'] = extracted_data['business_name'].strip()
+    # Per requirements, we ignore business information (A TO Z FLOORING)
+    extracted_data['business_name'] = ''
+    
+    # Clean up business name (if needed for future use, but set to empty as per requirements)
+    # if extracted_data['business_name']:
+    #     # Try to extract from SUBCONTRACTOR DETAILS section if available
+    #     if "A TO Z FLOORING" in extracted_data['raw_text']:
+    #         extracted_data['business_name'] = "A TO Z FLOORING SOLUTIONS"
+    #     else:
+    #         extracted_data['business_name'] = re.sub(r'\s+Job\s+Number.*$', '', extracted_data['business_name'])
+    #         extracted_data['business_name'] = re.sub(r'\s+SOLUTIONS.*$', '', extracted_data['business_name'])
+    #         extracted_data['business_name'] = re.sub(r'.*Subcontract agreement between the Builder and ', '', extracted_data['business_name'])
+    #         extracted_data['business_name'] = extracted_data['business_name'].strip()
     
     # Improve city parsing
     if extracted_data['city'] and 'Warriewood Street' in extracted_data['city']:
@@ -145,6 +150,49 @@ def clean_extracted_data(extracted_data):
         description = re.sub(r'\n\$\d+m2', ' - $45/m2', description)
         description = re.sub(r'\s{2,}', ' ', description)
         extracted_data['description_of_works'] = description
+    
+    # Set job_number to supervisor name + mobile as per requirements
+    if extracted_data['supervisor_name'] and extracted_data['supervisor_mobile']:
+        # Store the actual job number separately
+        extracted_data['actual_job_number'] = extracted_data['job_number']
+        # Set job_number to supervisor name + mobile
+        extracted_data['job_number'] = f"{extracted_data['supervisor_name']} {extracted_data['supervisor_mobile']}"
+    
+    # Filter extra_phones to only include customer-related numbers
+    if extracted_data['extra_phones']:
+        # Numbers to exclude
+        exclude_numbers = [
+            extracted_data.get('actual_job_number', ''),  # PO/job number
+            '0731100077',  # A to Z Flooring Solutions
+            extracted_data.get('supervisor_mobile', ''),  # Supervisor
+            '74658650821',  # ABN number
+            '35131176',    # Company number
+            '999869951'    # Other company number
+        ]
+        
+        # Create cleaned versions of excluded numbers (digits only)
+        clean_exclude_numbers = []
+        for number in exclude_numbers:
+            if number:
+                clean_exclude_numbers.append(''.join(c for c in number if c.isdigit()))
+        
+        # Filter the extra_phones list
+        filtered_phones = []
+        for phone in extracted_data['extra_phones']:
+            # Clean the phone
+            clean_phone = ''.join(c for c in phone if c.isdigit())
+            
+            # Skip if in excluded list or already in customer's main numbers
+            if (clean_phone not in clean_exclude_numbers and 
+                clean_phone not in [
+                    ''.join(c for c in extracted_data.get('phone', '') if c.isdigit()),
+                    ''.join(c for c in extracted_data.get('mobile', '') if c.isdigit()),
+                    ''.join(c for c in extracted_data.get('home_phone', '') if c.isdigit()),
+                    ''.join(c for c in extracted_data.get('work_phone', '') if c.isdigit())
+                ]):
+                filtered_phones.append(phone)
+        
+        extracted_data['extra_phones'] = filtered_phones
 
 
 def check_essential_fields(data):
@@ -276,21 +324,28 @@ def parse_extracted_text(text, extracted_data):
             break
     
     # Extract Description of Works for custom private notes
-    description_patterns = [
-        r"Description\s+of\s+the\s+Works([\s\S]+?)(?=TOTAL|Total\s+Purchase\s+Order)",
-        r"Description\s+of\s+Works([\s\S]+?)(?=TOTAL|Total\s+Purchase\s+Order)",
-        r"Scope\s+of\s+Work[:\s]+([\s\S]+?)(?=TOTAL|Total|Amount|Price|\$|\n\n)",
-        r"Description[:\s]+([\s\S]+?)(?=TOTAL|Total|Amount|Price|\$|\n\n)",
-        r"Services[:\s]+([\s\S]+?)(?=TOTAL|Total|Amount|Price|\$|\n\n)"
-    ]
-    
-    for pattern in description_patterns:
-        match = re.search(pattern, text, re.IGNORECASE)
-        if match:
-            extracted_data['description_of_works'] = match.group(1).strip()
-            # Set this as scope of work too for compatibility
-            extracted_data['scope_of_work'] = extracted_data['description_of_works']
-            break
+    # Improved to capture everything from Description to TOTAL
+    description_match = re.search(r"Description\s+of\s+the\s+Works([\s\S]+?)(?=TOTAL\s+Purchase\s+Order\s+Price|Total\s+Purchase\s+Order)", text, re.IGNORECASE)
+    if description_match:
+        extracted_data['description_of_works'] = description_match.group(1).strip()
+        # Set this as scope of work too for compatibility
+        extracted_data['scope_of_work'] = extracted_data['description_of_works']
+    else:
+        # Fallback to other patterns if the main pattern doesn't match
+        description_patterns = [
+            r"Description\s+of\s+Works([\s\S]+?)(?=TOTAL|Total\s+Purchase\s+Order)",
+            r"Scope\s+of\s+Work[:\s]+([\s\S]+?)(?=TOTAL|Total|Amount|Price|\$|\n\n)",
+            r"Description[:\s]+([\s\S]+?)(?=TOTAL|Total|Amount|Price|\$|\n\n)",
+            r"Services[:\s]+([\s\S]+?)(?=TOTAL|Total|Amount|Price|\$|\n\n)"
+        ]
+        
+        for pattern in description_patterns:
+            match = re.search(pattern, text, re.IGNORECASE)
+            if match:
+                extracted_data['description_of_works'] = match.group(1).strip()
+                # Set this as scope of work too for compatibility
+                extracted_data['scope_of_work'] = extracted_data['description_of_works']
+                break
     
     # Extract dollar value from TOTAL Purchase Order Price
     dollar_patterns = [
@@ -345,9 +400,54 @@ def extract_contact_details(text, extracted_data):
     # If no labeled email found but we have email matches, use the first one that's not from ambroseconstruct
     if not extracted_data['email'] and email_matches:
         for email in email_matches:
-            if not email.endswith('ambroseconstruct.com.au'):
+            if not email.endswith('ambroseconstruct.com.au') and not email.endswith('atozflooringsolutions.com.au'):
                 extracted_data['email'] = email
                 break
+    
+    # Extract all phone numbers from the document for potential extra phone fields
+    all_phone_numbers = []
+    
+    # General pattern to find all phone numbers
+    phone_pattern = r"(?<!\d)(?:\+?61|0)?(?:\(?\d{2,4}\)?\s?\d{3,4}\s?\d{3,4}|\d{4}\s?\d{3}\s?\d{3}|\d{8,10})(?!\d)"
+    all_matches = re.finditer(phone_pattern, text)
+    
+    # Company phone numbers to exclude
+    company_phone_numbers = ['0731100077', '35131176', '999869951']
+    excluded_number_patterns = [
+        r"ABN:\s*(\d+)",  # ABN pattern
+        r"Job\s+Number:?\s*([0-9-]+)"  # Job number pattern
+    ]
+    
+    # Extract numbers to exclude
+    numbers_to_exclude = []
+    for pattern in excluded_number_patterns:
+        match = re.search(pattern, text)
+        if match:
+            numbers_to_exclude.append(match.group(1))
+    
+    for match in all_matches:
+        phone = match.group(0).strip()
+        # Clean the phone number for comparison
+        clean_phone = ''.join(c for c in phone if c.isdigit())
+        
+        # Skip supervisor's mobile
+        if extracted_data['supervisor_mobile'] and clean_phone == ''.join(c for c in extracted_data['supervisor_mobile'] if c.isdigit()):
+            continue
+            
+        # Skip if it matches one of our excluded numbers
+        if any(clean_phone == ''.join(c for c in num if c.isdigit()) for num in company_phone_numbers + numbers_to_exclude):
+            continue
+            
+        # Only add if it's not already one of our main numbers and looks like a valid phone
+        if (len(clean_phone) >= 8 and 
+            clean_phone not in [
+                ''.join(c for c in extracted_data.get('phone', '') if c.isdigit()),
+                ''.join(c for c in extracted_data.get('mobile', '') if c.isdigit()),
+                ''.join(c for c in extracted_data.get('home_phone', '') if c.isdigit()),
+                ''.join(c for c in extracted_data.get('work_phone', '') if c.isdigit())
+            ]):
+            if len(clean_phone) >= 8 and len(clean_phone) <= 12:
+                all_phone_numbers.append(phone)
     
     # Extract phone numbers from BEST CONTACT DETAILS section if available
     if best_contact_section:
@@ -403,6 +503,21 @@ def extract_contact_details(text, extracted_data):
             if match:
                 extracted_data['phone'] = match.group(1).strip()
                 break
+    
+    # Add all unique phone numbers to extra_phones (will be filtered in clean_extracted_data)
+    for phone in all_phone_numbers:
+        # Clean the phone number - keep only digits
+        clean_phone = ''.join(c for c in phone if c.isdigit())
+        
+        # Check against existing phone numbers (also cleaned)
+        main_phones = []
+        for key in ['phone', 'mobile', 'home_phone', 'work_phone']:
+            if extracted_data[key]:
+                main_phones.append(''.join(c for c in extracted_data[key] if c.isdigit()))
+        
+        # Only add if it's not already in our main numbers and not already in extra_phones
+        if clean_phone not in main_phones and clean_phone not in extracted_data['extra_phones']:
+            extracted_data['extra_phones'].append(clean_phone)
 
 
 def extract_job_and_supervisor_details(text, extracted_data):
