@@ -182,8 +182,20 @@ def preview_data(pdf_id):
 def search_customers():
     """Search for customers in RFMS API."""
     search_term = request.args.get('term', '')
+    
+    if not search_term:
+        logger.warning("Empty search term provided")
+        return jsonify({"error": "Search term is required"}), 400
+    
     try:
+        logger.info(f"Searching for customers with term: {search_term}")
         customers = rfms_api.find_customers(search_term)
+        
+        if not customers:
+            logger.info(f"No customers found for search term: {search_term}")
+            return jsonify([])
+        
+        logger.info(f"Found {len(customers)} customers for search term: {search_term}")
         return jsonify(customers)
     except Exception as e:
         logger.error(f"Error searching customers: {str(e)}")
