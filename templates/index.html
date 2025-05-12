@@ -16,13 +16,63 @@
         .text-atoz-yellow { color: #ffe066; }
         .bg-atoz-yellow { background: #ffe066; }
         .text-heavy { font-weight: 800; }
-        .input-dark { background: #fff; color: #222; border: 1px solid #bbb; font-weight: 600; font-size: 1.1rem; padding: 0.4rem 0.7rem; }
+        .input-dark { 
+            background: #fff; 
+            color: #222; 
+            border: 1px solid #bbb; 
+            font-weight: 600; 
+            font-size: 0.99rem; /* Reduced by 10% from 1.1rem */
+            padding: 0.36rem 0.63rem; /* Reduced by 10% */
+        }
         .input-dark:focus { border-color: #7ed957; }
-        label { font-weight: 700; font-size: 1.1rem; }
-        .section-title { font-size: 1.2rem; letter-spacing: 0.02em; }
-        .compact-section { padding: 1.2rem 1.2rem; margin-bottom: 1rem; }
-        .compact-grid { gap: 1.2rem; }
-        .compact-btn { padding: 0.6rem 1.3rem; font-size: 1.1rem; }
+        label { 
+            font-weight: 700; 
+            font-size: 0.99rem; /* Reduced by 10% from 1.1rem */
+        }
+        .section-title { 
+            font-size: 1.08rem; /* Reduced by 10% from 1.2rem */
+            letter-spacing: 0.02em; 
+        }
+        .compact-section { 
+            padding: 1.08rem 1.08rem; /* Reduced by 10% */
+            margin-bottom: 0.9rem; /* Reduced by 10% */
+        }
+        .compact-grid { gap: 1.08rem; /* Reduced by 10% */ }
+        .compact-btn { 
+            padding: 0.54rem 1.17rem; /* Reduced by 10% */
+            font-size: 0.99rem; /* Reduced by 10% */
+        }
+        /* Clean up PHONE 2 field */
+        #ship-to-phone {
+            resize: none;
+            overflow: hidden;
+            min-height: 60px;
+            line-height: 1.2;
+            font-family: inherit;
+        }
+        /* Reduce logo size by 10% */
+        .logo-container img {
+            max-height: 72px; /* Reduced by 10% from 80px */
+            width: auto;
+            object-fit: contain;
+            background: #2c2c2c;
+            border-radius: 8px;
+            display: block;
+        }
+        /* Reduce header text size by 10% */
+        .header-text {
+            font-family: 'Montserrat', 'Arial', sans-serif;
+            font-weight: 900;
+            font-size: 2.52rem; /* Reduced by 10% from 2.8rem */
+            color: #00b686;
+            line-height: 72px; /* Reduced by 10% from 80px */
+            height: 72px; /* Reduced by 10% from 80px */
+            display: inline-flex;
+            align-items: center;
+            margin-left: 16.2px; /* Reduced by 10% from 18px */
+            letter-spacing: 0.04em;
+            white-space: nowrap;
+        }
     </style>
 </head>
 <body class="bg-charcoal text-white font-sans">
@@ -31,8 +81,8 @@
         <!-- Header with Logo -->
         <header class="flex items-center justify-between py-1 border-b border-gray-700 mb-2">
             <div class="flex items-center">
-                <img src="{{ url_for('static', filename='customcolor_logo_transparent_background.jpeg') }}" alt="A to Z Flooring Solutions Logo" class="mr-2" style="max-height:80px; width:auto; object-fit:contain; background:#2c2c2c; border-radius:8px; display:block;">
-                <span style="font-family: 'Montserrat', 'Arial', sans-serif; font-weight: 900; font-size: 2.8rem; color: #00b686; line-height: 80px; height: 80px; display: inline-flex; align-items: center; margin-left: 18px; letter-spacing: 0.04em; white-space: nowrap;">RFMS PDF XTRACR</span>
+                <img src="{{ url_for('static', filename='customcolor_logo_transparent_background.jpeg') }}" alt="A to Z Flooring Solutions Logo" class="mr-2" style="max-height:72px; width:auto; object-fit:contain; background:#2c2c2c; border-radius:8px; display:block;">
+                <span style="font-family: 'Montserrat', 'Arial', sans-serif; font-weight: 900; font-size: 2.52rem; color: #00b686; line-height: 72px; height: 72px; display: inline-flex; align-items: center; margin-left: 16.2px; letter-spacing: 0.04em; white-space: nowrap;">RFMS PDF XTRACR</span>
             </div>
             <div class="flex items-center" style="margin-top:65px;">
                 <span id="api-status-indicator" class="block w-3 h-3 rounded-full bg-gray-400 mr-2"></span>
@@ -46,7 +96,7 @@
                 <section id="upload-section" class="bg-charcoal rounded-lg shadow compact-section mb-0 pb-0 border-4 border-white" style="margin-bottom:-6px; padding-bottom:2px;">
                     <h2 class="section-title text-heavy mb-1 text-atoz-green">Upload Purchase Order PDF</h2>
                     <input type="file" id="pdf-upload" accept=".pdf" class="input-dark rounded w-full mb-1">
-                    <button id="upload-button" class="w-full bg-atoz-green text-black font-bold compact-btn rounded hover:bg-atoz-yellow transition">Upload and Extract</button>
+                    <button id="upload-button" class="w-full bg-atoz-green text-black font-bold compact-btn rounded hover:bg-atoz-yellow transition text-base">Clear Data, Upload and Extract</button>
                 </section>
                 <section id="po-number-section" class="bg-charcoal rounded-lg shadow compact-section mb-0 pb-0 border-4 border-white" style="margin-bottom:-6px; padding-bottom:2px;">
                     <label for="po-number" class="block mb-1">Purchase Order Number</label>
@@ -77,8 +127,8 @@
                 <div class="bg-charcoal rounded-lg shadow compact-section mb-0 pb-0 border-4 border-white">
                     <h2 class="section-title text-heavy mb-1 text-atoz-yellow">Sold To (RFMS Customer)</h2>
                     <div class="flex items-center mb-1">
-                        <input type="text" id="builder-search-input" placeholder="Enter Customer ID or Builder Name" class="input-dark rounded w-full mr-2">
-                        <button id="search-builder-button" class="bg-atoz-yellow text-black font-bold compact-btn rounded hover:bg-atoz-green transition">Search Builders</button>
+                        <input type="text" id="builder-search-input" placeholder="EnterName or CustomerID" class="input-dark rounded flex-grow mr-2 text-base">
+                        <button id="search-builder-button" class="bg-atoz-yellow text-black font-bold rounded hover:bg-atoz-green transition text-xs" style="width: 100px; padding: 0.4rem 0.3rem; white-space: normal; line-height: 1.2;">Retrieve Builders Details</button>
                     </div>
                     <div id="sold-to-fields" class="space-y-1">
                         <div>
@@ -157,9 +207,15 @@
                             <label for="ship-to-country">Country</label>
                             <input type="text" id="ship-to-country" class="input-dark rounded w-full">
                         </div>
-                        <div>
-                            <label for="ship-to-phone">Phone Numbers</label>
-                            <textarea id="ship-to-phone" rows="2" class="input-dark rounded w-full"></textarea>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div class="flex flex-col w-full">
+                                <label for="ship-to-phone1" class="block mb-1">Phone 1</label>
+                                <input type="text" id="ship-to-phone1" class="input-dark rounded w-full text-lg">
+                            </div>
+                            <div class="flex flex-col w-full">
+                                <label for="ship-to-phone2" class="block mb-1">Phone 2</label>
+                                <input type="text" id="ship-to-phone2" class="input-dark rounded w-full text-lg">
+                            </div>
                         </div>
                         <div>
                             <label for="ship-to-email">Email Address</label>
@@ -195,7 +251,7 @@
                 </div>
             </div>
             <div class="lg:col-span-1 flex flex-col space-y-0">
-                <div class="bg-gray-800 rounded-lg shadow compact-section border-4 border-white mb-0 pb-1" style="margin-top:-50px; min-height: 125px;">
+                <div class="bg-gray-800 rounded-lg shadow compact-section border-4 border-white mb-0 pb-1" style="margin-top:-50px; min-height: 155px;">
                     <label class="block text-atoz-yellow text-heavy mb-2 text-lg" for="alternate-contact-name">Best Contact / Real Estate Agent / Site Contact / Authorised Contact</label>
                     <div class="grid grid-cols-1 gap-3 mt-1">
                         <div>
@@ -205,11 +261,11 @@
                         <div class="grid grid-cols-2 gap-3">
                             <div class="flex flex-col w-full">
                                 <label for="alternate-contact-phone" class="block mb-1">Phone 1</label>
-                                <input type="text" id="alternate-contact-phone" placeholder="Phone 1" class="input-dark rounded w-full text-lg">
+                                <input type="text" id="alternate-contact-phone" class="input-dark rounded w-full text-lg">
                             </div>
                             <div class="flex flex-col w-full">
                                 <label for="alternate-contact-phone2" class="block mb-1">Phone 2</label>
-                                <input type="text" id="alternate-contact-phone2" placeholder="Phone 2 (optional)" class="input-dark rounded w-full text-lg">
+                                <input type="text" id="alternate-contact-phone2" class="input-dark rounded w-full text-lg">
                             </div>
                         </div>
                     </div>

@@ -145,6 +145,29 @@ function showNotification(message, type = 'info', duration = 3000) {
 }
 
 /**
+ * Clear all form fields in the application
+ */
+function clearFields() {
+    // Clear all input fields
+    const inputs = document.querySelectorAll('input[type="text"], input[type="email"], input[type="number"], textarea');
+    inputs.forEach(input => {
+        input.value = '';
+    });
+    
+    // Clear checkboxes
+    const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = false;
+    });
+    
+    // Hide secondary PO details if visible
+    const secondaryPoDetails = document.getElementById('secondary-po-details');
+    if (secondaryPoDetails) {
+        secondaryPoDetails.classList.add('hidden');
+    }
+}
+
+/**
  * Setup logic for PDF upload button and file input.
  */
 function setupPdfUpload() {
@@ -163,11 +186,14 @@ function setupPdfUpload() {
             return;
         }
 
+        // Clear all fields before uploading new PDF
+        clearFields();
+
         const formData = new FormData();
         formData.append('pdf_file', file);
 
         // Show loading indicator/message
-        showNotification('Uploading and extracting data...', 'info', 0); // Duration 0 means indefinite
+        showNotification('Uploading and extracting data...', 'info', 0);
 
         try {
             const response = await fetch('/upload-pdf', {
@@ -175,15 +201,10 @@ function setupPdfUpload() {
                 body: formData
             });
 
-            // Hide previous notification
-            // This requires a more sophisticated notification system or manual removal
-            // For now, new notification will overlay or replace
-
             if (response.ok) {
                 const extractedData = await response.json();
                 console.log('Extracted Data:', extractedData);
-                // Populate the UI fields with the extracted data
-                populateShipTo(extractedData); // Use the function defined below
+                populateShipTo(extractedData);
                 showNotification('PDF extracted successfully!', 'success');
             } else {
                 const errorData = await response.json();
@@ -212,46 +233,40 @@ function populateShipTo(data) {
     document.getElementById('ship-to-zip').value = data.zip_code || '';
     document.getElementById('ship-to-country').value = data.country || '';
 
-    // Consolidate and format phone numbers
+    // Handle phone numbers
     let phoneNumbers = [];
     if (data.phone) phoneNumbers.push(data.phone);
     if (data.mobile) phoneNumbers.push(data.mobile);
     if (data.home_phone) phoneNumbers.push(data.home_phone);
     if (data.work_phone) phoneNumbers.push(data.work_phone);
     if (data.extra_phones && data.extra_phones.length > 0) {
-         // Add extra phones only if they are not already in the main numbers
-         const mainPhonesCleaned = [data.phone, data.mobile, data.home_phone, data.work_phone].map(p => (p || '').replace(/\D/g, '')).filter(p => p);
-         const uniqueExtraPhones = data.extra_phones.filter(extraPhone => {
+        const mainPhonesCleaned = [data.phone, data.mobile, data.home_phone, data.work_phone]
+            .map(p => (p || '').replace(/\D/g, ''))
+            .filter(p => p);
+        const uniqueExtraPhones = data.extra_phones.filter(extraPhone => {
             const cleanedExtra = (extraPhone || '').replace(/\D/g, '');
             return cleanedExtra && !mainPhonesCleaned.includes(cleanedExtra);
-         });
-
-         phoneNumbers = phoneNumbers.concat(uniqueExtraPhones);
+        });
+        phoneNumbers = phoneNumbers.concat(uniqueExtraPhones);
     }
 
-     // Remove duplicates and format
-    const uniqueFormattedPhones = [...new Set(phoneNumbers)].map(formatPhoneNumber).join('\n');
-    document.getElementById('ship-to-phone').value = uniqueFormattedPhones;
+    // Format and populate phone fields
+    const formattedPhones = phoneNumbers.map(formatPhoneNumber);
+    document.getElementById('ship-to-phone1').value = formattedPhones[0] || '';
+    document.getElementById('ship-to-phone2').value = formattedPhones[1] || '';
 
     document.getElementById('ship-to-email').value = data.email || '';
 
-    // --- Populate alternate contact fields ---
-    document.getElementById('alternate-contact-name').value = data.alternate_contact_name || '';
-    document.getElementById('alternate-contact-phone').value = data.alternate_contact_phone || '';
-    document.getElementById('alternate-contact-phone2').value = data.alternate_contact_phone2 || '';
-    document.getElementById('alternate-contact-email').value = data.alternate_contact_email || '';
-
     // Populate Work Details fields from PDF
-    document.getElementById('job-number-api').value = data.job_number || ''; // Supervisor name + mobile
-    document.getElementById('actual-job-number').value = data.actual_job_number || ''; // Actual job number
-     // Update prefix for secondary PO based on actual job number
-    document.getElementById('secondary-po-prefix').textContent = (data.actual_job_number || '') + '-';
+    document.getElementById('supervisor-name').value = data.supervisor_name || '';
+    document.getElementById('supervisor-phone').value = data.supervisor_mobile || '';
+    document.getElementById('actual-job-number').value = data.actual_job_number || '';
     document.getElementById('po-number').value = data.po_number || '';
     document.getElementById('description-of-works').value = data.description_of_works || '';
     document.getElementById('dollar-value').value = data.dollar_value || '';
 
-    // Store all alternate contacts for export
-    window._lastExtractedAlternateContacts = data.alternate_contacts || [];
+    // Update prefix for secondary PO based on actual job number
+    document.getElementById('secondary-po-prefix').textContent = (data.actual_job_number || '') + '-';
 }
 
 /**
@@ -494,7 +509,7 @@ function setupExportToRFMS() {
             state: document.getElementById('ship-to-state').value,
             zip_code: document.getElementById('ship-to-zip').value,
             country: document.getElementById('ship-to-country').value,
-            phone: document.getElementById('ship-to-phone').value,
+            phone: document.getElementById('ship-to-phone1').value + ' ' + document.getElementById('ship-to-phone2').value,
             email: document.getElementById('ship-to-email').value
         };
 
@@ -516,7 +531,7 @@ function setupExportToRFMS() {
             descriptionOfWorks += `\n${bestContactStr}`;
         }
         const jobDetails = {
-            job_number: document.getElementById('job-number-api').value,
+            job_number: document.getElementById('supervisor-phone').value,
             actual_job_number: document.getElementById('actual-job-number').value,
             po_number: document.getElementById('po-number').value,
             description_of_works: descriptionOfWorks,
