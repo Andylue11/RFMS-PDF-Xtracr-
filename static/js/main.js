@@ -3,6 +3,13 @@
  * Common functionality used across the application
  */
 
+// Configuration
+const API_CONFIG = {
+    TIMEOUT: 30000, // 30 seconds
+    RETRY_ATTEMPTS: 2,
+    RETRY_DELAY: 1000 // 1 second
+};
+
 // Check API status on page load
 document.addEventListener('DOMContentLoaded', function() {
     checkApiStatus();
@@ -15,6 +22,103 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 /**
+ * Fetch with timeout and retry capability
+ * @param {string} url - The URL to fetch from
+ * @param {Object} options - Fetch options
+ * @param {number} retryCount - Current retry count
+ * @returns {Promise} - Fetch promise with timeout and retry handling
+ */
+async function fetchWithRetry(url, options = {}, retryCount = 0) {
+    // Add timeout to fetch using AbortController
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), API_CONFIG.TIMEOUT);
+    
+    try {
+        const response = await fetch(url, {
+            ...options,
+            signal: controller.signal
+        });
+        
+        // Clear timeout since request completed
+        clearTimeout(timeoutId);
+        
+        // Handle HTTP errors
+        if (!response.ok) {
+            // Get error details from response if possible
+            let errorMessage = `HTTP error ${response.status}: ${response.statusText}`;
+            try {
+                const errorData = await response.json();
+                if (errorData && errorData.error) {
+                    errorMessage = errorData.error;
+                }
+            } catch (e) {
+                // Unable to parse error response, use default error message
+            }
+            
+            const error = new Error(errorMessage);
+            error.status = response.status;
+            throw error;
+        }
+        
+        return response;
+        
+    } catch (error) {
+        // Clear timeout if request failed
+        clearTimeout(timeoutId);
+        
+        // Handle request timeout
+        if (error.name === 'AbortError') {
+            console.error('Request timeout');
+            error.message = 'Request timed out. Please try again.';
+        }
+        
+        // Retry logic for specific errors
+        if (retryCount < API_CONFIG.RETRY_ATTEMPTS && 
+            (error.status >= 500 || error.name === 'AbortError' || error.message.includes('network'))) {
+            console.log(`Retrying request (${retryCount + 1}/${API_CONFIG.RETRY_ATTEMPTS})...`);
+            
+            // Wait before retrying
+            await new Promise(resolve => setTimeout(resolve, API_CONFIG.RETRY_DELAY));
+            
+            return fetchWithRetry(url, options, retryCount + 1);
+        }
+        
+        throw error;
+    }
+}
+
+/**
+ * Centralized error handler for API requests
+ * @param {Error} error - The error object
+ * @param {string} operation - The operation being performed
+ * @returns {string} - User-friendly error message
+ */
+function handleApiError(error, operation) {
+    console.error(`Error during ${operation}:`, error);
+    
+    // Default error message
+    let userMessage = `An error occurred while ${operation}. Please try again.`;
+    
+    // Customize message based on error type
+    if (error.name === 'AbortError') {
+        userMessage = `Request timed out while ${operation}. Please check your connection and try again.`;
+    } else if (error.status === 401 || error.status === 403) {
+        userMessage = `Authentication failed while ${operation}. Please log in again.`;
+    } else if (error.status === 404) {
+        userMessage = `Resource not found while ${operation}.`;
+    } else if (error.status >= 500) {
+        userMessage = `Server error while ${operation}. Please try again later.`;
+    } else if (error.message) {
+        userMessage = error.message;
+    }
+    
+    // Display error to user
+    showNotification(userMessage, 'error');
+    
+    return userMessage;
+}
+
+/**
  * Check RFMS API status and update UI indicator
  */
 function checkApiStatus() {
@@ -23,7 +127,14 @@ function checkApiStatus() {
     
     if (!indicator || !text) return;
     
-    fetch('/api/check_status')
+    // Set initial state
+    indicator.classList.remove('bg-green-500', 'bg-red-500');
+    indicator.classList.add('bg-gray-400');
+    text.textContent = 'RFMS API: Checking...';
+    text.classList.remove('text-green-600', 'text-red-600');
+    text.classList.add('text-gray-600');
+    
+    fetchWithRetry('/api/check_status')
         .then(response => response.json())
         .then(data => {
             if (data.status === 'online') {
@@ -41,7 +152,7 @@ function checkApiStatus() {
             }
         })
         .catch(error => {
-            console.error('Error checking API status:', error);
+            handleApiError(error, 'checking API status');
             indicator.classList.remove('bg-gray-400', 'bg-green-500');
             indicator.classList.add('bg-red-500');
             text.textContent = 'RFMS API: Error';
@@ -113,8 +224,15 @@ function formatPhoneNumber(phoneNumberString) {
  * @param {string} message - The message to display
  * @param {string} type - The type of notification (success, error, warning, info)
  * @param {number} duration - Duration in milliseconds
+ * @returns {HTMLElement} - The notification element
  */
 function showNotification(message, type = 'info', duration = 3000) {
+    // Remove any existing notification with id 'notification-loading'
+    const existingNotification = document.getElementById('notification-loading');
+    if (existingNotification) {
+        document.body.removeChild(existingNotification);
+    }
+    
     // Create notification element
     const notification = document.createElement('div');
     notification.className = `fixed bottom-4 right-4 px-6 py-3 rounded-md shadow-lg text-white ${
@@ -122,7 +240,13 @@ function showNotification(message, type = 'info', duration = 3000) {
         type === 'error' ? 'bg-red-500' :
         type === 'warning' ? 'bg-yellow-500' :
         'bg-blue-500'
-    } transition-opacity duration-300 ease-in-out`;
+    } transition-opacity duration-300 ease-in-out opacity-0 z-50`;
+    
+    // For loading notifications, add an ID to allow removal later
+    if (duration === 0) {
+        notification.id = 'notification-loading';
+    }
+    
     notification.textContent = message;
     
     // Add to DOM
@@ -131,17 +255,24 @@ function showNotification(message, type = 'info', duration = 3000) {
     // Fade in
     setTimeout(() => {
         notification.classList.add('opacity-100');
+        notification.classList.remove('opacity-0');
     }, 10);
     
-    // Remove after duration
-    setTimeout(() => {
-        notification.classList.remove('opacity-100');
-        notification.classList.add('opacity-0');
-        
+    // Remove after duration (if not a persistent notification)
+    if (duration > 0) {
         setTimeout(() => {
-            document.body.removeChild(notification);
-        }, 300);
-    }, duration);
+            notification.classList.remove('opacity-100');
+            notification.classList.add('opacity-0');
+            
+            setTimeout(() => {
+                if (document.body.contains(notification)) {
+                    document.body.removeChild(notification);
+                }
+            }, 300);
+        }, duration);
+    }
+    
+    return notification;
 }
 
 /**
@@ -185,6 +316,12 @@ function setupPdfUpload() {
             showNotification('Please select a PDF file to upload.', 'warning');
             return;
         }
+        
+        // Validate file type
+        if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+            showNotification('Please select a valid PDF file.', 'error');
+            return;
+        }
 
         // Clear all fields before uploading new PDF
         clearFields();
@@ -193,27 +330,39 @@ function setupPdfUpload() {
         formData.append('pdf_file', file);
 
         // Show loading indicator/message
-        showNotification('Uploading and extracting data...', 'info', 0);
+        const loadingNotification = showNotification('Uploading and extracting data...', 'info', 0);
+        
+        // Disable button during upload
+        uploadButton.disabled = true;
+        uploadButton.textContent = 'Processing...';
 
         try {
-            const response = await fetch('/upload-pdf', {
+            const response = await fetchWithRetry('/upload-pdf', {
                 method: 'POST',
                 body: formData
             });
 
-            if (response.ok) {
-                const extractedData = await response.json();
-                console.log('Extracted Data:', extractedData);
-                populateShipTo(extractedData);
-                showNotification('PDF extracted successfully!', 'success');
-            } else {
-                const errorData = await response.json();
-                console.error('Upload failed:', errorData.error);
-                showNotification(`Error: ${errorData.error}`, 'error');
+            const extractedData = await response.json();
+            console.log('Extracted Data:', extractedData);
+            populateShipTo(extractedData);
+            
+            // Remove loading notification and show success
+            if (document.body.contains(loadingNotification)) {
+                document.body.removeChild(loadingNotification);
             }
+            showNotification('PDF extracted successfully!', 'success');
         } catch (error) {
-            console.error('Error during PDF upload and extraction:', error);
-            showNotification(`An error occurred: ${error.message}`, 'error');
+            handleApiError(error, 'uploading PDF');
+        } finally {
+            // Reset button state
+            uploadButton.disabled = false;
+            uploadButton.textContent = 'Clear Data, Upload and Extract';
+            
+            // Remove loading notification if it still exists
+            const persistentNotification = document.getElementById('notification-loading');
+            if (persistentNotification) {
+                document.body.removeChild(persistentNotification);
+            }
         }
     });
 }
@@ -291,42 +440,45 @@ function setupBuilderSearch() {
         // Show loading indicator
         searchButton.disabled = true;
         searchButton.textContent = 'Searching...';
-        showNotification('Searching for builders...', 'info');
+        const loadingNotification = showNotification('Searching for builders...', 'info', 0);
 
         try {
-            const response = await fetch(`/api/customers/search?term=${encodeURIComponent(searchTerm)}`);
+            console.log('Searching with term:', searchTerm);
+            const response = await fetchWithRetry(`/api/customers/search?term=${encodeURIComponent(searchTerm)}`);
+            const searchResults = await response.json();
             
-            // Reset button state
-            searchButton.disabled = false;
-            searchButton.textContent = 'Search Builders';
-
-            if (response.ok) {
-                const searchResults = await response.json();
-                
-                if (Array.isArray(searchResults) && searchResults.length > 0) {
-                    // Display search results for selection if there are multiple matches
-                    if (searchResults.length > 1) {
-                        displaySearchResults(searchResults);
-                    } else {
-                        // If only one result, auto-select it
-                        populateSoldTo(searchResults[0]);
-                        showNotification('Builder found and details populated.', 'success');
-                    }
+            console.log('Search results:', searchResults);
+            
+            if (Array.isArray(searchResults) && searchResults.length > 0) {
+                // Display search results for selection if there are multiple matches
+                if (searchResults.length > 1) {
+                    displaySearchResults(searchResults);
+                    showNotification('Multiple builders found. Please select one.', 'success');
                 } else {
-                    showNotification('No builders found matching your search term.', 'warning');
+                    // If only one result, auto-select it
+                    const result = searchResults[0];
+                    console.log('Auto-selecting single result:', result);
+                    populateSoldTo(result);
+                    showNotification('Builder found and details populated.', 'success');
                 }
             } else {
-                const errorData = await response.json();
-                console.error('Search failed:', errorData.error);
-                showNotification(`Error: ${errorData.error}`, 'error');
+                // No results found
+                clearSoldToFields();
+                showNotification('No builders found matching your search term. Please try a different search term or contact RFMS support.', 'warning');
             }
         } catch (error) {
-            console.error('Error during builder search:', error);
-            showNotification(`An error occurred: ${error.message}`, 'error');
-            
+            clearSoldToFields();
+            handleApiError(error, 'searching for builders');
+        } finally {
             // Reset button state
             searchButton.disabled = false;
-            searchButton.textContent = 'Search Builders';
+            searchButton.textContent = 'Retrieve Builders Details';
+            
+            // Remove loading notification
+            const persistentNotification = document.getElementById('notification-loading');
+            if (persistentNotification) {
+                document.body.removeChild(persistentNotification);
+            }
         }
     });
 
@@ -365,7 +517,7 @@ function displaySearchResults(results) {
     header.className = 'flex justify-between items-center mb-4';
     
     const title = document.createElement('h3');
-    title.className = 'text-lg font-bold';
+    title.className = 'text-lg font-bold text-black';
     title.textContent = 'Search Results';
     
     const closeButton = document.createElement('button');
@@ -382,9 +534,29 @@ function displaySearchResults(results) {
     const resultsList = document.createElement('div');
     resultsList.className = 'space-y-2';
     
+    // Create search info text
+    const searchCount = document.createElement('p');
+    searchCount.className = 'text-sm text-gray-600 mb-2';
+    searchCount.textContent = `Found ${results.length} result${results.length !== 1 ? 's' : ''}`;
+    
+    // Add a search input to filter results locally
+    const searchFilter = document.createElement('input');
+    searchFilter.type = 'text';
+    searchFilter.placeholder = 'Filter results...';
+    searchFilter.className = 'w-full p-2 border rounded mb-3';
+    searchFilter.addEventListener('input', (e) => {
+        const filterValue = e.target.value.toLowerCase();
+        
+        // Show/hide results based on filter
+        Array.from(resultsList.children).forEach(item => {
+            const itemText = item.textContent.toLowerCase();
+            item.style.display = itemText.includes(filterValue) ? 'block' : 'none';
+        });
+    });
+    
     results.forEach(result => {
         const resultItem = document.createElement('div');
-        resultItem.className = 'p-3 border rounded hover:bg-gray-100 cursor-pointer';
+        resultItem.className = 'p-3 border rounded hover:bg-gray-100 cursor-pointer text-black';
         
         // Format the display based on available properties in the result
         let displayText = `${result.name || 'Unknown Name'}`;
@@ -407,8 +579,18 @@ function displaySearchResults(results) {
     
     // Assemble the modal
     modalContent.appendChild(header);
+    modalContent.appendChild(searchCount);
+    modalContent.appendChild(searchFilter);
     modalContent.appendChild(resultsList);
     resultsContainer.appendChild(modalContent);
+    
+    // Add keyboard support for closing modal with ESC
+    document.addEventListener('keydown', function escHandler(e) {
+        if (e.key === 'Escape') {
+            resultsContainer.remove();
+            document.removeEventListener('keydown', escHandler);
+        }
+    });
 }
 
 /**
@@ -416,13 +598,41 @@ function displaySearchResults(results) {
  * @param {Object} builderData - The builder data object from the API
  */
 function populateSoldTo(builderData) {
-    // Map the API fields to our form fields
-    // These mappings will depend on the actual structure of the builder data from RFMS API
-    document.getElementById('sold-to-name').value = builderData.name || '';
+    console.log('Populating Sold To with data:', builderData);
     
-    // These field mappings are guesses and should be adjusted based on actual API response
+    // Clear existing data first
+    document.getElementById('sold-to-name').value = '';
+    document.getElementById('sold-to-address1').value = '';
+    document.getElementById('sold-to-address2').value = '';
+    document.getElementById('sold-to-city').value = '';
+    document.getElementById('sold-to-state').value = '';
+    document.getElementById('sold-to-zip').value = '';
+    document.getElementById('sold-to-country').value = '';
+    document.getElementById('sold-to-phone').value = '';
+    document.getElementById('sold-to-email').value = '';
+    
+    // Set customer ID (hidden field)
+    let builderIdField = document.getElementById('sold-to-customer-id');
+    if (!builderIdField) {
+        builderIdField = document.createElement('input');
+        builderIdField.type = 'hidden';
+        builderIdField.id = 'sold-to-customer-id';
+        document.getElementById('sold-to-fields').appendChild(builderIdField);
+    }
+    
+    // Basic validation
+    if (!builderData) {
+        console.error('No builder data provided');
+        return;
+    }
+    
+    // Populate fields with data
+    document.getElementById('sold-to-name').value = builderData.name || '';
+    builderIdField.value = builderData.id || '';
+    
+    // Process address
     if (builderData.address) {
-        // If address is a single string, attempt to parse
+        // If address is provided as a complete string, parse it
         if (typeof builderData.address === 'string') {
             const addressParts = builderData.address.split(',').map(part => part.trim());
             
@@ -432,49 +642,50 @@ function populateSoldTo(builderData) {
             if (addressParts.length >= 2) {
                 document.getElementById('sold-to-address2').value = addressParts[1] || '';
             }
-            // Try to parse city, state, zip from the last part
+            // Try to parse city, state, zip from the remaining parts
             if (addressParts.length >= 3) {
-                const lastPart = addressParts[addressParts.length - 1];
-                const cityStateZip = lastPart.split(' ');
+                // Last part likely contains city, state, zip
+                const cityStateZip = addressParts[addressParts.length - 1].split(' ');
                 
-                if (cityStateZip.length >= 2) {
-                    // Assume format: City STATE ZIP
-                    const city = cityStateZip.slice(0, -2).join(' ');
-                    const state = cityStateZip[cityStateZip.length - 2];
-                    const zip = cityStateZip[cityStateZip.length - 1];
-                    
-                    document.getElementById('sold-to-city').value = city || '';
-                    document.getElementById('sold-to-state').value = state || '';
-                    document.getElementById('sold-to-zip').value = zip || '';
-                }
+                // Extract city (all except last two elements)
+                const city = cityStateZip.slice(0, -2).join(' ');
+                // State is likely the second-to-last element
+                const state = cityStateZip[cityStateZip.length - 2];
+                // Zip is likely the last element
+                const zip = cityStateZip[cityStateZip.length - 1];
+                
+                document.getElementById('sold-to-city').value = city || '';
+                document.getElementById('sold-to-state').value = state || '';
+                document.getElementById('sold-to-zip').value = zip || '';
             }
-        } else if (typeof builderData.address === 'object') {
-            // If address is an object with separate fields
-            document.getElementById('sold-to-address1').value = builderData.address.line1 || '';
-            document.getElementById('sold-to-address2').value = builderData.address.line2 || '';
-            document.getElementById('sold-to-city').value = builderData.address.city || '';
-            document.getElementById('sold-to-state').value = builderData.address.state || '';
-            document.getElementById('sold-to-zip').value = builderData.address.zip || '';
         }
     }
     
-    // Populate additional fields if available
-    document.getElementById('sold-to-country').value = builderData.country || 'Australia';
     document.getElementById('sold-to-phone').value = builderData.phone || '';
     document.getElementById('sold-to-email').value = builderData.email || '';
+    document.getElementById('sold-to-country').value = 'Australia';
     
-    // Store the builder's RFMS customer ID for later use when creating the job
-    // This might be a hidden field or data attribute
-    if (builderData.id) {
-        // Add a hidden field if it doesn't exist
-        let builderIdField = document.getElementById('sold-to-customer-id');
-        if (!builderIdField) {
-            builderIdField = document.createElement('input');
-            builderIdField.type = 'hidden';
-            builderIdField.id = 'sold-to-customer-id';
-            document.getElementById('sold-to-fields').appendChild(builderIdField);
-        }
-        builderIdField.value = builderData.id;
+    console.log('Sold To fields populated successfully');
+}
+
+/**
+ * Clear all Sold To fields
+ */
+function clearSoldToFields() {
+    document.getElementById('sold-to-name').value = '';
+    document.getElementById('sold-to-address1').value = '';
+    document.getElementById('sold-to-address2').value = '';
+    document.getElementById('sold-to-city').value = '';
+    document.getElementById('sold-to-state').value = '';
+    document.getElementById('sold-to-zip').value = '';
+    document.getElementById('sold-to-country').value = '';
+    document.getElementById('sold-to-phone').value = '';
+    document.getElementById('sold-to-email').value = '';
+    
+    // Clear hidden customer ID field if it exists
+    const builderIdField = document.getElementById('sold-to-customer-id');
+    if (builderIdField) {
+        builderIdField.value = '';
     }
 }
 
@@ -486,10 +697,28 @@ function setupExportToRFMS() {
     if (!exportButton) return;
 
     exportButton.addEventListener('click', async () => {
+        // Validate required fields before submitting
+        const soldToName = document.getElementById('sold-to-name').value.trim();
+        const soldToCustomerId = document.getElementById('sold-to-customer-id') ? 
+            document.getElementById('sold-to-customer-id').value.trim() : '';
+        const shipToName = document.getElementById('ship-to-name').value.trim();
+        const poNumber = document.getElementById('po-number').value.trim();
+        
+        const missingFields = [];
+        if (!soldToName) missingFields.push('Builder Name');
+        if (!soldToCustomerId) missingFields.push('Builder ID');
+        if (!shipToName) missingFields.push('Ship To Name');
+        if (!poNumber) missingFields.push('PO Number');
+        
+        if (missingFields.length > 0) {
+            showNotification(`Please complete the following required fields: ${missingFields.join(', ')}`, 'warning');
+            return;
+        }
+        
         // Gather Sold To data
         const soldTo = {
-            id: document.getElementById('sold-to-customer-id') ? document.getElementById('sold-to-customer-id').value : '',
-            name: document.getElementById('sold-to-name').value,
+            id: soldToCustomerId,
+            name: soldToName,
             address1: document.getElementById('sold-to-address1').value,
             address2: document.getElementById('sold-to-address2').value,
             city: document.getElementById('sold-to-city').value,
@@ -502,7 +731,7 @@ function setupExportToRFMS() {
 
         // Gather Ship To data
         const shipTo = {
-            name: document.getElementById('ship-to-name').value,
+            name: shipToName,
             address1: document.getElementById('ship-to-address1').value,
             address2: document.getElementById('ship-to-address2').value,
             city: document.getElementById('ship-to-city').value,
@@ -533,7 +762,7 @@ function setupExportToRFMS() {
         const jobDetails = {
             job_number: document.getElementById('supervisor-phone').value,
             actual_job_number: document.getElementById('actual-job-number').value,
-            po_number: document.getElementById('po-number').value,
+            po_number: poNumber,
             description_of_works: descriptionOfWorks,
             dollar_value: parseFloat(document.getElementById('dollar-value').value) || 0
         };
@@ -558,32 +787,37 @@ function setupExportToRFMS() {
         };
 
         // Show loading notification
-        showNotification('Exporting to RFMS...', 'info', 0);
+        const loadingNotification = showNotification('Exporting to RFMS...', 'info', 0);
         exportButton.disabled = true;
+        exportButton.textContent = 'Processing...';
 
         try {
-            const response = await fetch('/api/export-to-rfms', {
+            const response = await fetchWithRetry('/api/export-to-rfms', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
 
-            exportButton.disabled = false;
-
-            if (response.ok) {
-                const result = await response.json();
-                showNotification('Exported to RFMS successfully!', 'success');
-                // Optionally, display a summary or redirect
-                console.log('RFMS Export Result:', result);
-            } else {
-                const errorData = await response.json();
-                showNotification(`Export failed: ${errorData.error}`, 'error');
-                console.error('Export error:', errorData);
+            const result = await response.json();
+            showNotification('Exported to RFMS successfully!', 'success');
+            console.log('RFMS Export Result:', result);
+            
+            // Option: Display success details
+            if (result.job_id) {
+                showNotification(`Job created with ID: ${result.job_id}`, 'success', 5000);
             }
+            
         } catch (error) {
+            handleApiError(error, 'exporting to RFMS');
+        } finally {
             exportButton.disabled = false;
-            showNotification(`An error occurred: ${error.message}`, 'error');
-            console.error('Export error:', error);
+            exportButton.textContent = 'Export to RFMS';
+            
+            // Remove loading notification
+            const persistentNotification = document.getElementById('notification-loading');
+            if (persistentNotification) {
+                document.body.removeChild(persistentNotification);
+            }
         }
     });
 } 
