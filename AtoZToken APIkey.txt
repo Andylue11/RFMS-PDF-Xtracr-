@@ -1,9 +1,9 @@
 ##
 AtoZToken
 Store number: 01
-CustomerType: BUILDERS
+CustomerType: INSURANCE
 ##
-Username: admin@atozflooring.com
-Password: SimVek22$$
-Store: store-5291f4e3dca04334afede9f642ec6157
-API Key: 58ddae189c21473bb9064628b1c85161
+
+TO Begin a new session by using POST to https://api.rfms.online/v2/Session/Begin
+•	Using Basic Auth, the Username is your store queue (including the word "store") store-5291f4e3dca04334afede9f642ec6157
+•	Your password is your API key: 49bf22ea017f4b97aabc99def43c0b66
