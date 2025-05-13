@@ -152,3 +152,73 @@ Traceback (most recent call last):
   File "/Users/adrian/CURSOR PROJECT/RFMS PDF Xtracr/.venv/lib/python3.9/site-packages/werkzeug/_reloader.py", line 439, in ensure_echo_on
     termios.tcsetattr(sys.stdin, termios.TCSANOW, attributes)
 termios.error: (4, 'Interrupted system call')
+/Users/adrian/CURSOR PROJECT/RFMS PDF Xtracr/.venv/lib/python3.9/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+ * Serving Flask app 'app'
+ * Debug mode: on
+2025-05-13 19:36:21,526 - werkzeug - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://192.168.0.208:5000
+2025-05-13 19:36:21,526 - werkzeug - INFO - [33mPress CTRL+C to quit[0m
+2025-05-13 19:36:21,527 - werkzeug - INFO -  * Restarting with stat
+/Users/adrian/CURSOR PROJECT/RFMS PDF Xtracr/.venv/lib/python3.9/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+2025-05-13 19:36:21,835 - werkzeug - WARNING -  * Debugger is active!
+2025-05-13 19:36:21,842 - werkzeug - INFO -  * Debugger PIN: 353-528-095
+/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/multiprocessing/resource_tracker.py:216: UserWarning: resource_tracker: There appear to be 1 leaked semaphore objects to clean up at shutdown
+  warnings.warn('resource_tracker: There appear to be %d '
+/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/multiprocessing/resource_tracker.py:216: UserWarning: resource_tracker: There appear to be 1 leaked semaphore objects to clean up at shutdown
+  warnings.warn('resource_tracker: There appear to be %d '
+/Users/adrian/CURSOR PROJECT/RFMS PDF Xtracr/.venv/lib/python3.9/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+ * Serving Flask app 'app'
+ * Debug mode: on
+2025-05-13 19:37:20,638 - werkzeug - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://192.168.0.208:5000
+2025-05-13 19:37:20,638 - werkzeug - INFO - [33mPress CTRL+C to quit[0m
+2025-05-13 19:37:20,638 - werkzeug - INFO -  * Restarting with stat
+/Users/adrian/CURSOR PROJECT/RFMS PDF Xtracr/.venv/lib/python3.9/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+2025-05-13 19:37:20,939 - werkzeug - WARNING -  * Debugger is active!
+2025-05-13 19:37:20,944 - werkzeug - INFO -  * Debugger PIN: 353-528-095
+Traceback (most recent call last):
+  File "/Users/adrian/CURSOR PROJECT/RFMS PDF Xtracr/app.py", line 441, in <module>
+    app.run(debug=debug_mode, host='0.0.0.0', port=int(os.getenv('PORT', 5000))) 
+  File "/Users/adrian/CURSOR PROJECT/RFMS PDF Xtracr/.venv/lib/python3.9/site-packages/flask/app.py", line 662, in run
+    run_simple(t.cast(str, host), port, self, **options)
+  File "/Users/adrian/CURSOR PROJECT/RFMS PDF Xtracr/.venv/lib/python3.9/site-packages/werkzeug/serving.py", line 1115, in run_simple
+    run_with_reloader(
+  File "/Users/adrian/CURSOR PROJECT/RFMS PDF Xtracr/.venv/lib/python3.9/site-packages/werkzeug/_reloader.py", line 459, in run_with_reloader
+    ensure_echo_on()
+  File "/Users/adrian/CURSOR PROJECT/RFMS PDF Xtracr/.venv/lib/python3.9/site-packages/werkzeug/_reloader.py", line 439, in ensure_echo_on
+    termios.tcsetattr(sys.stdin, termios.TCSANOW, attributes)
+termios.error: (4, 'Interrupted system call')
+/Users/adrian/CURSOR PROJECT/RFMS PDF Xtracr/.venv/lib/python3.9/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+ * Serving Flask app 'app'
+ * Debug mode: on
+2025-05-13 19:39:13,752 - werkzeug - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://192.168.0.208:5000
+2025-05-13 19:39:13,753 - werkzeug - INFO - [33mPress CTRL+C to quit[0m
+2025-05-13 19:39:13,753 - werkzeug - INFO -  * Restarting with stat
+/Users/adrian/CURSOR PROJECT/RFMS PDF Xtracr/.venv/lib/python3.9/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+2025-05-13 19:39:14,057 - werkzeug - WARNING -  * Debugger is active!
+2025-05-13 19:39:14,062 - werkzeug - INFO -  * Debugger PIN: 353-528-095
+Traceback (most recent call last):
+  File "/Users/adrian/CURSOR PROJECT/RFMS PDF Xtracr/app.py", line 441, in <module>
+    app.run(debug=debug_mode, host='0.0.0.0', port=int(os.getenv('PORT', 5000))) 
+  File "/Users/adrian/CURSOR PROJECT/RFMS PDF Xtracr/.venv/lib/python3.9/site-packages/flask/app.py", line 662, in run
+    run_simple(t.cast(str, host), port, self, **options)
+  File "/Users/adrian/CURSOR PROJECT/RFMS PDF Xtracr/.venv/lib/python3.9/site-packages/werkzeug/serving.py", line 1115, in run_simple
+    run_with_reloader(
+  File "/Users/adrian/CURSOR PROJECT/RFMS PDF Xtracr/.venv/lib/python3.9/site-packages/werkzeug/_reloader.py", line 459, in run_with_reloader
+    ensure_echo_on()
+  File "/Users/adrian/CURSOR PROJECT/RFMS PDF Xtracr/.venv/lib/python3.9/site-packages/werkzeug/_reloader.py", line 439, in ensure_echo_on
+    termios.tcsetattr(sys.stdin, termios.TCSANOW, attributes)
+termios.error: (4, 'Interrupted system call')
