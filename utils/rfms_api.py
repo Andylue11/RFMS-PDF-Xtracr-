@@ -2,6 +2,7 @@ import requests
 import logging
 import json
 import os
+import base64
 from datetime import datetime, timedelta
 from requests.exceptions import RequestException, Timeout, ConnectionError
 
@@ -28,7 +29,7 @@ class RfmsApi:
         self.store_code = store_code
         self.username = username
         self.api_key = api_key
-        self.session_id = None
+        self.session_token = None
         self.session_expiry = None
         self.headers = {
             'Content-Type': 'application/json',
@@ -41,15 +42,15 @@ class RfmsApi:
     
     def ensure_session(self):
         """
-        Ensure that we have a valid session ID for API calls.
+        Ensure that we have a valid session token for API calls.
         
-        If there is no session ID or it has expired, get a new one.
+        If there is no session token or it has expired, get a new one.
         
         Returns:
             bool: True if session is valid, False otherwise
         """
         # Check if we have a session and it's not expired
-        if self.session_id and self.session_expiry and datetime.now() < self.session_expiry:
+        if self.session_token and self.session_expiry and datetime.now() < self.session_expiry:
             return True
         
         # Get a new session
@@ -57,64 +58,76 @@ class RfmsApi:
     
     def get_session(self):
         """
-        Get a new session ID from the RFMS API.
+        Get a new session token from the RFMS API.
         
         Returns:
             bool: True if successful, False otherwise
         """
-        # Try multiple endpoint formats to find the correct one
-        endpoints = [
-            f"{self.base_url}/v2/session",
-            f"{self.base_url}/api/v2/Session"
-        ]
+        # According to updated docs, use this endpoint
+        endpoint = f"{self.base_url}/v2/Session/Begin"
         
-        # Use username/password authentication
-        payload = {
-            "storeCode": self.store_code,
-            "userName": self.username,
-            "password": "SimVek22$$"
-        }
+        # Set up basic auth with store_code as username and API key as password
+        # (no need to use the regular username/password)
+        auth = (self.store_code, self.api_key)
         
         headers = {
             'Content-Type': 'application/json',
             'Accept': 'application/json'
         }
         
-        # Try each endpoint until successful or all fail
-        for endpoint in endpoints:
-            try:
-                logger.info(f"Attempting to connect to RFMS API at {endpoint}")
-                logger.info(f"With credentials: Username: {self.username}, StoreCode: {self.store_code}")
-                
-                response = requests.post(endpoint, headers=headers, json=payload, timeout=self.timeout)
-                logger.info(f"RFMS API response status: {response.status_code}")
-                
-                if response.status_code == 200:
-                    data = response.json()
-                    self.session_id = data.get('sessionId')
-                    
-                    if not self.session_id:
-                        logger.error("Session ID not found in response")
-                        continue
-                    
-                    # Set session expiry to 1 hour from now
-                    self.session_expiry = datetime.now() + timedelta(hours=1)
-                    
-                    # Update headers with session ID
-                    self.headers['Session-ID'] = self.session_id
-                    
-                    logger.info(f"Successfully obtained RFMS API session: {self.session_id}")
-                    return True
+        try:
+            logger.info(f"Attempting to connect to RFMS API at {endpoint}")
+            logger.info(f"With store code: {self.store_code}")
             
-            except Timeout:
-                logger.error(f"Timeout connecting to RFMS API at {endpoint}")
-            except ConnectionError:
-                logger.error(f"Connection error connecting to RFMS API at {endpoint}")
-            except Exception as e:
-                logger.error(f"Error getting RFMS API session from {endpoint}: {str(e)}")
+            response = requests.post(endpoint, headers=headers, auth=auth, timeout=self.timeout)
+            logger.info(f"RFMS API response status: {response.status_code}")
+            
+            if response.status_code == 200:
+                data = response.json()
+                self.session_token = data.get('sessionToken')
+                
+                if not self.session_token:
+                    logger.error("Session token not found in response")
+                    return False
+                
+                # Set session expiry based on returned value or default to 20 minutes
+                if 'sessionExpires' in data:
+                    try:
+                        # Parse the expiry date from the response
+                        expiry_str = data.get('sessionExpires')
+                        self.session_expiry = datetime.strptime(expiry_str, "%a, %d %b %Y %H:%M:%S %Z")
+                    except Exception as e:
+                        logger.warning(f"Could not parse session expiry: {str(e)}")
+                        # Default to 20 minutes from now as mentioned in documentation
+                        self.session_expiry = datetime.now() + timedelta(minutes=20)
+                else:
+                    # Default to 20 minutes from now as mentioned in documentation
+                    self.session_expiry = datetime.now() + timedelta(minutes=20)
+                
+                # For future requests, use store_code as username and session_token as password
+                self.auth = (self.store_code, self.session_token)
+                
+                logger.info(f"Successfully obtained RFMS API session token: {self.session_token}")
+                logger.info(f"Session expires at: {self.session_expiry}")
+                return True
+            
+            else:
+                logger.error(f"Failed to get session token. Status code: {response.status_code}")
+                try:
+                    logger.error(f"Response: {response.json()}")
+                except:
+                    logger.error(f"Response text: {response.text}")
+                return False
+                
+        except Timeout:
+            logger.error(f"Timeout connecting to RFMS API at {endpoint}")
+        except ConnectionError:
+            logger.error(f"Connection error connecting to RFMS API at {endpoint}")
+        except Exception as e:
+            logger.error(f"Error getting RFMS API session from {endpoint}: {str(e)}")
         
-        # All endpoints failed
-        logger.error("All session endpoints failed")
+        # All attempts failed
+        logger.error("Session initialization failed")
         return False
     
     def execute_request(self, method, url, payload=None, retry_count=0):
@@ -139,14 +152,17 @@ class RfmsApi:
         try:
             logger.debug(f"Executing {method} request to {url}")
             
+            # Use Basic Auth with store_code:session_token
+            headers = self.headers.copy()
+            
             if method.upper() == 'GET':
-                response = requests.get(url, headers=self.headers, timeout=self.timeout)
+                response = requests.get(url, headers=headers, auth=self.auth, timeout=self.timeout)
             elif method.upper() == 'POST':
-                response = requests.post(url, headers=self.headers, json=payload, timeout=self.timeout)
+                response = requests.post(url, headers=headers, json=payload, auth=self.auth, timeout=self.timeout)
             elif method.upper() == 'PUT':
-                response = requests.put(url, headers=self.headers, json=payload, timeout=self.timeout)
+                response = requests.put(url, headers=headers, json=payload, auth=self.auth, timeout=self.timeout)
             elif method.upper() == 'DELETE':
-                response = requests.delete(url, headers=self.headers, timeout=self.timeout)
+                response = requests.delete(url, headers=headers, auth=self.auth, timeout=self.timeout)
             else:
                 raise ValueError(f"Unsupported HTTP method: {method}")
             
@@ -161,7 +177,7 @@ class RfmsApi:
             # Handle session expiry (401) by getting a new session and retrying
             elif response.status_code == 401 and retry_count < self.max_retries:
                 logger.warning("Session expired, requesting new session")
-                self.session_id = None
+                self.session_token = None
                 self.session_expiry = None
                 return self.execute_request(method, url, payload, retry_count + 1)
             
@@ -206,17 +222,21 @@ class RfmsApi:
             str: 'online' if API is available, 'offline' otherwise
         """
         # Attempt to connect to the API to determine real status
-        url = f"{self.base_url}/api/v2/Session"
+        url = f"{self.base_url}/v2/Session/Begin"
         
         try:
+            # Set up basic auth with store_code as username and api_key as password
+            auth = (self.store_code, self.api_key)
+            
+            headers = {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            }
+            
             response = requests.post(
                 url, 
-                headers=self.headers, 
-                json={
-                    "storeCode": self.store_code,
-                    "userName": self.username,
-                    "password": "SimVek22$$"
-                },
+                headers=headers,
+                auth=auth,
                 timeout=self.timeout
             )
             
@@ -248,13 +268,53 @@ class RfmsApi:
         """
         logger.info(f"Finding customers with search term: {search_term}")
         
-        # Determine if search_term is numeric (likely a CustomerID) or text
-        if search_term.isdigit():
-            logger.info("Numeric search term detected, treating as CustomerID")
-            return self.find_customer_by_id(search_term)
-        else:
-            logger.info("Text search term detected, treating as customer name")
-            return self.find_customer_by_name(search_term)
+        # Based on POST to rfms.txt, we need to use this endpoint
+        url = f"{self.base_url}/v2/customers/find"
+        
+        # According to the documentation, use a POST request
+        payload = {
+            "searchText": search_term,
+            "includeCustomers": True,
+            "includeProspects": False,
+            "includeInactive": False,
+            "startIndex": 0
+        }
+        
+        try:
+            response_data = self.execute_request('POST', url, payload)
+            
+            # Check if we got valid results
+            if not response_data or "result" not in response_data or not response_data.get("result"):
+                logger.warning(f"No customers found for search term: {search_term}")
+                return []
+            
+            customers = response_data.get("result", [])
+            formatted_customers = []
+            
+            # Format the customer data according to the POST to rfms.txt example
+            for customer in customers:
+                formatted_customer = {
+                    'id': customer.get('customerSourceId', ''),  # This will be used as CustomerSeqNum
+                    'customer_source_id': customer.get('customerSourceId', ''),
+                    'name': customer.get('customerName', ''),
+                    'first_name': customer.get('customerFirstName', ''),
+                    'last_name': customer.get('customerLastName', ''),
+                    'business_name': customer.get('customerBusinessName', ''),
+                    'address1': customer.get('customerAddress', ''),
+                    'address2': customer.get('customerAddress2', ''),
+                    'city': customer.get('customerCity', ''),
+                    'state': customer.get('customerState', ''),
+                    'zip_code': customer.get('customerZIP', ''),
+                    'country': customer.get('customerCountry', '')
+                }
+                formatted_customers.append(formatted_customer)
+            
+            logger.info(f"Found {len(formatted_customers)} customers for search term: {search_term}")
+            return formatted_customers
+            
+        except Exception as e:
+            logger.error(f"Error finding customers: {str(e)}")
+            return []
     
     def find_customer_by_id(self, customer_id):
         """
@@ -467,46 +527,131 @@ class RfmsApi:
         Returns:
             dict: Created job object
         """
-        url = f"{self.base_url}/api/v2/Order"
+        url = f"{self.base_url}/v2/Order"
         
         # Validate required fields
-        if not job_data.get('customer_id'):
-            raise ValueError("Missing required field: customer_id")
+        if not job_data.get('sold_to_customer_id'):
+            raise ValueError("Missing required field: sold_to_customer_id")
             
-        # Prepare payload according to RFMS API format
+        # Prepare payload according to RFMS API format and New job Payload.txt
         payload = {
+            "username": job_data.get('salesperson1', 'zoran.vekic'),
             "order": {
-                "customerId": job_data.get('customer_id'),
-                "quoteId": job_data.get('quote_id'),  # Optional, if converting a quote
-                "opportunityName": job_data.get('job_name', 'New Job'),
-                "poNumber": job_data.get('po_number', ''),
-                "storeCode": self.store_code,
-                "salesPerson": job_data.get('sales_person', ''),
-                "workOrderNotes": job_data.get('description_of_works', ''),
-                "billToAddress": {
-                    "name": job_data.get('bill_to_name', ''),
-                    "address1": job_data.get('bill_to_address1', ''),
-                    "address2": job_data.get('bill_to_address2', ''),
-                    "city": job_data.get('bill_to_city', ''),
-                    "state": job_data.get('bill_to_state', ''),
-                    "postalCode": job_data.get('bill_to_zip', ''),
-                    "country": job_data.get('bill_to_country', 'Australia')
-                },
-                "shipToAddress": {
-                    "name": job_data.get('ship_to_name', ''),
-                    "address1": job_data.get('ship_to_address1', ''),
-                    "address2": job_data.get('ship_to_address2', ''),
-                    "city": job_data.get('ship_to_city', ''),
-                    "state": job_data.get('ship_to_state', ''),
-                    "postalCode": job_data.get('ship_to_zip', ''),
-                    "country": job_data.get('ship_to_country', 'Australia')
-                }
-            }
+                "useDocumentWebOrderFlag": False,
+                "originalMessageId": None,
+                "newInvoiceNumber": None,
+                "originalInvoiceNumber": None,
+                "SeqNum": 0,
+                "InvoiceNumber": "",
+                "OriginalQuoteNum": "",
+                "ActionFlag": "Insert",
+                "InvoiceType": None,
+                "IsQuote": False,
+                "IsWebOrder": True,
+                "Exported": False,
+                "CanEdit": False,
+                "LockTaxes": False,
+                "CustomerSource": job_data.get('customer_source', ''),
+                "CustomerSeqNum": job_data.get('sold_to_customer_id', ''),  # From documentation: customerID or customerSourceID
+                "CustomerUpSeqNum": job_data.get('ship_to_customer_id', job_data.get('sold_to_customer_id', '')),
+                "CustomerFirstName": job_data.get('customer_first_name', ''),
+                "CustomerLastName": job_data.get('customer_last_name', ''),
+                "CustomerAddress1": job_data.get('customer_address1', ''),
+                "CustomerAddress2": job_data.get('customer_address2', ''),
+                "CustomerCity": job_data.get('customer_city', ''),
+                "CustomerState": job_data.get('customer_state', ''),
+                "CustomerPostalCode": job_data.get('customer_postal_code', ''),
+                "CustomerCounty": job_data.get('customer_county', ''),
+                "Phone1": job_data.get('customer_phone', ''),
+                "ShipToFirstName": job_data.get('ship_to_first_name', ''),
+                "ShipToLastName": job_data.get('ship_to_last_name', ''),
+                "ShipToAddress1": job_data.get('ship_to_address1', ''),
+                "ShipToAddress2": job_data.get('ship_to_address2', ''),
+                "ShipToCity": job_data.get('ship_to_city', ''),
+                "ShipToState": job_data.get('ship_to_state', ''),
+                "ShipToPostalCode": job_data.get('ship_to_postal_code', ''),
+                "ShipToCounty": job_data.get('ship_to_county', ''),
+                "Phone2": job_data.get('ship_to_phone', ''),
+                "ShipToLocked": False,
+                "SalesPerson1": job_data.get('salesperson1', 'ZORAN VEKIC'),
+                "SalesPerson2": job_data.get('salesperson2', ''),
+                "SalesRepLocked": False,
+                "CommisionSplitPercent": 0.0,
+                "Store": job_data.get('store_number', 1),
+                "Email": job_data.get('email', ''),
+                "CustomNote": job_data.get('custom_note', ''),
+                "Note": job_data.get('note', ''),
+                "WorkOrderNote": job_data.get('description_of_works', ''),
+                "PickingTicketNote": None,
+                "OrderDate": job_data.get('order_date', datetime.now().strftime('%Y-%m-%d')),
+                "MeasureDate": job_data.get('measure_date', ''),
+                "PromiseDate": job_data.get('promise_date', ''),
+                "PONumber": job_data.get('po_number', ''),
+                "CustomerType": job_data.get('customer_type', 'INSURANCE'),
+                "JobNumber": job_data.get('job_number', ''),
+                "DateEntered": job_data.get('date_entered', datetime.now().strftime('%Y-%m-%d')),
+                "DatePaid": None,
+                "DueDate": job_data.get('due_date', ''),
+                "Model": None,
+                "PriceLevel": 0,
+                "TaxStatus": "Tax",
+                "Occupied": False,
+                "Voided": False,
+                "AdSource": 0,
+                "TaxCode": None,
+                "OverheadMarginBase": None,
+                "TaxStatusLocked": False,
+                "Map": None,
+                "Zone": None,
+                "Phase": None,
+                "Tract": None,
+                "Block": None,
+                "Lot": None,
+                "Unit": None,
+                "Property": None,
+                "PSMemberNumber": 0,
+                "PSMemberName": None,
+                "PSBusinessName": None,
+                "TaxMethod": "",
+                "TaxInclusive": False,
+                "UserOrderType": job_data.get('user_order_type_id', 3),
+                "ServiceType": job_data.get('service_type_id', 1),
+                "ContractType": job_data.get('contract_type_id', 1),
+                "Timeslot": 0,
+                "InstallStore": job_data.get('install_store', 1),
+                "AgeFrom": None,
+                "Completed": None,
+                "ReferralAmount": 0.0,
+                "ReferralLocked": False,
+                "PreAuthorization": None,
+                "SalesTax": 0.0,
+                "GrandInvoiceTotal": job_data.get('dollar_value', 0.0),
+                "MaterialOnly": 0.0,
+                "Labor": 0.0,
+                "MiscCharges": job_data.get('dollar_value', 0.0),  # As per API Communication document, PO $ value goes here
+                "InvoiceTotal": job_data.get('dollar_value', 0.0),
+                "MiscTax": 0.0,
+                "RecycleFee": 0.0,
+                "TotalPaid": 0.0,
+                "Balance": job_data.get('dollar_value', 0.0),
+                "DiscountRate": 0.0,
+                "DiscountAmount": 0.0,
+                "ApplyRecycleFee": False,
+                "Attachements": None,
+                "PendingAttachments": None,
+                "Order": None,
+                "LockInfo": None,
+                "Message": None,
+                "Lines": job_data.get('lines', [])
+            },
+            "products": None
         }
         
         try:
             data = self.execute_request('POST', url, payload)
-            return data.get('result', {}).get('order', {})
+            if data and 'result' in data:
+                return data.get('result', {})
+            return data
         except Exception as e:
             logger.error(f"Error creating job: {str(e)}")
             raise Exception(f"Error creating job: {str(e)}")
