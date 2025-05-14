@@ -201,180 +201,47 @@ def test_customer_search(base_url, search_term):
         print(f"ERROR: {str(e)}")
         return []
 
-def test_create_job(base_url, customer_id):
-    """Test creating a job."""
-    print(f"\nCreating test job for customer ID: {customer_id}...")
+def test_create_job():
+    """Test creating a job in RFMS."""
+    # Test data
+    customer_id = 12345
+    dollar_value = 1234.56
+    po_number = f"TEST-{datetime.now().strftime('%Y%m%d%H%M%S')}"
     
-    # Step 1: Get session token
-    auth = (STORE, API_KEY)
+    # Prepare job data
+    job_data = {
+        'username': 'zoran.vekic',
+        'order': {
+            'CustomerSeqNum': customer_id,
+            'CustomerUpSeqNum': customer_id,
+            'PONumber': po_number,
+            'WorkOrderNote': 'Test job created by RFMS-PDF-Xtracr',
+            'CustomerType': 'INSURANCE',
+            'UserOrderType': 12,
+            'ServiceType': 9,
+            'ContractType': 2,
+            'SalesPerson1': 'ZORAN VEKIC',
+            'Store': 1,
+            'InstallStore': 1,
+            'OrderDate': datetime.now().strftime('%Y-%m-%d'),
+            'DateEntered': datetime.now().strftime('%Y-%m-%d'),
+            'GrandInvoiceTotal': dollar_value,
+            'MaterialOnly': 0.0,
+            'Labor': 0.0,
+            'MiscCharges': dollar_value,
+            'InvoiceTotal': dollar_value,
+            'Balance': dollar_value,
+            'Lines': []
+        }
+    }
     
-    try:
-        # Make request to begin session
-        response = requests.post(
-            f"{base_url}/v2/Session/Begin",
-            headers=headers,
-            auth=auth
-        )
-        
-        if response.status_code == 200:
-            result = response.json()
-            session_token = result.get('sessionToken')
-            if not session_token:
-                print("FAILED: No session token in response")
-                return None
-                
-            # Create auth tuple with store as username and session token as password
-            session_auth = (STORE, session_token)
-            
-            # Step 2: Create a test job
-            dollar_value = 1234.56
-            
-            payload = {
-                "username": "zoran.vekic",
-                "order": {
-                    "useDocumentWebOrderFlag": False,
-                    "originalMessageId": None,
-                    "newInvoiceNumber": None,
-                    "originalInvoiceNumber": None,
-                    "SeqNum": 0,
-                    "InvoiceNumber": "",
-                    "OriginalQuoteNum": "",
-                    "ActionFlag": "Insert",
-                    "InvoiceType": None,
-                    "IsQuote": False,
-                    "IsWebOrder": True,
-                    "Exported": False,
-                    "CanEdit": False,
-                    "LockTaxes": False,
-                    "CustomerSource": "",
-                    "CustomerSeqNum": customer_id,
-                    "CustomerUpSeqNum": customer_id,
-                    "CustomerFirstName": "",
-                    "CustomerLastName": "",
-                    "CustomerAddress1": "",
-                    "CustomerAddress2": "",
-                    "CustomerCity": "",
-                    "CustomerState": "",
-                    "CustomerPostalCode": "",
-                    "CustomerCounty": "",
-                    "Phone1": "",
-                    "ShipToFirstName": "",
-                    "ShipToLastName": "",
-                    "ShipToAddress1": "",
-                    "ShipToAddress2": "",
-                    "ShipToCity": "",
-                    "ShipToState": "",
-                    "ShipToPostalCode": "",
-                    "ShipToCounty": "",
-                    "Phone2": "",
-                    "ShipToLocked": False,
-                    "SalesPerson1": "ZORAN VEKIC",
-                    "SalesPerson2": "",
-                    "SalesRepLocked": False,
-                    "CommisionSplitPercent": 0.0,
-                    "Store": 1,
-                    "Email": "",
-                    "CustomNote": "",
-                    "Note": "",
-                    "WorkOrderNote": "Test job from RFMS-PDF-Xtracr",
-                    "PickingTicketNote": None,
-                    "OrderDate": datetime.now().strftime("%Y-%m-%d"),
-                    "MeasureDate": "",
-                    "PromiseDate": "",
-                    "PONumber": f"TEST-PO-{datetime.now().strftime('%Y%m%d%H%M%S')}",
-                    "CustomerType": "INSURANCE",
-                    "JobNumber": "",
-                    "DateEntered": datetime.now().strftime("%Y-%m-%d"),
-                    "DatePaid": None,
-                    "DueDate": "",
-                    "Model": None,
-                    "PriceLevel": 0,
-                    "TaxStatus": "Tax",
-                    "Occupied": False,
-                    "Voided": False,
-                    "AdSource": 0,
-                    "TaxCode": None,
-                    "OverheadMarginBase": None,
-                    "TaxStatusLocked": False,
-                    "Map": None,
-                    "Zone": None,
-                    "Phase": None,
-                    "Tract": None,
-                    "Block": None,
-                    "Lot": None,
-                    "Unit": None,
-                    "Property": None,
-                    "PSMemberNumber": 0,
-                    "PSMemberName": None,
-                    "PSBusinessName": None,
-                    "TaxMethod": "",
-                    "TaxInclusive": False,
-                    "UserOrderType": 3,
-                    "ServiceType": 1,
-                    "ContractType": 1,
-                    "Timeslot": 0,
-                    "InstallStore": 1,
-                    "AgeFrom": None,
-                    "Completed": None,
-                    "ReferralAmount": 0.0,
-                    "ReferralLocked": False,
-                    "PreAuthorization": None,
-                    "SalesTax": 0.0,
-                    "GrandInvoiceTotal": dollar_value,
-                    "MaterialOnly": 0.0,
-                    "Labor": 0.0,
-                    "MiscCharges": dollar_value,
-                    "InvoiceTotal": dollar_value,
-                    "MiscTax": 0.0,
-                    "RecycleFee": 0.0,
-                    "TotalPaid": 0.0,
-                    "Balance": dollar_value,
-                    "DiscountRate": 0.0,
-                    "DiscountAmount": 0.0,
-                    "ApplyRecycleFee": False,
-                    "Attachements": None,
-                    "PendingAttachments": None,
-                    "Order": None,
-                    "LockInfo": None,
-                    "Message": None,
-                    "Lines": [
-                        {
-                            "productId": "PO#$$",
-                            "colorId": "PO#$$",
-                            "quantity": dollar_value,
-                            "priceLevel": "Price4"
-                        }
-                    ]
-                },
-                "products": None
-            }
-            
-            job_response = requests.post(
-                f"{base_url}/v2/Order",
-                headers=headers,
-                auth=session_auth,
-                json=payload
-            )
-            
-            print(f"Create Job Status Code: {job_response.status_code}")
-            if job_response.status_code == 200:
-                job_result = job_response.json()
-                if "result" in job_result:
-                    job_id = job_result.get("result", {}).get("id")
-                    print(f"SUCCESS: Job created with ID: {job_id}")
-                    return job_result
-                else:
-                    print("No job created in response")
-                    return None
-            else:
-                print(f"FAILED: Create Job - {job_response.text}")
-                return None
-        else:
-            print(f"FAILED: Session token request - {response.text}")
-            return None
-    except Exception as e:
-        print(f"ERROR: {str(e)}")
-        return None
+    # Create the job
+    response = rfms_api.create_job(job_data)
+    
+    # Verify response
+    assert response is not None
+    assert 'result' in response
+    assert 'id' in response['result']
 
 # Main execution
 if __name__ == "__main__":
@@ -406,7 +273,7 @@ if __name__ == "__main__":
             customer_id = customers[0].get("customerSourceId")
             if customer_id:
                 print(f"\nFound customer ID: {customer_id}")
-                test_create_job(base_url, customer_id)
+                test_create_job()
     else:
         print("\nFAILED: All authentication tests failed!")
         sys.exit(1)

@@ -3,7 +3,5 @@ AtoZToken
 Store number: 01
 CustomerType: BUILDERS
 ##
-Username: admin@atozflooring.com
-Password: SimVek22$$
-Store: store-5291f4e3dca04334afede9f642ec6157
-API Key: 58ddae189c21473bb9064628b1c85161
+Username: store-5291f4e3dca04334afede9f642ec6157
+Password: 58ddae189c21473bb9064628b1c85161

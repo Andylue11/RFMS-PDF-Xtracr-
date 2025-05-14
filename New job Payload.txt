@@ -17,7 +17,7 @@
 "LockTaxes": false,
 "CustomerSource": "",
 "CustomerSeqNum": 02,
-"CustomerUpSeqNum": 02,
+"CustomerUpSeqNum": 0,
 "CustomerFirstName": "",
 "CustomerLastName": "",
 "CustomerAddress1": "",

@@ -1,0 +1,502 @@
+##basic customer find
+##https://api.rfms.online/v2/customers/find
+
+import http.client
+import json
+
+conn = http.client.HTTPSConnection("api.rfms.online")
+payload = json.dumps({
+  "searchText": "grok",
+  "includeCustomers": True,
+  "includeProspects": False,
+  "includeInactive": False,
+  "startIndex": 0
+})
+headers = {
+  'Content-Type': 'application/json'
+}
+conn.request("POST", "/v2/customers/find", payload, headers)
+res = conn.getresponse()
+data = res.read()
+print(data.decode("utf-8"))
+
+##Parameters avialible
+##Parameter	Required	Meaning
+##searchText	true	The supplied text will be found in customer and ship-to name, address, phone, email address and city
+##includeCustomers	false	Search customers (true by default)
+##includeProspects	false	Search prospects (true by default)
+##includeInactive	false	Include inactive customers (false by default)
+##startIndex	false	Results are returned 10 at a time. If this value is omitted the first 10 are returned (Index numbers 0 to 9). To request the next 10, send startIndex = 10, etc.
+##referralType	false	For users that have the proper parameter set, setting this value to "member" will display customer search results with an association to Main only, while a "client" input will display results with association to a Branch only
+
+##example response
+{
+  "status": "success",
+  "result": [],
+  "detail": [
+    {
+      "customerSource": "Customer",
+      "customerSourceId": 12345,
+      "salesLeadId": 0,
+      "lmsId": "",
+      "customerName": "GROKMAN",
+      "customerFirstName": "ISAAK",
+      "actualCustomerFirstName": "ISAAK",
+      "customerLastName": "GROKMAN",
+      "customerBusinessName": "BIZ",
+      "customerAddress": "2 CASTA WAY",
+      "customerAddress2": "UNIT 3",
+      "customerCity": "FAYETTE",
+      "customerState": "AL",
+      "customerZIP": "35555",
+      "customerPhone": "(808) 978 74",
+      "customerPhone2": "",
+      "customerPhone3": "",
+      "useSoldToBusinessName": false,
+      "customerEmail": "issak@castaway.abc",
+      "customerCounty": "FAYETTE",
+      "shipToName": "GROKMAN",
+      "shipToFirstName": "ISAAK",
+      "shipToLastName": "GROKMAN",
+      "shipToBusinessName": "BIZ",
+      "actualShipToFirstName": "ISAAK",
+      "shipToAddress": "3 CASTA WAY",
+      "shipToAddress2": "UNIT 2",
+      "shipToCity": "FAUNSDALE",
+      "shipToState": "AL",
+      "shipToZIP": "36738",
+      "shipToCounty": "MARENGO",
+      "useShipToBusinessName": false,
+      "customerType": "ACCOMMODATIONS",
+      "referralType": "Standalone",
+      "referralMemberId": 0,
+      "referralMemberName": "",
+      "taxStatus": "Tax",
+      "taxMethod": "UseTax",
+      "taxId": "",
+      "preferredPriceLevel": 1,
+      "preferredSalesperson1": "",
+      "preferredSalesperson2": "",
+      "jobNumberOverride": null,
+      "entryType": "Customer",
+      "terms": "",
+      "termDays": 0,
+      "creditLimit": 0,
+      "defaultStore": 01,
+      "internalNotes": "",
+      "remarks": []
+    }
+  ]
+}
+
+##Advance customer find
+##https://api.rfms.online/v2/customers/find/advanced
+
+import http.client
+
+conn = http.client.HTTPSConnection("api.rfms.online")
+payload = "{\r\n    \"searchText\": \"car\",\r\n    \"stores\": [01, 01],\r\n    \"activeOnly\": false,\r\n    \"dateCreatedFrom\": \"01-01-2021\",\r\n    \"customerTypes\": [\"Commercial\"]\r\n}"
+headers = {}
+conn.request("POST", "/v2/customers/find/advanced", payload, headers)
+res = conn.getresponse()
+data = res.read()
+print(data.decode("utf-8"))
+
+
+
+
+
+
+Parameter	Notes
+searchText	String value. Text found in customer name.
+stores	List of integers.
+salespersonName	String value.
+activeOnly	Boolean value. true value filters out inactive customers.
+dateCreatedFrom	String in YYYY-MM-DD format
+dateCreatedTo	String in YYYY-MM-DD format
+lastPurchaseFrom	String in YYYY-MM-DD format
+lastPurchaseTo	String in YYYY-MM-DD format
+customerTypes	List of string values. Obtain from Get Customer Values endpoint.
+businessSoldName	String value.
+businessShipName	String value.
+## Headers
+##Cache-Control
+##no-cache
+
+##Pragma
+##no-cache
+
+##Content-Length
+##7675
+
+##Content-Type
+##application/json; charset=utf-8
+
+##Expires
+##-1
+
+##Server
+##Microsoft-IIS/10.0
+
+##X-AspNet-Version
+##4.0.30319
+
+##X-Powered-By
+##ASP.NET
+
+
+##Get Customer
+##https://api.rfms.online/v2/customer/{{customerId}}
+import http.client
+import json
+
+conn = http.client.HTTPSConnection("api.rfms.online")
+payload = ''
+headers = {
+  'Content-Type': 'application/json'
+}
+conn.request("GET", "/v2/customer/{{customerId}}", payload, headers)
+res = conn.getresponse()
+data = res.read()
+print(data.decode("utf-8"))
+
+##Example response
+{
+  "status": "success",
+  "result": {
+    "customerId": 12345,
+    "customerType": "ACCOMMODATIONS",
+    "entryType": "Customer",
+    "customerAddress": {
+      "businessName": "BIZ",
+      "lastName": "GROKMAN",
+      "firstName": "ISAAK",
+      "address1": "2 CASTA WAY",
+      "address2": "UNIT 1",
+      "city": "FAYETTE",
+      "state": "AL",
+      "postalCode": "35555",
+      "county": ""
+    },
+    "shipToAddress": {
+      "businessName": "BIZ",
+      "lastName": "GROKMAN",
+      "firstName": "ISAAK",
+      "address1": "3 CASTA WAY",
+      "address2": "UNIT 2",
+      "city": "FAUNSDALE",
+      "state": "AL",
+      "postalCode": "36738",
+      "county": ""
+    },
+    "phone1": "(808) 978 74",
+    "phone2": "",
+    "email": "issak@castaway.abc",
+    "taxStatus": "Tax",
+    "taxMethod": "UseTax",
+    "preferredSalesperson1": "JOE SHMO",
+    "preferredSalesperson2": "",
+    "storeNumber": 32,
+    "notes": "",
+    "referralType": "Standalone",
+    "referralMemberId": 0,
+    "referralMemberName": "",
+    "lmsId": ""
+  },
+  "detail": {
+    "customerSource": "Customer",
+    "customerSourceId": 12345,
+    "salesLeadId": 0,
+    "lmsId": "",
+    "customerName": "GROKMAN",
+    "customerFirstName": "ISAAK",
+    "actualCustomerFirstName": "ISAAK",
+    "customerLastName": "GROKMAN",
+    "customerBusinessName": "BIZ",
+    "customerAddress": "2 CASTA WAY",
+    "customerAddress2": "UNIT 1",
+    "customerCity": "FAYETTE",
+    "customerState": "AL",
+    "customerZIP": "35555",
+    "customerPhone": "(808) 978 74",
+    "customerPhone2": "",
+    "customerPhone3": "",
+    "useSoldToBusinessName": false,
+    "customerEmail": "issak@castaway.abc",
+    "customerCounty": "",
+    "shipToName": "GROKMAN",
+    "shipToFirstName": "ISAAK",
+    "shipToLastName": "GROKMAN",
+    "shipToBusinessName": "BIZ",
+    "actualShipToFirstName": "ISAAK",
+    "shipToAddress": "3 CASTA WAY",
+    "shipToAddress2": "UNIT 2",
+    "shipToCity": "FAUNSDALE",
+    "shipToState": "AL",
+    "shipToZIP": "36738",
+    "shipToCounty": "",
+    "useShipToBusinessName": false,
+    "customerType": "ACCOMMODATIONS",
+    "referralType": "Standalone",
+    "referralMemberId": 0,
+    "referralMemberName": "",
+    "taxStatus": "Tax",
+    "taxMethod": "UseTax",
+    "taxId": "",
+    "preferredPriceLevel": 1,
+    "preferredSalesperson1": "JOE SHMO",
+    "preferredSalesperson2": "",
+    "jobNumberOverride": null,
+    "entryType": "Customer",
+    "terms": "",
+    "termDays": 0,
+    "creditLimit": 0,
+    "defaultStore": 32,
+    "internalNotes": "",
+    "remarks": []
+  }
+}
+
+##
+import http.client
+import json
+import mimetypes
+from codecs import encode
+
+conn = http.client.HTTPSConnection("api.rfms.online")
+boundary = ''
+payload = ''
+headers = {
+  'Content-Type': 'application/json',
+  'Content-type': 'multipart/form-data; boundary={}'.format(boundary)
+}
+conn.request("GET", "/v2/customer/{{customerId}}", payload, headers)
+res = conn.getresponse()
+data = res.read()
+print(data.decode("utf-8"))
+
+##example Response
+{
+  "status": "success",
+  "result": {
+    "customerId": 75526,
+    "customerType": "CASH & CARRY",
+    "entryType": "Customer",
+    "customerAddress": {
+      "businessName": null,
+      "lastName": "APARTMENTS",
+      "firstName": "CB",
+      "address1": "123 TEST AVE",
+      "address2": "",
+      "city": "SAN DIEGO",
+      "state": "CA",
+      "postalCode": "92026",
+      "county": null
+    },
+    "shipToAddress": {
+      "businessName": null,
+      "lastName": "BANUELOS",
+      "firstName": "CARLOS",
+      "address1": "123 TEST AVE",
+      "address2": "",
+      "city": "SAN DIEGO",
+      "state": "CA",
+      "postalCode": "92026",
+      "county": null
+    },
+    "phone1": "2051234567",
+    "phone2": "",
+    "email": "TEST@TEST.COM",
+    "taxStatus": "Tax",
+    "taxMethod": "SalesTax",
+    "preferredSalesperson1": "CARLOS BANUELOS",
+    "preferredSalesperson2": "",
+    "storeNumber": 32,
+    "notes": "<div>\n<div>\n<p style=\"margin:0pt 0pt 0pt 0pt;line-height:normal;\"><span style=\"font-family:'Courier New';font-size:9pt;color:#000000;;\">Customer Internal Note for CB Apartments</span></p>\n</div>\n</div>"
+  },
+  "detail": {
+    "customerSource": "Customer",
+    "customerSourceId": 75526,
+    "salesLeadId": 0,
+    "customerName": "APARTMENTS",
+    "customerFirstName": "CB",
+    "actualCustomerFirstName": "CB",
+    "customerLastName": "APARTMENTS",
+    "customerBusinessName": "CARLOS BANUELOS",
+    "customerAddress": "123 TEST AVE",
+    "customerAddress2": "",
+    "customerCity": "SAN DIEGO",
+    "customerState": "CA",
+    "customerZIP": "92026",
+    "customerPhone": "2051234567",
+    "customerPhone2": "",
+    "customerPhone3": "",
+    "customerEmail": "TEST@TEST.COM",
+    "customerCounty": null,
+    "shipToName": "BANUELOS",
+    "shipToFirstName": "CARLOS",
+    "shipToLastName": "BANUELOS",
+    "shipToBusinessName": "",
+    "actualShipToFirstName": "CARLOS",
+    "shipToAddress": "123 TEST AVE",
+    "shipToAddress2": "",
+    "shipToCity": "SAN DIEGO",
+    "shipToState": "CA",
+    "shipToZIP": "92026",
+    "shipToCounty": null,
+    "customerType": "CASH & CARRY",
+    "referralType": "Standalone",
+    "referralMemberId": 0,
+    "referralMemberName": "",
+    "taxStatus": "Tax",
+    "taxMethod": "SalesTax",
+    "preferredPriceLevel": 0,
+    "preferredSalesperson1": "CARLOS BANUELOS",
+    "preferredSalesperson2": "",
+    "jobNumberOverride": null,
+    "entryType": "Customer",
+    "terms": "",
+    "termDays": 0,
+    "creditLimit": 0,
+    "defaultStore": 01,
+    "internalNotes": "<div>\n<div>\n<p style=\"margin:0pt 0pt 0pt 0pt;line-height:normal;\"><span style=\"font-family:'Courier New';font-size:9pt;color:#000000;;\">Customer Internal Note for CB Apartments</span></p>\n</div>\n</div>",
+    "remarks": []
+  }
+}
+
+##Get Customer Values
+import http.client
+
+conn = http.client.HTTPSConnection("api.rfms.online")
+payload = ''
+headers = {}
+conn.request("GET", "/v2/customers", payload, headers)
+res = conn.getresponse()
+data = res.read()
+print(data.decode("utf-8"))
+
+##Example response
+{
+  "customerType": [
+    "ACCOMMODATIONS",
+    "CASH & CARRY",
+    "COMMERCIAL",
+    "INSTALLER",
+    "REMODELING"
+  ],
+  "entryType": [
+    "Customer",
+    "Prospect"
+  ],
+  "taxStatus": [
+    "Tax",
+    "Exempt",
+    "Resale"
+  ],
+  "taxMethod": [
+    "SalesTax",
+    "UseTax",
+    "LineTax"
+  ],
+  "preferredSalesperson1": [
+    "BOB",
+    "ANDREW",
+    "HOUSE",
+    "FRANK"
+  ],
+  "preferredSalesperson2": [
+    "BOB",
+    "ANDREW",
+    "HOUSE",
+    "FRANK"
+  ],
+  "stores": [
+    {
+      "id": 32,
+      "name": "ACME CARPET WEST",
+      "displayCode": " "
+    },
+    {
+      "id": 50,
+      "name": "ACME CARPET EAST",
+      "displayCode": "2"
+    }
+  ]
+}
+
+##POST API Pass Through
+##https://api.rfms.online/v2/passthrough
+import http.client
+
+conn = http.client.HTTPSConnection("api.rfms.online")
+payload = "{\r\n    \"methodName\": \"Inventory.ReceiveFromInvoice\",\r\n    \"requestPayload\": {\r\n    \"username\": \"JSolanto\",\r\n    \"legacy\": false,\r\n    \"inventoryCosting\": {\r\n        \"Supplier\": \"84 LUMBER COMPANY\",\r\n        \"InvoiceNumber\": \"\",\r\n        \"DueDate\": {\r\n            \"Year\": 2024,\r\n            \"Month\": 6,\r\n            \"Day\": 24\r\n        },\r\n        \"DiscountRate\": 0.0,\r\n        \"Freight\": 0.33,\r\n        \"FreightIsDiscountable\": false,\r\n        \"ExtraCost1\": 0.0,\r\n        \"ExtraCost1IsDiscountable\": false,\r\n        \"ExtraCost2\": 0.0,\r\n        \"ExtraCost2IsDiscountable\": false,\r\n        \"InventoryDataRows\": [\r\n            {\r\n                \"Seqnum\": 0,\r\n                \"Store\": 32,\r\n                \"ProductCode\": \"01\",\r\n                \"RollItemNumber\": \"\",\r\n                \"ItemSequenceNumber\": 0,\r\n                \"Supplier\": \"84 LUMBER COMPANY\",\r\n                \"PrivateSupplier\": \"84 LUMBER COMPANY\",\r\n                \"StyleItem\": \"FOO1\",\r\n                \"ColorDescription\": \"BAR1\",\r\n                \"Width\": \"12\",\r\n                \"Length\": \"100\",\r\n                \"InitialAmount\": 100,\r\n                \"InitialQuantity\": 1200,\r\n                \"Used\": 0,\r\n                \"Reserved\": 0,\r\n                \"Available\": 100,\r\n                \"AvailableQuantity\": 1200,\r\n                \"DateReceived\": {\r\n                    \"Year\": 2024,\r\n                    \"Month\": 6,\r\n                    \"Day\": 26\r\n                },\r\n                \"InvoiceNumber\": \"\",\r\n                \"GrossCost\": 4,\r\n                \"NetCost\": 4,\r\n                \"Freight\": 0,\r\n                \"Load\": 0.22,\r\n                \"Units\": \"SF\",\r\n                \"DyeLot\": \"DYE\",\r\n                \"LadingNumber\": \"\",\r\n                \"SerialNumber\": \"SERIAL\",\r\n                \"PONumber\": \"\",\r\n                \"Sidemark\": \"SIDEMARK\",\r\n                \"StyleNumber\": \"PFOOSTYLE\",\r\n                \"ColorNumber\": \"PCOLORNUM\",\r\n                \"PriceListSeqNum\": 0,\r\n                \"ColorSeqNum\": 0,\r\n                \"UnitPrice\": 3.20,\r\n                \"TotalValue\": 4800,\r\n                \"UseTotalValue\": false,\r\n                \"Sku\": \" \",\r\n                \"ManufacturerSKU\": \" \",\r\n                \"Manufacturer\": \"DALTILE\",\r\n                \"Location\": \"LOCATON\",\r\n                \"InventoryType\": \"Roll\",\r\n                \"InitialTotalValue\": 4800,\r\n                \"CanConsolidate\": false,\r\n                \"Collection\": \"COLLECTION\",\r\n                \"PrivateCollection\": \"\",\r\n                \"Builder\": \"\",\r\n                \"SubDivision\": \"\",\r\n                \"Block\": \"\",\r\n                \"Lot\": \"\",\r\n                \"POSeqNum\": 0,\r\n                \"ItemWidth\": \"\",\r\n                \"ItemLength\": \"\",\r\n                \"SoftReserve\": 0,\r\n                \"Receiving_Backing\": 444,\r\n                \"Receiving_Quality\": 6,\r\n                \"Receiving_RollCut\": \"Roll\",\r\n                \"Receiving_FiberType\": 117,\r\n                \"Receiving_StyleType\": 0,\r\n                \"Receiving_ColorType\": 5,\r\n                \"Receiving_Weight\": 2,\r\n                \"Receiving_Pile\": 2,\r\n                \"Receiving_ToxicityNumber\": \"PODPIN\",\r\n                \"Receiving_Comments\": \"COMMENT\",\r\n                \"Receiving_UserReal1\": 3.33,\r\n                \"Receiving_ASNItemSeqNum\": 0,\r\n                \"Receiving_RunLot\": \"RUN\",\r\n                \"Receiving_PrintTags\": false,\r\n                \"Receiving_SatisfyPo\": false,\r\n                \"Receiving_Load\": 1.98\r\n            }\r\n        ],\r\n        \"Payable\": null,\r\n        \"ApplyProductFreightFactor\": false\r\n    }\r\n    }\r\n}"
+headers = {}
+conn.request("POST", "/v2/passthrough", payload, headers)
+res = conn.getresponse()
+data = res.read()
+print(data.decode("utf-8"))
+
+##Example response
+{
+  "status": "success",
+  "result": "OK",
+  "detail": {
+    "DidCosting": true,
+    "IsError": true,
+    "ReceivingResults": {
+      "Method": "UpdateOrderLines",
+      "Code": 0,
+      "Message": "Receiving complete",
+      "IsError": false,
+      "ReceivedRollsItems": [
+        {
+          "RollLadingNumber": "31",
+          "PONumber": "",
+          "IsRoll": true,
+          "SeqNumSystemRefNum": 123
+        }
+      ]
+    },
+    "CostingResults": {
+      "IsNull": false,
+      "IsError": true,
+      "IsValidationError": true,
+      "IsModelError": true,
+      "IsException": false,
+      "Messages": "No Invoice Number Provided\r\nInvoice Date can not be null\r\nPayable can not be nullThere are errors with the costing data",
+      "ValidationMessages": "No Invoice Number Provided\r\nInvoice Date can not be null\r\nPayable can not be null",
+      "ExceptionMessage": ""
+    }
+  }
+}
+
+##Headers
+##Cache-Control
+##no-cache
+
+##Pragma
+##no-cache
+
+##Content-Length
+##671
+
+##Content-Type
+##application/json; charset=utf-8
+
+##Expires
+##-1
+
+##Server
+##Microsoft-IIS/10.0
+
+##X-AspNet-Version
+##4.0.30319
+
+##X-SourceFiles
+##=?UTF-8?B?QzpcVXNlcnNcTGluZHNleS5HaXVsaWFub1xzb3VyY2VccmVwb3NcbWVhc3VyZWNsb3VkYXBpXFJmbXNQdWJsaWNBcGlcdjJccGFzc3Rocm91Z2g=?=
+
+##X-Powered-By
+##ASP.NET
+
+##Date
+##Mon, 09 Sep 2024 14:49:50 GMT

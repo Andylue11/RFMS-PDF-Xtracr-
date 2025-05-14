@@ -7,6 +7,11 @@ import urllib.parse
 import time
 import sys
 from pprint import pprint
+import os
+from dotenv import load_dotenv
+
+# Load environment variables from .env-test
+load_dotenv('.env-test')
 
 # Set up logging
 logging.basicConfig(level=logging.INFO, 
@@ -14,11 +19,17 @@ logging.basicConfig(level=logging.INFO,
 logger = logging.getLogger(__name__)
 
 # Configuration
-BASE_URL = "https://api.rfms.online"
+BASE_URL = os.getenv('RFMS_BASE_URL', "https://api.rfms.online")
 
 # Credentials for Session Authentication
-USERNAME = "store-5291f4e3dca04334afede9f642ec6157"
-PASSWORD = "58ddae189c21473bb9064628b1c85161"
+STORE_CODE = "store-5291f4e3dca04334afede9f642ec6157"
+API_KEY = "427e18d70fe142ea825bcba37be113c1"
+
+# Debug output
+print(f"Loaded environment variables:")
+print(f"BASE_URL: {BASE_URL}")
+print(f"STORE_CODE: {STORE_CODE}")
+print(f"API_KEY: {API_KEY}")
 
 # Custom headers for authentication and content type
 headers = {
@@ -26,12 +37,15 @@ headers = {
     'Accept': 'application/json'
 }
 
+print(f"Current working directory: {os.getcwd()}")
+print(f".env-test exists: {os.path.exists('.env-test')}")
+
 def get_session_token(base_url):
     """Get session token for authentication."""
     print("Getting session token...")
     
     # Use Basic Auth with the provided credentials
-    auth = (USERNAME, PASSWORD)
+    auth = (STORE_CODE, API_KEY)
     
     try:
         response = requests.post(
@@ -59,7 +73,7 @@ def find_customers(base_url, session_token, search_term):
     print(f"\nSearching for customers with term: {search_term}")
     
     # Use Username and session token for subsequent requests
-    session_auth = (USERNAME, session_token)
+    session_auth = (STORE_CODE, session_token)
     
     payload = {
         "searchText": search_term,
@@ -82,6 +96,14 @@ def find_customers(base_url, session_token, search_term):
             if "result" in result:
                 customers = result.get("result", [])
                 print(f"Found {len(customers)} customers")
+                # Print detailed customer information
+                for customer in customers:
+                    print(f"\nCustomer Details:")
+                    print(f"Name: {customer.get('customerName', 'Unknown')}")
+                    print(f"ID: {customer.get('customerSourceId', 'Unknown')}")
+                    print(f"Address: {customer.get('customerAddress', 'Unknown')}")
+                    print(f"City: {customer.get('customerCity', 'Unknown')}")
+                    print(f"State: {customer.get('customerState', 'Unknown')}")
                 return customers
             else:
                 print("No customers found in response")
@@ -95,16 +117,15 @@ def find_customers(base_url, session_token, search_term):
         print(f"Error searching customers: {str(e)}")
         return []
 
-def create_job(base_url, session_token, customer_id):
+def create_job(base_url, session_token, customer_id, dollar_value):
     """Create a test job."""
     print(f"\nCreating test job for customer ID: {customer_id}")
     
     # Use Username and session token for subsequent requests
-    session_auth = (USERNAME, session_token)
+    session_auth = (STORE_CODE, session_token)
     
     # Generate a unique PO number for this test
     po_number = f"TEST-{datetime.now().strftime('%Y%m%d%H%M%S')}"
-    dollar_value = 1234.56
     
     payload = {
         "username": "zoran.vekic",
@@ -124,8 +145,8 @@ def create_job(base_url, session_token, customer_id):
             "CanEdit": False,
             "LockTaxes": False,
             "CustomerSource": "",
-            "CustomerSeqNum": customer_id,
-            "CustomerUpSeqNum": customer_id,
+            "CustomerSeqNum": int(customer_id),
+            "CustomerUpSeqNum": int(customer_id),
             "CustomerFirstName": "",
             "CustomerLastName": "",
             "CustomerAddress1": "",
@@ -186,9 +207,9 @@ def create_job(base_url, session_token, customer_id):
             "PSBusinessName": None,
             "TaxMethod": "",
             "TaxInclusive": False,
-            "UserOrderType": 3,
-            "ServiceType": 1,
-            "ContractType": 1,
+            "UserOrderType": 12,
+            "ServiceType": 9,
+            "ContractType": 2,
             "Timeslot": 0,
             "InstallStore": 1,
             "AgeFrom": None,
@@ -214,16 +235,8 @@ def create_job(base_url, session_token, customer_id):
             "Order": None,
             "LockInfo": None,
             "Message": None,
-            "Lines": [
-                {
-                    "productId": "PO#$$",
-                    "colorId": "PO#$$",
-                    "quantity": dollar_value,
-                    "priceLevel": "Price4"
-                }
-            ]
-        },
-        "products": None
+            "Lines": []
+        }
     }
     
     try:
@@ -258,7 +271,7 @@ if __name__ == "__main__":
     print("========================================")
     print("RFMS Customer Search and Job Creation Test")
     print(f"Base URL: {base_url}")
-    print(f"Username: {USERNAME}")
+    print(f"STORE_CODE: {STORE_CODE}")
     print("========================================")
     
     # Get session token
@@ -304,15 +317,18 @@ if __name__ == "__main__":
             print("Selected customer has no ID. Exiting.")
             sys.exit(1)
             
+        # Get dollar value from user
+        dollar_value = float(input("\nEnter the dollar value for the job: ").strip())
+            
         # Create job for selected customer
-        job_result = create_job(base_url, session_token, customer_id)
+        job_result = create_job(base_url, session_token, customer_id, dollar_value)
         
         if job_result:
             print("\nJob created successfully!")
         else:
             print("\nFailed to create job.")
     except ValueError:
-        print("Invalid selection. Exiting.")
+        print("Invalid selection or dollar value. Exiting.")
         sys.exit(1)
     
     print("\nTest completed!") 

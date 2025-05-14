@@ -96,4 +96,32 @@ class Job(db.Model):
         if 'billingGroupId' in rfms_data:
             job.billing_group_id = rfms_data['billingGroupId']
         
-        return job 
+        return job
+
+    def to_rfms_data(self):
+        """Convert job to RFMS API format."""
+        return {
+            'username': 'zoran.vekic',
+            'order': {
+                'CustomerSeqNum': self.customer_id,
+                'CustomerUpSeqNum': self.customer_id,
+                'PONumber': self.po_number,
+                'WorkOrderNote': self.scope_of_work,
+                'CustomerType': 'INSURANCE',
+                'UserOrderType': 12,
+                'ServiceType': 9,
+                'ContractType': 2,
+                'SalesPerson1': 'ZORAN VEKIC',
+                'Store': 1,
+                'InstallStore': 1,
+                'OrderDate': datetime.now().strftime('%Y-%m-%d'),
+                'DateEntered': datetime.now().strftime('%Y-%m-%d'),
+                'GrandInvoiceTotal': self.dollar_value,
+                'MaterialOnly': 0.0,
+                'Labor': 0.0,
+                'MiscCharges': self.dollar_value,
+                'InvoiceTotal': self.dollar_value,
+                'Balance': self.dollar_value,
+                'Lines': []
+            }
+        } 

@@ -123,7 +123,7 @@ def upload_pdf_api():
         return jsonify({"error": "Invalid file type. Please upload a PDF."}), 400
 
 @app.route('/upload', methods=['POST'])
-def upload_pdf():
+def upload_file():
     """Handle PDF upload and extraction."""
     if 'pdf_file' not in request.files:
         flash('No file part')
@@ -162,6 +162,37 @@ def upload_pdf():
             db.session.add(pdf_data)
             db.session.commit()
             
+            # Create first job
+            first_job_data = {
+                'username': 'zoran.vekic',
+                'order': {
+                    'CustomerSeqNum': pdf_data.customer_id,
+                    'CustomerUpSeqNum': pdf_data.customer_id,
+                    'PONumber': pdf_data.po_number,
+                    'WorkOrderNote': pdf_data.scope_of_work,
+                    'CustomerType': 'INSURANCE',
+                    'UserOrderType': 12,
+                    'ServiceType': 9,
+                    'ContractType': 2,
+                    'SalesPerson1': 'ZORAN VEKIC',
+                    'Store': 1,
+                    'InstallStore': 1,
+                    'OrderDate': datetime.now().strftime('%Y-%m-%d'),
+                    'DateEntered': datetime.now().strftime('%Y-%m-%d'),
+                    'GrandInvoiceTotal': pdf_data.dollar_value,
+                    'MaterialOnly': 0.0,
+                    'Labor': 0.0,
+                    'MiscCharges': pdf_data.dollar_value,
+                    'InvoiceTotal': pdf_data.dollar_value,
+                    'Balance': pdf_data.dollar_value,
+                    'Lines': []
+                }
+            }
+
+            # Create second job with same data
+            second_job_data = first_job_data.copy()
+            second_job_data['order']['PONumber'] = f"{pdf_data.po_number}-2"
+
             return redirect(url_for('preview_data', pdf_id=pdf_data.id))
         
         except Exception as e:
