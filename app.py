@@ -46,7 +46,6 @@ db.init_app(app)
 rfms_api = RfmsApi(
     base_url=os.getenv('RFMS_BASE_URL', 'https://api.rfms.online'),
     store_code=os.getenv('RFMS_STORE_CODE'),
-    username=os.getenv('RFMS_USERNAME'),
     api_key=os.getenv('RFMS_API_KEY')
 )
 

@@ -2,21 +2,14 @@ import os
 import re
 import sys
 
-def check_file(file_path):
-    """Check a file for old and new credentials"""
-    
-    old_credentials = {
-        "username": ["admin@atozflooring.com"],
-        "password": ["SimVek22$$"],
-        "apikey": ["58ddae189c21473bb9064628b1c85161"]
-    }
+
     
     new_credentials = {
-        "username": "emily@atozflooring.com",
-        "password": "5Hstg9gWmnEg",
+        "username": "store-5291f4e3dca04334afede9f642ec6157"
+        "password": "49bf22ea017f4b97aabc99def43c0b66"
+    
         "store_code": "store-5291f4e3dca04334afede9f642ec6157",
-        "api_key": "427e18d70fe142ea825bcba37be113c1"
-    }
+        "api_key": "49bf22ea017f4b97aabc99def43c0b66"
     
     issues = []
     

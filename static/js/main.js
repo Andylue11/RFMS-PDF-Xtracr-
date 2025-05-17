@@ -495,177 +495,105 @@ function setupBuilderSearch() {
  * @param {Array} results - The search results from the API
  */
 function displaySearchResults(results) {
-    // Create or clear the results container
-    let resultsContainer = document.getElementById('search-results-container');
-    
-    if (!resultsContainer) {
-        // Create the container if it doesn't exist
-        resultsContainer = document.createElement('div');
-        resultsContainer.id = 'search-results-container';
-        resultsContainer.className = 'fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50';
-        document.body.appendChild(resultsContainer);
-    } else {
-        resultsContainer.innerHTML = '';
-    }
+    const searchResults = document.getElementById('search-results');
+    if (!searchResults) return;
 
-    // Create the modal content
-    const modalContent = document.createElement('div');
-    modalContent.className = 'bg-white p-6 rounded-lg shadow-lg max-w-2xl w-full max-h-[80vh] overflow-auto';
-    
-    // Create the header
-    const header = document.createElement('div');
-    header.className = 'flex justify-between items-center mb-4';
-    
-    const title = document.createElement('h3');
-    title.className = 'text-lg font-bold text-black';
-    title.textContent = 'Search Results';
-    
-    const closeButton = document.createElement('button');
-    closeButton.className = 'text-gray-500 hover:text-gray-700';
-    closeButton.textContent = '✕';
-    closeButton.onclick = () => {
-        resultsContainer.remove();
-    };
-    
-    header.appendChild(title);
-    header.appendChild(closeButton);
-    
-    // Create the results list
-    const resultsList = document.createElement('div');
-    resultsList.className = 'space-y-2';
-    
-    // Create search info text
-    const searchCount = document.createElement('p');
-    searchCount.className = 'text-sm text-gray-600 mb-2';
-    searchCount.textContent = `Found ${results.length} result${results.length !== 1 ? 's' : ''}`;
-    
-    // Add a search input to filter results locally
-    const searchFilter = document.createElement('input');
-    searchFilter.type = 'text';
-    searchFilter.placeholder = 'Filter results...';
-    searchFilter.className = 'w-full p-2 border rounded mb-3';
-    searchFilter.addEventListener('input', (e) => {
-        const filterValue = e.target.value.toLowerCase();
+    let html = '<div class="space-y-2">';
+    results.forEach(customer => {
+        const name = customer.name || `${customer.first_name} ${customer.last_name}`.trim();
+        const address = [
+            customer.address1,
+            customer.address2,
+            customer.city,
+            customer.state,
+            customer.zip_code
+        ].filter(Boolean).join(', ');
         
-        // Show/hide results based on filter
-        Array.from(resultsList.children).forEach(item => {
-            const itemText = item.textContent.toLowerCase();
-            item.style.display = itemText.includes(filterValue) ? 'block' : 'none';
+        html += `
+            <div class="border border-gray-200 rounded-md p-3 hover:bg-gray-50 cursor-pointer customer-result" 
+                 data-id="${customer.id}" 
+                 data-customer='${JSON.stringify(customer)}'>
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="font-medium">${name}</p>
+                        ${customer.business_name ? `<p class="text-sm text-gray-600">${customer.business_name}</p>` : ''}
+                        <p class="text-sm text-gray-600">${address}</p>
+                        <p class="text-sm text-gray-600">
+                            ${customer.phone ? `Phone: ${customer.phone}` : ''}
+                            ${customer.email ? ` | Email: ${customer.email}` : ''}
+                        </p>
+                        <p class="text-sm text-gray-600">
+                            Customer ID: ${customer.customer_source_id || 'N/A'}
+                            ${customer.customer_type ? ` | Type: ${customer.customer_type}` : ''}
+                        </p>
+                    </div>
+                    <button class="select-customer-btn px-3 py-1 bg-atoz-yellow text-black rounded hover:bg-atoz-green transition">
+                        Select
+                    </button>
+                </div>
+            </div>
+        `;
+    });
+    html += '</div>';
+    
+    searchResults.innerHTML = html;
+    
+    // Add click event to customer results
+    document.querySelectorAll('.customer-result').forEach(result => {
+        result.addEventListener('click', function(e) {
+            if (!e.target.classList.contains('select-customer-btn')) {
+                const customerData = JSON.parse(this.dataset.customer);
+                populateSoldTo(customerData);
+                hideCustomerModal();
+            }
         });
     });
     
-    results.forEach(result => {
-        const resultItem = document.createElement('div');
-        resultItem.className = 'p-3 border rounded hover:bg-gray-100 cursor-pointer text-black';
-        
-        // Format the display based on available properties in the result
-        let displayText = `${result.name || 'Unknown Name'}`;
-        if (result.id) {
-            displayText = `${result.id}: ${displayText}`;
-        }
-        if (result.address) {
-            displayText += ` - ${result.address}`;
-        }
-        
-        resultItem.textContent = displayText;
-        resultItem.onclick = () => {
-            populateSoldTo(result);
-            resultsContainer.remove();
-            showNotification('Builder selected and details populated.', 'success');
-        };
-        
-        resultsList.appendChild(resultItem);
-    });
-    
-    // Assemble the modal
-    modalContent.appendChild(header);
-    modalContent.appendChild(searchCount);
-    modalContent.appendChild(searchFilter);
-    modalContent.appendChild(resultsList);
-    resultsContainer.appendChild(modalContent);
-    
-    // Add keyboard support for closing modal with ESC
-    document.addEventListener('keydown', function escHandler(e) {
-        if (e.key === 'Escape') {
-            resultsContainer.remove();
-            document.removeEventListener('keydown', escHandler);
-        }
+    // Add click event to select buttons
+    document.querySelectorAll('.select-customer-btn').forEach(button => {
+        button.addEventListener('click', function(e) {
+            e.stopPropagation();
+            const result = this.closest('.customer-result');
+            const customerData = JSON.parse(result.dataset.customer);
+            populateSoldTo(customerData);
+            hideCustomerModal();
+        });
     });
 }
 
 /**
  * Populate the Sold To fields with the selected builder data
- * @param {Object} builderData - The builder data object from the API
+ * @param {Object} customer - The customer data object from the API
  */
-function populateSoldTo(builderData) {
-    console.log('Populating Sold To with data:', builderData);
+function populateSoldTo(customer) {
+    // Populate all relevant fields with customer data
+    const fields = {
+        'sold_to_name': customer.name || `${customer.first_name} ${customer.last_name}`.trim(),
+        'sold_to_business_name': customer.business_name || '',
+        'sold_to_address1': customer.address1 || '',
+        'sold_to_address2': customer.address2 || '',
+        'sold_to_city': customer.city || '',
+        'sold_to_state': customer.state || '',
+        'sold_to_zip': customer.zip_code || '',
+        'sold_to_phone': customer.phone || '',
+        'sold_to_email': customer.email || '',
+        'sold_to_customer_id': customer.customer_source_id || '',
+        'sold_to_customer_type': customer.customer_type || ''
+    };
     
-    // Clear existing data first
-    document.getElementById('sold-to-name').value = '';
-    document.getElementById('sold-to-address1').value = '';
-    document.getElementById('sold-to-address2').value = '';
-    document.getElementById('sold-to-city').value = '';
-    document.getElementById('sold-to-state').value = '';
-    document.getElementById('sold-to-zip').value = '';
-    document.getElementById('sold-to-country').value = '';
-    document.getElementById('sold-to-phone').value = '';
-    document.getElementById('sold-to-email').value = '';
-    
-    // Set customer ID (hidden field)
-    let builderIdField = document.getElementById('sold-to-customer-id');
-    if (!builderIdField) {
-        builderIdField = document.createElement('input');
-        builderIdField.type = 'hidden';
-        builderIdField.id = 'sold-to-customer-id';
-        document.getElementById('sold-to-fields').appendChild(builderIdField);
-    }
-    
-    // Basic validation
-    if (!builderData) {
-        console.error('No builder data provided');
-        return;
-    }
-    
-    // Populate fields with data
-    document.getElementById('sold-to-name').value = builderData.name || '';
-    builderIdField.value = builderData.id || '';
-    
-    // Process address
-    if (builderData.address) {
-        // If address is provided as a complete string, parse it
-        if (typeof builderData.address === 'string') {
-            const addressParts = builderData.address.split(',').map(part => part.trim());
-            
-            if (addressParts.length >= 1) {
-                document.getElementById('sold-to-address1').value = addressParts[0] || '';
-            }
-            if (addressParts.length >= 2) {
-                document.getElementById('sold-to-address2').value = addressParts[1] || '';
-            }
-            // Try to parse city, state, zip from the remaining parts
-            if (addressParts.length >= 3) {
-                // Last part likely contains city, state, zip
-                const cityStateZip = addressParts[addressParts.length - 1].split(' ');
-                
-                // Extract city (all except last two elements)
-                const city = cityStateZip.slice(0, -2).join(' ');
-                // State is likely the second-to-last element
-                const state = cityStateZip[cityStateZip.length - 2];
-                // Zip is likely the last element
-                const zip = cityStateZip[cityStateZip.length - 1];
-                
-                document.getElementById('sold-to-city').value = city || '';
-                document.getElementById('sold-to-state').value = state || '';
-                document.getElementById('sold-to-zip').value = zip || '';
-            }
+    // Update form fields
+    Object.entries(fields).forEach(([fieldId, value]) => {
+        const field = document.getElementById(fieldId);
+        if (field) {
+            field.value = value;
         }
-    }
+    });
     
-    document.getElementById('sold-to-phone').value = builderData.phone || '';
-    document.getElementById('sold-to-email').value = builderData.email || '';
-    document.getElementById('sold-to-country').value = 'Australia';
+    // Store customer ID for later use
+    window.selectedCustomerId = customer.id;
     
-    console.log('Sold To fields populated successfully');
+    // Show success notification
+    showNotification('Customer details populated successfully', 'success');
 }
 
 /**

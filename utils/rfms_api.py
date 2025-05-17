@@ -15,20 +15,18 @@ class RfmsApi:
     This class handles authentication and provides methods for various API endpoints.
     """
     
-    def __init__(self, base_url, store_code, username, api_key):
+    def __init__(self, base_url=None, store_code=None, api_key=None):
         """
         Initialize the RFMS API client.
         
         Args:
             base_url (str): The base URL for the RFMS API
             store_code (str): The store code for authentication
-            username (str): The username for authentication
             api_key (str): The API key for authentication
         """
-        self.base_url = base_url
-        self.store_code = store_code
-        self.username = username
-        self.api_key = api_key
+        self.base_url = base_url or os.getenv('RFMS_BASE_URL', 'https://api.rfms.online')
+        self.store_code = store_code or os.getenv('RFMS_STORE_CODE')
+        self.api_key = api_key or os.getenv('RFMS_API_KEY')
         self.session_token = None
         self.session_expiry = None
         self.headers = {
@@ -38,6 +36,11 @@ class RfmsApi:
         self.timeout = 10
         self.max_retries = 2
         self.auth = None  # Will store the current auth tuple
+        
+        if not self.store_code or not self.api_key:
+            raise ValueError("RFMS_STORE_CODE and RFMS_API_KEY environment variables must be set")
+        
+        logger.info(f"Initialized RFMS API client for store: {self.store_code}")
     
     def ensure_session(self):
         """
@@ -58,56 +61,45 @@ class RfmsApi:
     def get_session(self):
         """
         Get a new session token from the RFMS API.
+        Initial auth uses store code and API key, then uses store code and session token.
         
         Returns:
             bool: True if successful, False otherwise
         """
         endpoint = f"{self.base_url}/v2/Session/Begin"
         
-        # Use store_code and API key for initial authentication
-        auth = (self.store_code, self.api_key)
-        
         try:
             logger.info(f"Getting new session token from {endpoint}")
+            logger.info(f"Using store_code: {self.store_code}")
+            
+            # Initial auth with store code and API key
+            auth = (self.store_code, self.api_key)
             
             response = requests.post(
                 endpoint, 
-                headers=self.headers, 
-                auth=auth, 
+                headers=self.headers,
+                auth=auth,
                 timeout=self.timeout
             )
             
             if response.status_code == 200:
                 data = response.json()
-                self.session_token = data.get('sessionToken')
-                
-                if not self.session_token:
-                    logger.error("Session token not found in response")
-                    return False
-                
-                # Set session expiry based on returned value
-                if 'sessionExpires' in data:
-                    try:
-                        expiry_str = data.get('sessionExpires')
-                        self.session_expiry = datetime.strptime(expiry_str, "%a, %d %b %Y %H:%M:%S %Z")
-                    except Exception as e:
-                        logger.warning(f"Could not parse session expiry: {str(e)}")
-                        self.session_expiry = datetime.now() + timedelta(minutes=20)
+                if data.get('authorized') and data.get('sessionToken'):
+                    self.session_token = data['sessionToken']
+                    self.session_expiry = data.get('sessionExpires')
+                    logger.info(f"Session token obtained: {self.session_token[:8]}...")
+                    logger.info(f"Session expires: {self.session_expiry}")
+                    
+                    # Set up auth for future requests using store code as username and session token as password
+                    self.auth = (self.store_code, self.session_token)
+                    return True
                 else:
-                    self.session_expiry = datetime.now() + timedelta(minutes=20)
-                
-                # Set up auth for future requests
-                self.auth = (self.store_code, self.session_token)
-                
-                logger.info(f"Successfully obtained session token, expires at: {self.session_expiry}")
-                return True
-            
+                    logger.error("Session token not found in response or not authorized")
+                    logger.error(f"Response: {data}")
+                    return False
             else:
                 logger.error(f"Failed to get session token. Status code: {response.status_code}")
-                try:
-                    logger.error(f"Response: {response.json()}")
-                except:
-                    logger.error(f"Response text: {response.text}")
+                logger.error(f"Response: {response.text}")
                 return False
                 
         except Exception as e:
@@ -190,58 +182,57 @@ class RfmsApi:
         url = f"{self.base_url}/v2/Session/Begin"
         
         try:
-            # Set up basic auth with store_code as username and api_key as password
+            # Initial auth with store code and API key
             auth = (self.store_code, self.api_key)
-            
-            headers = {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json'
-            }
             
             response = requests.post(
                 url, 
-                headers=headers,
+                headers=self.headers,
                 auth=auth,
                 timeout=self.timeout
             )
             
             if response.status_code == 200:
-                return 'online'
-            else:
-                logger.warning(f"API connection failed with status code: {response.status_code}")
-                return 'offline'
-        
-        except Timeout:
-            logger.error("API status check timed out")
+                data = response.json()
+                if data.get('authorized') and data.get('sessionToken'):
+                    # Store the session token for future use
+                    self.session_token = data['sessionToken']
+                    self.session_expiry = data.get('sessionExpires')
+                    self.auth = (self.store_code, self.session_token)
+                    return 'online'
+            
+            logger.warning(f"API connection failed with status code: {response.status_code}")
             return 'offline'
-        except ConnectionError:
-            logger.error("API connection error during status check")
-            return 'offline'
+                
         except Exception as e:
             logger.error(f"Error checking API status: {str(e)}")
             return 'offline'
     
     def find_customers(self, search_term):
         """
-        Search for customers by name using the RFMS API.
-        Uses POST request with store code and session token authentication.
+        Find customers using the advanced search endpoint.
         
         Args:
-            search_term (str): The search term for finding customers
+            search_term (str): The search term to find customers
             
         Returns:
             list: List of customer objects matching the search term
         """
         logger.info(f"Finding customers with search term: {search_term}")
         
-        url = f"{self.base_url}/v2/customers/find"
+        # Use advanced search endpoint for better search capabilities
+        url = f"{self.base_url}/v2/customers/find/advanced"
         
-        # Exact payload structure with string boolean values
-        payload = {
+        # Prepare advanced search parameters with more flexible options
+        search_params = {
             "searchText": search_term,
-            "includeCustomers": "true",
-            "includeProspects": "false",
-            "includeInactive": "false"
+            "stores": [self.store_code],  # Search in current store
+            "activeOnly": False,  # Include inactive customers
+            "includeCustomers": True,
+            "includeProspects": True,  # Include prospects
+            "includeInactive": True,  # Include inactive customers
+            "startIndex": 0,
+            "maxResults": 50  # Limit results to prevent overwhelming response
         }
         
         try:
@@ -250,9 +241,11 @@ class RfmsApi:
                 logger.error("Failed to establish session for customer search")
                 return []
             
-            # Make the request with exact headers
+            # Make the request with proper headers
             headers = {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-API-Key': self.api_key
             }
             
             # Use store code as username and session token as password
@@ -262,7 +255,7 @@ class RfmsApi:
                 url,
                 headers=headers,
                 auth=auth,
-                json=payload,
+                json=search_params,
                 timeout=self.timeout
             )
             
