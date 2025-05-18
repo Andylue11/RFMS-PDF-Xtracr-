@@ -123,7 +123,7 @@ def upload_pdf_api():
         return jsonify({"error": "Invalid file type. Please upload a PDF."}), 400
 
 @app.route('/upload', methods=['POST'])
-def upload_pdf():
+def upload_file():
     """Handle PDF upload and extraction."""
     if 'pdf_file' not in request.files:
         flash('No file part')
@@ -162,6 +162,37 @@ def upload_pdf():
             db.session.add(pdf_data)
             db.session.commit()
             
+            # Create first job
+            first_job_data = {
+                'username': 'zoran.vekic',
+                'order': {
+                    'CustomerSeqNum': pdf_data.customer_id,
+                    'CustomerUpSeqNum': pdf_data.customer_id,
+                    'PONumber': pdf_data.po_number,
+                    'WorkOrderNote': pdf_data.scope_of_work,
+                    'CustomerType': 'INSURANCE',
+                    'UserOrderType': 12,
+                    'ServiceType': 9,
+                    'ContractType': 2,
+                    'SalesPerson1': 'ZORAN VEKIC',
+                    'Store': 1,
+                    'InstallStore': 1,
+                    'OrderDate': datetime.now().strftime('%Y-%m-%d'),
+                    'DateEntered': datetime.now().strftime('%Y-%m-%d'),
+                    'GrandInvoiceTotal': pdf_data.dollar_value,
+                    'MaterialOnly': 0.0,
+                    'Labor': 0.0,
+                    'MiscCharges': pdf_data.dollar_value,
+                    'InvoiceTotal': pdf_data.dollar_value,
+                    'Balance': pdf_data.dollar_value,
+                    'Lines': []
+                }
+            }
+
+            # Create second job with same data
+            second_job_data = first_job_data.copy()
+            second_job_data['order']['PONumber'] = f"{pdf_data.po_number}-2"
+
             return redirect(url_for('preview_data', pdf_id=pdf_data.id))
         
         except Exception as e:
@@ -195,8 +226,28 @@ def search_customers():
             logger.info(f"No customers found for search term: {search_term}")
             return jsonify([])
         
-        logger.info(f"Found {len(customers)} customers for search term: {search_term}")
-        return jsonify(customers)
+        # Format response for frontend
+        formatted_customers = []
+        for customer in customers:
+            formatted_customer = {
+                'id': customer.get('id'),
+                'customer_source_id': customer.get('customer_source_id'),
+                'name': customer.get('name', ''),
+                'first_name': customer.get('first_name', ''),
+                'last_name': customer.get('last_name', ''),
+                'business_name': customer.get('business_name', ''),
+                'address': f"{customer.get('address1', '')}, {customer.get('city', '')}, {customer.get('state', '')} {customer.get('zip_code', '')}",
+                'address1': customer.get('address1', ''),
+                'address2': customer.get('address2', ''),
+                'city': customer.get('city', ''),
+                'state': customer.get('state', ''),
+                'zip_code': customer.get('zip_code', ''),
+                'country': customer.get('country', '')
+            }
+            formatted_customers.append(formatted_customer)
+        
+        logger.info(f"Found {len(formatted_customers)} customers for search term: {search_term}")
+        return jsonify(formatted_customers)
     except Exception as e:
         logger.error(f"Error searching customers: {str(e)}")
         return jsonify({"error": str(e)}), 500
@@ -336,30 +387,28 @@ def export_to_rfms():
         # Prepare the job data for the API
         po_number = job_data.get('po_number', '')
         dollar_value = job_data.get('dollar_value', 0)
-        # Build lines array as specified
+        # Build lines array for the PO# line item
         lines = [{
             'productId': f'PO#$$',
             'colorId': f'PO#$$',
             'quantity': dollar_value,
             'priceLevel': 'Price4'
         }]
+        
+        # Prepare the job data using the new format
         prepared_job_data = {
-            'storeNumber': 1,
-            'privateNotes': 'PRIVATE',
-            'publicNotes': job_data.get('description_of_works', ''),
-            'workOrderNotes': description,
-            'salesperson1': 'Zoran Vekic',
-            'salesperson2': '',
-            'userOrderTypeId': 3,
-            'serviceTypeId': 1,
-            'contractTypeId': 1,
-            'lines': lines,
-            'po_number': po_number,
-            'job_number': job_data.get('job_number'),
             'sold_to_customer_id': sold_to_customer_id,
             'ship_to_customer_id': ship_to_customer_id,
+            'po_number': po_number,
+            'job_number': job_data.get('job_number'),
+            'description_of_works': description,
             'dollar_value': dollar_value,
-            # Additional fields as required by your RFMS API
+            'salesperson1': 'Zoran Vekic',
+            'store_number': 1,
+            'service_type_id': 1,
+            'contract_type_id': 1,
+            'user_order_type_id': 3,
+            'lines': lines
         }
         
         logger.info(f"Creating job in RFMS: {prepared_job_data.get('po_number')}")
@@ -394,6 +443,13 @@ def export_to_rfms():
                 second_job_data = prepared_job_data.copy()
                 second_job_data['po_number'] = f"{po_prefix}-{po_suffix}"
                 second_job_data['dollar_value'] = second_value
+                # Update lines for the second job
+                second_job_data['lines'] = [{
+                    'productId': f'PO#$$',
+                    'colorId': f'PO#$$',
+                    'quantity': second_value,
+                    'priceLevel': 'Price4'
+                }]
                 
                 logger.info(f"Creating second job in RFMS: {second_job_data.get('po_number')}")
                 

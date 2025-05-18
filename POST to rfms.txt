@@ -1,0 +1,115 @@
+POST
+
+https://api.rfms.online/v2/customers/find
+
+Params
+
+Authorization.
+
+Headers (11)
+
+Body .
+
+Scripts
+
+Auth Type
+Basic Auth
+
+Username
+
+Same Username (Store Queue)
+
+store-5291f4e3dca04334afede9f642ec6157
+
+The authorization header will be
+
+Password
+
+Password is sessionToken
+
+..............
+
+automatically generated when you send the
+request. Learn more about Basic Auth
+authorization.
+
+Body
+
+Cookies (2)
+Headers (11) Test Results
+
+{} JSON v
+
+Preview
+
+Visualize
+
+v
+
+1
+
+2
+
+"status": "success
+
+3
+
+"result": [],
+"detail": [
+
+5
+
+"customerSource": "Customer",
+
+7
+
+"customerSourceId": 1324,
+"salesLeadId": 0,
+
+9
+
+"1msId": "",
+
+10
+
+"customerName": "HAIG-SMITH",
+
+11
+
+"customerFirstName": "PAUL AND ANNI",
+
+12
+
+"actualCustomerFirstName": "PAUL AND ANNI",
+
+13
+
+"customerLastName": "HAIG-SMITH",
+
+14
+
+"customerBusinessName": "",
+
+15
+
+"customerAddress": "47 AQUA CRESCENT",
+
+16
+
+"customerAddress2": "",
+
+17
+
+"customerCity": "REDLAND BAY",
+
+18
+
+"customerState": "QLD",
+
+19
+
+"customerZIP": "4165",
+
+20
+
+"customerCountry": ""
