@@ -68,11 +68,11 @@ class RfmsApi:
             f"{self.base_url}/api/v2/Session"
         ]
         
-        # Use username/password authentication
+        # Use username/api_key authentication
         payload = {
             "storeCode": self.store_code,
             "userName": self.username,
-            "password": "SimVek22$$"
+            "password": self.api_key
         }
         
         headers = {
@@ -215,7 +215,7 @@ class RfmsApi:
                 json={
                     "storeCode": self.store_code,
                     "userName": self.username,
-                    "password": "SimVek22$$"
+                    "password": self.api_key
                 },
                 timeout=self.timeout
             )
