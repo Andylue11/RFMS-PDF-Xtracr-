@@ -247,27 +247,37 @@ def check_api_status():
 def search_customers_api():
     """Search for customers by name or exact ID."""
     search_term = request.args.get('term', '')
-    if not search_term:
-        return jsonify([])
+    page = int(request.args.get('page', 0))
     
-    logger.info(f"Searching for customers with term: {search_term}")
+    if not search_term:
+        return jsonify({"results": [], "total": 0})
+    
+    logger.info(f"Searching for customers with term: {search_term}, page: {page}")
     
     try:
         # If the search term is a digit, treat as exact customer ID
         if search_term.isdigit():
             customer = rfms_api.find_customer_by_id(search_term)
             if customer:
-                return jsonify(customer)
+                return jsonify({
+                    "results": [customer],
+                    "total": 1
+                })
             else:
-                return jsonify([])
+                return jsonify({
+                    "results": [],
+                    "total": 0
+                })
         
-        # Otherwise, do a fuzzy search
-        customers = rfms_api.find_customers(search_term)
-        if customers:
-            return jsonify(customers)
+        # Otherwise, do a fuzzy search with pagination
+        customers = rfms_api.find_customers(search_term, page)
+        total = rfms_api.get_customer_count(search_term)
         
-        logger.info(f"No customers found for search term: {search_term}")
-        return jsonify([])
+        return jsonify({
+            "results": customers,
+            "total": total
+        })
+        
     except Exception as e:
         logger.error(f"Error searching customers: {str(e)}")
         return jsonify({"error": str(e)}), 500
@@ -439,7 +449,7 @@ def export_to_rfms():
         
         # 2. Get the Sold To customer ID (assumes it was already obtained via search)
         sold_to_data = data['sold_to']
-        sold_to_customer_id = sold_to_data.get('id')
+        sold_to_customer_id = sold_to_data.get('customerSourceId')
         
         if not sold_to_customer_id:
             logger.warning("Missing Sold To customer ID")

@@ -451,7 +451,7 @@ function setupBuilderSearch() {
             if (Array.isArray(searchResults) && searchResults.length > 0) {
                 // Display search results for selection if there are multiple matches
                 if (searchResults.length > 1) {
-                    displaySearchResults(searchResults);
+                    displaySearchResults(searchResults, searchResults.length);
                     showNotification('Multiple builders found. Please select one.', 'success');
                 } else {
                     // If only one result, auto-select it
@@ -493,12 +493,11 @@ function setupBuilderSearch() {
  * Display search results in a modal or dropdown for user selection
  * @param {Array} results - The search results from the API
  */
-function displaySearchResults(results) {
+function displaySearchResults(results, totalResults, currentPage = 0) {
     // Create or clear the results container
     let resultsContainer = document.getElementById('search-results-container');
     
     if (!resultsContainer) {
-        // Create the container if it doesn't exist
         resultsContainer = document.createElement('div');
         resultsContainer.id = 'search-results-container';
         resultsContainer.className = 'fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50';
@@ -536,7 +535,7 @@ function displaySearchResults(results) {
     // Create search info text
     const searchCount = document.createElement('p');
     searchCount.className = 'text-sm text-gray-600 mb-2';
-    searchCount.textContent = `Found ${results.length} result${results.length !== 1 ? 's' : ''}`;
+    searchCount.textContent = `Showing ${results.length} of ${totalResults} result${totalResults !== 1 ? 's' : ''}`;
     
     // Add a search input to filter results locally
     const searchFilter = document.createElement('input');
@@ -545,8 +544,6 @@ function displaySearchResults(results) {
     searchFilter.className = 'w-full p-2 border rounded mb-3';
     searchFilter.addEventListener('input', (e) => {
         const filterValue = e.target.value.toLowerCase();
-        
-        // Show/hide results based on filter
         Array.from(resultsList.children).forEach(item => {
             const itemText = item.textContent.toLowerCase();
             item.style.display = itemText.includes(filterValue) ? 'block' : 'none';
@@ -557,7 +554,6 @@ function displaySearchResults(results) {
         const resultItem = document.createElement('div');
         resultItem.className = 'p-3 border rounded hover:bg-gray-100 cursor-pointer text-black';
         
-        // Format the display with CustomerID first
         let displayText = '';
         if (result.customer_source_id) {
             displayText = `CustomerID: ${result.customer_source_id} - `;
@@ -577,12 +573,43 @@ function displaySearchResults(results) {
         
         resultsList.appendChild(resultItem);
     });
+
+    // Create pagination controls
+    const paginationContainer = document.createElement('div');
+    paginationContainer.className = 'flex justify-between items-center mt-4 pt-4 border-t';
+    
+    const prevButton = document.createElement('button');
+    prevButton.className = 'px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 disabled:opacity-50';
+    prevButton.textContent = 'Previous';
+    prevButton.disabled = currentPage === 0;
+    prevButton.onclick = () => {
+        const searchTerm = document.getElementById('customer-search').value;
+        searchCustomers(searchTerm, currentPage - 1);
+    };
+    
+    const nextButton = document.createElement('button');
+    nextButton.className = 'px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50';
+    nextButton.textContent = 'Next';
+    nextButton.disabled = (currentPage + 1) * 10 >= totalResults;
+    nextButton.onclick = () => {
+        const searchTerm = document.getElementById('customer-search').value;
+        searchCustomers(searchTerm, currentPage + 1);
+    };
+    
+    const pageInfo = document.createElement('span');
+    pageInfo.className = 'text-sm text-gray-600';
+    pageInfo.textContent = `Page ${currentPage + 1} of ${Math.ceil(totalResults / 10)}`;
+    
+    paginationContainer.appendChild(prevButton);
+    paginationContainer.appendChild(pageInfo);
+    paginationContainer.appendChild(nextButton);
     
     // Assemble the modal
     modalContent.appendChild(header);
     modalContent.appendChild(searchCount);
     modalContent.appendChild(searchFilter);
     modalContent.appendChild(resultsList);
+    modalContent.appendChild(paginationContainer);
     resultsContainer.appendChild(modalContent);
     
     // Add keyboard support for closing modal with ESC
@@ -592,6 +619,26 @@ function displaySearchResults(results) {
             document.removeEventListener('keydown', escHandler);
         }
     });
+}
+
+async function searchCustomers(searchTerm, page = 0) {
+    try {
+        const response = await fetchWithRetry(`/api/customers/search?term=${encodeURIComponent(searchTerm)}&page=${page}`);
+        const data = await response.json();
+        
+        if (data.error) {
+            showNotification(data.error, 'error');
+            return;
+        }
+        
+        if (Array.isArray(data.results)) {
+            displaySearchResults(data.results, data.total, page);
+        } else {
+            showNotification('Invalid response format from server', 'error');
+        }
+    } catch (error) {
+        showNotification(`Error searching customers: ${error.message}`, 'error');
+    }
 }
 
 /**
@@ -620,7 +667,7 @@ function populateSoldTo(builderData) {
         builderIdField.id = 'sold-to-customer-id';
         document.getElementById('sold-to-fields').appendChild(builderIdField);
     }
-    builderIdField.value = builderData.customer_source_id || '';
+    builderIdField.value = builderData.customerSourceId || builderData.customer_source_id || '';
     
     // Populate the fields with the builder data
     document.getElementById('sold-to-name').value = builderData.business_name || builderData.name || '';
@@ -691,7 +738,7 @@ function setupExportToRFMS() {
         
         // Gather Sold To data
         const soldTo = {
-            id: soldToCustomerId,
+            customerSourceId: soldToCustomerId,
             name: soldToName,
             address1: document.getElementById('sold-to-address1').value,
             address2: document.getElementById('sold-to-address2').value,

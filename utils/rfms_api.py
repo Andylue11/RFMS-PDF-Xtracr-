@@ -164,48 +164,60 @@ class RfmsApi:
         """Check if the RFMS API is available."""
         return self.get_session()
     
-    def find_customers(self, search_term, start_index=0):
-        """Search for customers with pagination support."""
-        if not self.ensure_session():
-            logger.error("Failed to establish session for customer search")
-            return []
+    def find_customers(self, search_term, page=0):
+        """
+        Find customers by search term with pagination.
         
+        Args:
+            search_term (str): The search term to find customers
+            page (int): Page number for pagination (0-based)
+            
+        Returns:
+            list: List of customer objects matching the search term
+        """
         url = f"{self.base_url}/v2/customers/find"
         
-        # Search payload with pagination
         payload = {
             "searchText": search_term,
             "includeCustomers": True,
             "includeProspects": False,
             "includeInactive": False,
-            "startIndex": start_index,
-            "storeNumber": 49,
+            "startIndex": page * 10,
+            "storeNumber": self.store_number,
             "customerType": "BUILDERS",
             "referralType": "Standalone",
             "entryType": "Customer",
             "activeOnly": True,
-            "defaultStore": 49
+            "defaultStore": self.store_number
         }
         
         try:
-            response = requests.post(
-                url,
-                headers=self.headers,
-                auth=self.auth,
-                json=payload,
-                timeout=self.timeout
-            )
+            logger.info(f"Finding customers with term: {search_term}, page: {page}")
+            data = self.execute_request('POST', url, payload)
             
-            if response.status_code == 200:
-                data = response.json()
-                customers = data.get('detail', [])
-                logger.info(f"Found {len(customers)} customers for search term: {search_term}")
-                return self._format_customer_list(customers)
-            else:
-                logger.error(f"Failed to search customers. Status code: {response.status_code}")
-                logger.error(f"Response: {response.text}")
+            if not data or "result" not in data:
+                logger.warning("No customers found in search response")
                 return []
-                
+            
+            customers = data.get("result", [])
+            
+            # Format each customer for UI display
+            formatted_customers = []
+            for customer in customers:
+                formatted_customers.append({
+                    'id': customer.get('customerId', ''),
+                    'customer_source_id': customer.get('customerSourceId', ''),
+                    'name': customer.get('customerName', ''),
+                    'first_name': customer.get('firstName', ''),
+                    'last_name': customer.get('lastName', ''),
+                    'business_name': customer.get('customerBusinessName', ''),
+                    'address': f"{customer.get('customerAddress', '')}, {customer.get('customerCity', '')}, {customer.get('customerState', '')} {customer.get('customerZip', '')}",
+                    'phone': customer.get('customerPhone', ''),
+                    'email': customer.get('customerEmail', '')
+                })
+            
+            return formatted_customers
+            
         except Exception as e:
             logger.error(f"Error finding customers: {str(e)}")
             return []
@@ -226,6 +238,12 @@ class RfmsApi:
             logger.info(f"Finding customer by ID: {customer_id}")
             response = self.execute_request('GET', url)
             
+            # Handle case where response is a string (no customer found)
+            if isinstance(response, str):
+                logger.warning(f"No customer found with ID: {customer_id}")
+                return []
+            
+            # Handle case where response is None or empty
             if not response:
                 logger.warning(f"No customer found with ID: {customer_id}")
                 return []
@@ -704,4 +722,51 @@ class RfmsApi:
             }
             formatted_customers.append(formatted_customer)
         
-        return formatted_customers 
+        return formatted_customers
+    
+    def get_customer_count(self, search_term):
+        """Get the total count of customers matching a search term."""
+        if not self.ensure_session():
+            logger.error("Failed to establish session for customer count")
+            return 0
+        
+        url = f"{self.base_url}/v2/customers/find"
+        
+        # Search payload for count
+        payload = {
+            "searchText": search_term,
+            "includeCustomers": True,
+            "includeProspects": False,
+            "includeInactive": False,
+            "startIndex": 0,
+            "storeNumber": 49,
+            "customerType": "BUILDERS",
+            "referralType": "Standalone",
+            "entryType": "Customer",
+            "activeOnly": True,
+            "defaultStore": 49,
+            "countOnly": True  # Request only the count
+        }
+        
+        try:
+            response = requests.post(
+                url,
+                headers=self.headers,
+                auth=self.auth,
+                json=payload,
+                timeout=self.timeout
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                total_count = data.get('totalCount', 0)
+                logger.info(f"Found {total_count} total customers for search term: {search_term}")
+                return total_count
+            else:
+                logger.error(f"Failed to get customer count. Status code: {response.status_code}")
+                logger.error(f"Response: {response.text}")
+                return 0
+                
+        except Exception as e:
+            logger.error(f"Error getting customer count: {str(e)}")
+            return 0 
