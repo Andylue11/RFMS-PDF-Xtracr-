@@ -82,7 +82,7 @@ print(data.decode("utf-8"))
       "terms": "",
       "termDays": 0,
       "creditLimit": 0,
-      "defaultStore": 01,
+      "defaultStore": 49,
       "internalNotes": "",
       "remarks": []
     }

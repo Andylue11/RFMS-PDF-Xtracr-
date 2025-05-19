@@ -24,9 +24,22 @@
         <form id="data-form" class="space-y-6">
             <!-- Customer Information Section -->
             <div>
-                <h4 class="text-lg font-medium text-gray-900 mb-4">Sold To / Customer Information</h4>
+                <div class="flex justify-between items-center mb-4">
+                    <h4 class="text-lg font-medium text-gray-900">Builder Information</h4>
+                    <button id="change-builder-btn" class="px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200 transition">Change Builder</button>
+                </div>
                 
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div id="builder-search-section" class="mb-4">
+                    <div class="flex gap-2">
+                        <input type="text" id="builder-search" placeholder="Search by name or ID" class="flex-grow px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                        <button id="search-builder-btn" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition">Search</button>
+                    </div>
+                    <div id="builder-search-results" class="mt-2 max-h-48 overflow-y-auto hidden">
+                        <!-- Search results will be displayed here -->
+                    </div>
+                </div>
+                
+                <div id="builder-details" class="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
                         <label for="salutation" class="block text-sm font-medium text-gray-700 mb-1">Salutation</label>
                         <select id="salutation" name="salutation" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
@@ -396,5 +409,110 @@
             });
         }
     }
+
+    // Builder search functionality
+    const builderSearchInput = document.getElementById('builder-search');
+    const searchBuilderBtn = document.getElementById('search-builder-btn');
+    const builderSearchResults = document.getElementById('builder-search-results');
+    const builderDetails = document.getElementById('builder-details');
+    const changeBuilderBtn = document.getElementById('change-builder-btn');
+    
+    let selectedBuilderId = null;
+    
+    function showBuilderSearch() {
+        builderSearchResults.classList.remove('hidden');
+        builderDetails.classList.add('opacity-50');
+        builderDetails.classList.add('pointer-events-none');
+    }
+    
+    function hideBuilderSearch() {
+        builderSearchResults.classList.add('hidden');
+        builderDetails.classList.remove('opacity-50');
+        builderDetails.classList.remove('pointer-events-none');
+    }
+    
+    function populateBuilderDetails(customer) {
+        document.getElementById('salutation').value = customer.salutation || '';
+        document.getElementById('first_name').value = customer.firstName || '';
+        document.getElementById('last_name').value = customer.lastName || '';
+        document.getElementById('business_name').value = customer.businessName || '';
+        document.getElementById('address').value = customer.address || '';
+        document.getElementById('city').value = customer.city || '';
+        document.getElementById('state').value = customer.state || '';
+        document.getElementById('zip_code').value = customer.zipCode || '';
+        document.getElementById('phone').value = customer.phone || '';
+        document.getElementById('email').value = customer.email || '';
+        
+        // Store the RFMS customerId as our builderId
+        selectedBuilderId = customer.customerId;
+        hideBuilderSearch();
+    }
+    
+    searchBuilderBtn.addEventListener('click', function() {
+        const searchTerm = builderSearchInput.value.trim();
+        if (!searchTerm) return;
+        
+        builderSearchResults.innerHTML = '<p class="text-sm text-gray-500">Searching...</p>';
+        showBuilderSearch();
+        
+        fetch(`/api/customers/search?term=${encodeURIComponent(searchTerm)}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    builderSearchResults.innerHTML = `<p class="text-sm text-red-500">${data.error}</p>`;
+                    return;
+                }
+                
+                if (data.length === 0) {
+                    builderSearchResults.innerHTML = '<p class="text-sm text-gray-500">No builders found. Try a different search term.</p>';
+                    return;
+                }
+                
+                let html = '<div class="space-y-2">';
+                data.forEach(customer => {
+                    html += `
+                        <div class="border border-gray-200 rounded-md p-3 hover:bg-gray-50 cursor-pointer builder-result" data-id="${customer.customerId}">
+                            <p class="font-medium">${customer.name || customer.firstName + ' ' + customer.lastName}</p>
+                            <p class="text-sm text-gray-600">${customer.businessName || ''}</p>
+                            <p class="text-sm text-gray-600">${customer.address || ''}, ${customer.city || ''}, ${customer.state || ''}</p>
+                            <p class="text-sm text-gray-600">${customer.phone || ''} | RFMS ID: ${customer.customerId}</p>
+                        </div>
+                    `;
+                });
+                html += '</div>';
+                
+                builderSearchResults.innerHTML = html;
+                
+                // Add click event to builder results
+                document.querySelectorAll('.builder-result').forEach(item => {
+                    item.addEventListener('click', function() {
+                        const customerId = this.dataset.id;
+                        fetch(`/api/customer/${customerId}`)
+                            .then(response => response.json())
+                            .then(customer => {
+                                populateBuilderDetails(customer);
+                            })
+                            .catch(error => {
+                                console.error('Error fetching customer details:', error);
+                            });
+                    });
+                });
+            })
+            .catch(error => {
+                builderSearchResults.innerHTML = `<p class="text-sm text-red-500">Error searching builders: ${error.message}</p>`;
+            });
+    });
+    
+    changeBuilderBtn.addEventListener('click', function() {
+        builderSearchInput.value = '';
+        showBuilderSearch();
+    });
+    
+    // Enter key triggers search
+    builderSearchInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            searchBuilderBtn.click();
+        }
+    });
 </script>
 {% endblock %} 

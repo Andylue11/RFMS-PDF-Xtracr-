@@ -374,13 +374,13 @@ function setupPdfUpload() {
  */
 function populateShipTo(data) {
     // Populate Ship To fields
-    document.getElementById('ship-to-name').value = data.customer_name || '';
+    document.getElementById('ship-to-name').value = data.business_name || data.name || '';
     document.getElementById('ship-to-address1').value = data.address1 || '';
     document.getElementById('ship-to-address2').value = data.address2 || '';
     document.getElementById('ship-to-city').value = data.city || '';
     document.getElementById('ship-to-state').value = data.state || '';
     document.getElementById('ship-to-zip').value = data.zip_code || '';
-    document.getElementById('ship-to-country').value = data.country || '';
+    document.getElementById('ship-to-country').value = 'USA'; // Default to USA
 
     // Handle phone numbers
     let phoneNumbers = [];
@@ -399,10 +399,9 @@ function populateShipTo(data) {
         phoneNumbers = phoneNumbers.concat(uniqueExtraPhones);
     }
 
-    // Format and populate phone fields
+    // Format and populate phone field
     const formattedPhones = phoneNumbers.map(formatPhoneNumber);
-    document.getElementById('ship-to-phone1').value = formattedPhones[0] || '';
-    document.getElementById('ship-to-phone2').value = formattedPhones[1] || '';
+    document.getElementById('ship-to-phone').value = formattedPhones.join('\n') || '';
 
     document.getElementById('ship-to-email').value = data.email || '';
 
@@ -463,11 +462,11 @@ function setupBuilderSearch() {
                 }
             } else {
                 // No results found
-                clearSoldToFields();
+                // Do NOT clear sold-to fields automatically; let user clear if needed
                 showNotification('No builders found matching your search term. Please try a different search term or contact RFMS support.', 'warning');
             }
         } catch (error) {
-            clearSoldToFields();
+            // Do NOT clear sold-to fields on error; let user clear if needed
             handleApiError(error, 'searching for builders');
         } finally {
             // Reset button state
@@ -495,105 +494,152 @@ function setupBuilderSearch() {
  * @param {Array} results - The search results from the API
  */
 function displaySearchResults(results) {
-    const searchResults = document.getElementById('search-results');
-    if (!searchResults) return;
+    // Create or clear the results container
+    let resultsContainer = document.getElementById('search-results-container');
+    
+    if (!resultsContainer) {
+        // Create the container if it doesn't exist
+        resultsContainer = document.createElement('div');
+        resultsContainer.id = 'search-results-container';
+        resultsContainer.className = 'fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50';
+        document.body.appendChild(resultsContainer);
+    } else {
+        resultsContainer.innerHTML = '';
+    }
 
-    let html = '<div class="space-y-2">';
-    results.forEach(customer => {
-        const name = customer.name || `${customer.first_name} ${customer.last_name}`.trim();
-        const address = [
-            customer.address1,
-            customer.address2,
-            customer.city,
-            customer.state,
-            customer.zip_code
-        ].filter(Boolean).join(', ');
+    // Create the modal content
+    const modalContent = document.createElement('div');
+    modalContent.className = 'bg-white p-6 rounded-lg shadow-lg max-w-2xl w-full max-h-[80vh] overflow-auto';
+    
+    // Create the header
+    const header = document.createElement('div');
+    header.className = 'flex justify-between items-center mb-4';
+    
+    const title = document.createElement('h3');
+    title.className = 'text-lg font-bold text-black';
+    title.textContent = 'Search Results';
+    
+    const closeButton = document.createElement('button');
+    closeButton.className = 'text-gray-500 hover:text-gray-700';
+    closeButton.textContent = '✕';
+    closeButton.onclick = () => {
+        resultsContainer.remove();
+    };
+    
+    header.appendChild(title);
+    header.appendChild(closeButton);
+    
+    // Create the results list
+    const resultsList = document.createElement('div');
+    resultsList.className = 'space-y-2';
+    
+    // Create search info text
+    const searchCount = document.createElement('p');
+    searchCount.className = 'text-sm text-gray-600 mb-2';
+    searchCount.textContent = `Found ${results.length} result${results.length !== 1 ? 's' : ''}`;
+    
+    // Add a search input to filter results locally
+    const searchFilter = document.createElement('input');
+    searchFilter.type = 'text';
+    searchFilter.placeholder = 'Filter results...';
+    searchFilter.className = 'w-full p-2 border rounded mb-3';
+    searchFilter.addEventListener('input', (e) => {
+        const filterValue = e.target.value.toLowerCase();
         
-        html += `
-            <div class="border border-gray-200 rounded-md p-3 hover:bg-gray-50 cursor-pointer customer-result" 
-                 data-id="${customer.id}" 
-                 data-customer='${JSON.stringify(customer)}'>
-                <div class="flex justify-between items-start">
-                    <div>
-                        <p class="font-medium">${name}</p>
-                        ${customer.business_name ? `<p class="text-sm text-gray-600">${customer.business_name}</p>` : ''}
-                        <p class="text-sm text-gray-600">${address}</p>
-                        <p class="text-sm text-gray-600">
-                            ${customer.phone ? `Phone: ${customer.phone}` : ''}
-                            ${customer.email ? ` | Email: ${customer.email}` : ''}
-                        </p>
-                        <p class="text-sm text-gray-600">
-                            Customer ID: ${customer.customer_source_id || 'N/A'}
-                            ${customer.customer_type ? ` | Type: ${customer.customer_type}` : ''}
-                        </p>
-                    </div>
-                    <button class="select-customer-btn px-3 py-1 bg-atoz-yellow text-black rounded hover:bg-atoz-green transition">
-                        Select
-                    </button>
-                </div>
-            </div>
-        `;
-    });
-    html += '</div>';
-    
-    searchResults.innerHTML = html;
-    
-    // Add click event to customer results
-    document.querySelectorAll('.customer-result').forEach(result => {
-        result.addEventListener('click', function(e) {
-            if (!e.target.classList.contains('select-customer-btn')) {
-                const customerData = JSON.parse(this.dataset.customer);
-                populateSoldTo(customerData);
-                hideCustomerModal();
-            }
+        // Show/hide results based on filter
+        Array.from(resultsList.children).forEach(item => {
+            const itemText = item.textContent.toLowerCase();
+            item.style.display = itemText.includes(filterValue) ? 'block' : 'none';
         });
     });
     
-    // Add click event to select buttons
-    document.querySelectorAll('.select-customer-btn').forEach(button => {
-        button.addEventListener('click', function(e) {
-            e.stopPropagation();
-            const result = this.closest('.customer-result');
-            const customerData = JSON.parse(result.dataset.customer);
-            populateSoldTo(customerData);
-            hideCustomerModal();
-        });
+    results.forEach(result => {
+        const resultItem = document.createElement('div');
+        resultItem.className = 'p-3 border rounded hover:bg-gray-100 cursor-pointer text-black';
+        
+        // Format the display with CustomerID first
+        let displayText = '';
+        if (result.customer_source_id) {
+            displayText = `CustomerID: ${result.customer_source_id} - `;
+        }
+        displayText += `${result.name || result.first_name + ' ' + result.last_name || 'Unknown Name'}`;
+        
+        if (result.address) {
+            displayText += `\n${result.address}`;
+        }
+        
+        resultItem.textContent = displayText;
+        resultItem.onclick = () => {
+            populateSoldTo(result);
+            resultsContainer.remove();
+            showNotification('Customer selected and details populated.', 'success');
+        };
+        
+        resultsList.appendChild(resultItem);
+    });
+    
+    // Assemble the modal
+    modalContent.appendChild(header);
+    modalContent.appendChild(searchCount);
+    modalContent.appendChild(searchFilter);
+    modalContent.appendChild(resultsList);
+    resultsContainer.appendChild(modalContent);
+    
+    // Add keyboard support for closing modal with ESC
+    document.addEventListener('keydown', function escHandler(e) {
+        if (e.key === 'Escape') {
+            resultsContainer.remove();
+            document.removeEventListener('keydown', escHandler);
+        }
     });
 }
 
 /**
  * Populate the Sold To fields with the selected builder data
- * @param {Object} customer - The customer data object from the API
+ * @param {Object} builderData - The builder data object from the API
  */
-function populateSoldTo(customer) {
-    // Populate all relevant fields with customer data
-    const fields = {
-        'sold_to_name': customer.name || `${customer.first_name} ${customer.last_name}`.trim(),
-        'sold_to_business_name': customer.business_name || '',
-        'sold_to_address1': customer.address1 || '',
-        'sold_to_address2': customer.address2 || '',
-        'sold_to_city': customer.city || '',
-        'sold_to_state': customer.state || '',
-        'sold_to_zip': customer.zip_code || '',
-        'sold_to_phone': customer.phone || '',
-        'sold_to_email': customer.email || '',
-        'sold_to_customer_id': customer.customer_source_id || '',
-        'sold_to_customer_type': customer.customer_type || ''
-    };
+function populateSoldTo(builderData) {
+    console.log('Populating Sold To with data:', builderData);
     
-    // Update form fields
-    Object.entries(fields).forEach(([fieldId, value]) => {
-        const field = document.getElementById(fieldId);
-        if (field) {
-            field.value = value;
-        }
-    });
+    // Clear existing data first
+    document.getElementById('sold-to-name').value = '';
+    document.getElementById('sold-to-address1').value = '';
+    document.getElementById('sold-to-address2').value = '';
+    document.getElementById('sold-to-city').value = '';
+    document.getElementById('sold-to-state').value = '';
+    document.getElementById('sold-to-zip').value = '';
+    document.getElementById('sold-to-country').value = '';
+    document.getElementById('sold-to-phone').value = '';
+    document.getElementById('sold-to-email').value = '';
     
-    // Store customer ID for later use
-    window.selectedCustomerId = customer.id;
+    // Set customer ID (hidden field)
+    let builderIdField = document.getElementById('sold-to-customer-id');
+    if (!builderIdField) {
+        builderIdField = document.createElement('input');
+        builderIdField.type = 'hidden';
+        builderIdField.id = 'sold-to-customer-id';
+        document.getElementById('sold-to-fields').appendChild(builderIdField);
+    }
+    builderIdField.value = builderData.customer_source_id || '';
+    
+    // Populate the fields with the builder data
+    document.getElementById('sold-to-name').value = builderData.business_name || builderData.name || '';
+    document.getElementById('sold-to-address1').value = builderData.address1 || '';
+    document.getElementById('sold-to-address2').value = builderData.address2 || '';
+    document.getElementById('sold-to-city').value = builderData.city || '';
+    document.getElementById('sold-to-state').value = builderData.state || '';
+    document.getElementById('sold-to-zip').value = builderData.zip_code || '';
+    document.getElementById('sold-to-country').value = 'USA'; // Default to USA
+    document.getElementById('sold-to-phone').value = builderData.phone || '';
+    document.getElementById('sold-to-email').value = builderData.email || '';
+    
+    // If there's ship-to data, populate it as well
+    if (builderData.ship_to) {
+        populateShipTo(builderData.ship_to);
+    }
     
     // Show success notification
-    showNotification('Customer details populated successfully', 'success');
+    showNotification('Customer details populated successfully.', 'success');
 }
 
 /**
@@ -666,7 +712,7 @@ function setupExportToRFMS() {
             state: document.getElementById('ship-to-state').value,
             zip_code: document.getElementById('ship-to-zip').value,
             country: document.getElementById('ship-to-country').value,
-            phone: document.getElementById('ship-to-phone1').value + ' ' + document.getElementById('ship-to-phone2').value,
+            phone: document.getElementById('ship-to-phone').value,
             email: document.getElementById('ship-to-email').value
         };
 
@@ -748,4 +794,13 @@ function setupExportToRFMS() {
             }
         }
     });
+}
+
+// Add a button for clearing the builder (if not present in your HTML)
+<button id="clear-builder-btn" type="button">Clear Builder</button>
+
+// Add event listener for the clear button
+const clearBuilderBtn = document.getElementById('clear-builder-btn');
+if (clearBuilderBtn) {
+    clearBuilderBtn.addEventListener('click', clearSoldToFields);
 } 

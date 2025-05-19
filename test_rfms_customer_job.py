@@ -80,8 +80,12 @@ def find_customers(base_url, session_token, search_term):
         "includeCustomers": True,
         "includeProspects": False,
         "includeInactive": False,
-        "startIndex": 0
-    }
+        "referralType": "Standalone",
+        "stores": 49,
+        "startIndex": 0,
+        "entryType": "Customer",
+        "customerType": "BUILDERS",
+                }
     
     try:
         response = requests.post(

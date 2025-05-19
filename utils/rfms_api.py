@@ -15,18 +15,20 @@ class RfmsApi:
     This class handles authentication and provides methods for various API endpoints.
     """
     
-    def __init__(self, base_url=None, store_code=None, api_key=None):
+    def __init__(self, base_url, store_code, username, api_key):
         """
         Initialize the RFMS API client.
         
         Args:
             base_url (str): The base URL for the RFMS API
             store_code (str): The store code for authentication
+            username (str): The username for authentication
             api_key (str): The API key for authentication
         """
-        self.base_url = base_url or os.getenv('RFMS_BASE_URL', 'https://api.rfms.online')
-        self.store_code = store_code or os.getenv('RFMS_STORE_CODE')
-        self.api_key = api_key or os.getenv('RFMS_API_KEY')
+        self.base_url = base_url
+        self.store_code = store_code
+        self.username = username
+        self.api_key = api_key
         self.session_token = None
         self.session_expiry = None
         self.headers = {
@@ -35,67 +37,45 @@ class RfmsApi:
         }
         self.timeout = 10
         self.max_retries = 2
-        self.auth = None  # Will store the current auth tuple
-        
-        if not self.store_code or not self.api_key:
-            raise ValueError("RFMS_STORE_CODE and RFMS_API_KEY environment variables must be set")
-        
-        logger.info(f"Initialized RFMS API client for store: {self.store_code}")
-    
-    def ensure_session(self):
-        """
-        Ensure that we have a valid session token for API calls.
-        Only gets a new session if we don't have one or if the current one is expired.
-        
-        Returns:
-            bool: True if session is valid, False otherwise
-        """
-        # If we have a valid session token and it's not expired, use it
-        if self.session_token and self.session_expiry and datetime.now() < self.session_expiry:
-            self.auth = (self.store_code, self.session_token)
-            return True
-        
-        # Get a new session
-        return self.get_session()
+        self.auth = None
     
     def get_session(self):
-        """
-        Get a new session token from the RFMS API.
-        Initial auth uses store code and API key, then uses store code and session token.
-        
-        Returns:
-            bool: True if successful, False otherwise
-        """
+        """Get a new session token from the RFMS API."""
         endpoint = f"{self.base_url}/v2/Session/Begin"
+        
+        # Use store_code and API key for initial authentication
+        auth = (self.store_code, self.api_key)
         
         try:
             logger.info(f"Getting new session token from {endpoint}")
             logger.info(f"Using store_code: {self.store_code}")
-            
-            # Initial auth with store code and API key
-            auth = (self.store_code, self.api_key)
+            logger.info(f"Using api_key: {self.api_key[:4]}...")
             
             response = requests.post(
                 endpoint, 
-                headers=self.headers,
-                auth=auth,
+                headers=self.headers, 
+                auth=auth, 
                 timeout=self.timeout
             )
             
             if response.status_code == 200:
-                data = response.json()
-                if data.get('authorized') and data.get('sessionToken'):
-                    self.session_token = data['sessionToken']
-                    self.session_expiry = data.get('sessionExpires')
-                    logger.info(f"Session token obtained: {self.session_token[:8]}...")
-                    logger.info(f"Session expires: {self.session_expiry}")
+                try:
+                    data = response.json()
+                    if not isinstance(data, dict):
+                        logger.error(f"Invalid response format: {data}")
+                        return False
+                        
+                    self.session_token = data.get('sessionToken')
+                    if not self.session_token:
+                        logger.error("Session token not found in response")
+                        return False
                     
-                    # Set up auth for future requests using store code as username and session token as password
+                    # Set up auth for future requests
                     self.auth = (self.store_code, self.session_token)
+                    logger.info("Successfully obtained session token")
                     return True
-                else:
-                    logger.error("Session token not found in response or not authorized")
-                    logger.error(f"Response: {data}")
+                except json.JSONDecodeError:
+                    logger.error("Invalid JSON response from API")
                     return False
             else:
                 logger.error(f"Failed to get session token. Status code: {response.status_code}")
@@ -105,6 +85,12 @@ class RfmsApi:
         except Exception as e:
             logger.error(f"Error getting session token: {str(e)}")
             return False
+    
+    def ensure_session(self):
+        """Ensure we have a valid session token."""
+        if not self.session_token:
+            return self.get_session()
+        return True
     
     def execute_request(self, method, url, payload=None, retry_count=0):
         """
@@ -142,7 +128,10 @@ class RfmsApi:
             # Check for successful response
             if response.status_code == 200:
                 try:
-                    return response.json()
+                    data = response.json()
+                    if isinstance(data, dict) and 'result' in data:
+                        return data['result']
+                    return data
                 except json.JSONDecodeError:
                     logger.error(f"Invalid JSON response from {url}")
                     raise Exception("Invalid JSON response from API")
@@ -172,102 +161,46 @@ class RfmsApi:
             raise
     
     def check_status(self):
-        """
-        Check if the RFMS API is available.
-        
-        Returns:
-            str: 'online' if API is available, 'offline' otherwise
-        """
-        # Attempt to connect to the API to determine real status
-        url = f"{self.base_url}/v2/Session/Begin"
-        
-        try:
-            # Initial auth with store code and API key
-            auth = (self.store_code, self.api_key)
-            
-            response = requests.post(
-                url, 
-                headers=self.headers,
-                auth=auth,
-                timeout=self.timeout
-            )
-            
-            if response.status_code == 200:
-                data = response.json()
-                if data.get('authorized') and data.get('sessionToken'):
-                    # Store the session token for future use
-                    self.session_token = data['sessionToken']
-                    self.session_expiry = data.get('sessionExpires')
-                    self.auth = (self.store_code, self.session_token)
-                    return 'online'
-            
-            logger.warning(f"API connection failed with status code: {response.status_code}")
-            return 'offline'
-                
-        except Exception as e:
-            logger.error(f"Error checking API status: {str(e)}")
-            return 'offline'
+        """Check if the RFMS API is available."""
+        return self.get_session()
     
-    def find_customers(self, search_term):
-        """
-        Find customers using the advanced search endpoint.
+    def find_customers(self, search_term, start_index=0):
+        """Search for customers with pagination support."""
+        if not self.ensure_session():
+            logger.error("Failed to establish session for customer search")
+            return []
         
-        Args:
-            search_term (str): The search term to find customers
-            
-        Returns:
-            list: List of customer objects matching the search term
-        """
-        logger.info(f"Finding customers with search term: {search_term}")
+        url = f"{self.base_url}/v2/customers/find"
         
-        # Use advanced search endpoint for better search capabilities
-        url = f"{self.base_url}/v2/customers/find/advanced"
-        
-        # Prepare advanced search parameters with more flexible options
-        search_params = {
+        # Search payload with pagination
+        payload = {
             "searchText": search_term,
-            "stores": [self.store_code],  # Search in current store
-            "activeOnly": False,  # Include inactive customers
             "includeCustomers": True,
-            "includeProspects": True,  # Include prospects
-            "includeInactive": True,  # Include inactive customers
-            "startIndex": 0,
-            "maxResults": 50  # Limit results to prevent overwhelming response
+            "includeProspects": False,
+            "includeInactive": False,
+            "startIndex": start_index,
+            "storeNumber": 49,
+            "customerType": "BUILDERS",
+            "referralType": "Standalone",
+            "entryType": "Customer",
+            "activeOnly": True,
+            "defaultStore": 49
         }
         
         try:
-            # Ensure we have a valid session
-            if not self.ensure_session():
-                logger.error("Failed to establish session for customer search")
-                return []
-            
-            # Make the request with proper headers
-            headers = {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json',
-                'X-API-Key': self.api_key
-            }
-            
-            # Use store code as username and session token as password
-            auth = (self.store_code, self.session_token)
-            
             response = requests.post(
                 url,
-                headers=headers,
-                auth=auth,
-                json=search_params,
+                headers=self.headers,
+                auth=self.auth,
+                json=payload,
                 timeout=self.timeout
             )
             
             if response.status_code == 200:
                 data = response.json()
-                if "result" in data:
-                    customers = data.get("result", [])
-                    logger.info(f"Found {len(customers)} customers for search term: {search_term}")
-                    return self._format_customer_list(customers)
-                else:
-                    logger.warning(f"No customers found for search term: {search_term}")
-                    return []
+                customers = data.get('detail', [])
+                logger.info(f"Found {len(customers)} customers for search term: {search_term}")
+                return self._format_customer_list(customers)
             else:
                 logger.error(f"Failed to search customers. Status code: {response.status_code}")
                 logger.error(f"Response: {response.text}")
@@ -291,40 +224,48 @@ class RfmsApi:
         
         try:
             logger.info(f"Finding customer by ID: {customer_id}")
-            data = self.execute_request('GET', url)
+            response = self.execute_request('GET', url)
             
-            if not data or "result" not in data:
+            if not response:
                 logger.warning(f"No customer found with ID: {customer_id}")
                 return []
             
-            customer = data.get('result', {})
-            if customer:
-                # Format the customer data according to the API response structure
-                formatted_customer = {
-                    'id': customer.get('customerId', ''),
-                    'customer_source_id': customer.get('customerId', ''),
-                    'name': f"{customer.get('customerAddress', {}).get('firstName', '')} {customer.get('customerAddress', {}).get('lastName', '')}".strip(),
-                    'first_name': customer.get('customerAddress', {}).get('firstName', ''),
-                    'last_name': customer.get('customerAddress', {}).get('lastName', ''),
-                    'business_name': customer.get('customerAddress', {}).get('businessName', ''),
-                    'address1': customer.get('customerAddress', {}).get('address1', ''),
-                    'address2': customer.get('customerAddress', {}).get('address2', ''),
-                    'city': customer.get('customerAddress', {}).get('city', ''),
-                    'state': customer.get('customerAddress', {}).get('state', ''),
-                    'zip_code': customer.get('customerAddress', {}).get('postalCode', ''),
-                    'phone': customer.get('phone1', ''),
-                    'email': customer.get('email', ''),
-                    'customer_type': customer.get('customerType', ''),
-                    'tax_status': customer.get('taxStatus', ''),
-                    'tax_method': customer.get('taxMethod', ''),
-                    'preferred_salesperson1': customer.get('preferredSalesperson1', ''),
-                    'preferred_salesperson2': customer.get('preferredSalesperson2', ''),
-                    'store_number': customer.get('storeNumber', ''),
-                    'internal_notes': customer.get('notes', '')
+            # Format the customer data according to the API response structure
+            formatted_customer = {
+                'id': str(response.get('customerId', '')),
+                'customer_source_id': str(response.get('customerId', '')),
+                'name': f"{response.get('firstName', '')} {response.get('lastName', '')}".strip(),
+                'first_name': response.get('firstName', ''),
+                'last_name': response.get('lastName', ''),
+                'business_name': response.get('businessName', ''),
+                'address1': response.get('address1', ''),
+                'address2': response.get('address2', ''),
+                'city': response.get('city', ''),
+                'state': response.get('state', ''),
+                'zip_code': response.get('postalCode', ''),
+                'phone': response.get('phone1', ''),
+                'email': response.get('email', ''),
+                'customer_type': response.get('customerType', ''),
+                'tax_status': response.get('taxStatus', ''),
+                'tax_method': response.get('taxMethod', ''),
+                'preferred_salesperson1': response.get('preferredSalesperson1', ''),
+                'preferred_salesperson2': response.get('preferredSalesperson2', ''),
+                'store_number': str(response.get('storeNumber', '')),
+                'internal_notes': response.get('notes', ''),
+                'ship_to': {
+                    'name': f"{response.get('shipToFirstName', '')} {response.get('shipToLastName', '')}".strip(),
+                    'first_name': response.get('shipToFirstName', ''),
+                    'last_name': response.get('shipToLastName', ''),
+                    'business_name': response.get('shipToBusinessName', ''),
+                    'address1': response.get('shipToAddress1', ''),
+                    'address2': response.get('shipToAddress2', ''),
+                    'city': response.get('shipToCity', ''),
+                    'state': response.get('shipToState', ''),
+                    'zip_code': response.get('shipToPostalCode', ''),
+                    'county': response.get('shipToCounty', '')
                 }
-                return [formatted_customer]
-            
-            return []
+            }
+            return [formatted_customer]
             
         except Exception as e:
             logger.error(f"Error finding customer by ID: {str(e)}")
@@ -580,16 +521,12 @@ class RfmsApi:
         Create a new job in RFMS.
         
         Args:
-            job_data (dict): Job data
+            job_data (dict): Job data with customerId and shipToAddress
             
         Returns:
             dict: Created job object
         """
         try:
-            # Ensure required fields are present
-            if not all(key in job_data['order'] for key in ['CustomerSeqNum', 'PONumber', 'MiscCharges']):
-                raise ValueError("Missing required fields in job data")
-            
             # Get session token
             session_token = self.session_token
             if not session_token:
@@ -604,9 +541,13 @@ class RfmsApi:
             # Use session token for authentication
             auth = (self.store_code, session_token)
             
-            # Make the request
+            # Validate required fields
+            if not job_data.get('order', {}).get('customerId'):
+                raise ValueError("Missing required field: customerId")
+            
+            # Make the request to the correct endpoint
             response = requests.post(
-                f"{self.base_url}/v2/Order",
+                f"{self.base_url}/v2/order/create",
                 headers=headers,
                 auth=auth,
                 json=job_data

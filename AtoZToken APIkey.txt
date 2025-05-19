@@ -1,7 +1,7 @@
 ##
 AtoZToken
-Store number: 01
+Store number: 49
 CustomerType: BUILDERS
 ##
 Username: store-5291f4e3dca04334afede9f642ec6157
-Password: 58ddae189c21473bb9064628b1c85161
+Password: 49bf22ea017f4b97aabc99def43c0b66

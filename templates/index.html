@@ -127,8 +127,8 @@
                 <div class="bg-charcoal rounded-lg shadow compact-section mb-0 pb-0 border-4 border-white">
                     <h2 class="section-title text-heavy mb-1 text-atoz-yellow">Sold To (RFMS Customer)</h2>
                     <div class="flex items-center mb-1">
-                        <input type="text" id="builder-search-input" placeholder="EnterName or CustomerID" class="input-dark rounded flex-grow mr-2 text-base">
-                        <button id="search-builder-button" class="bg-atoz-yellow text-black font-bold rounded hover:bg-atoz-green transition text-xs" style="width: 100px; padding: 0.4rem 0.3rem; white-space: normal; line-height: 1.2;">Retrieve Builders Details</button>
+                        <input type="text" id="builder-search-input" placeholder="Enter CustomerID or Name" class="input-dark rounded flex-grow mr-2 text-base">
+                        <button id="search-builder-button" class="bg-atoz-yellow text-black font-bold rounded hover:bg-atoz-green transition text-xs" style="width: 100px; padding: 0.4rem 0.3rem; white-space: normal; line-height: 1.2;">Search Customer</button>
                     </div>
                     <div id="sold-to-fields" class="space-y-1">
                         <div>
@@ -280,41 +280,6 @@
         </div>
     </div>
     <div id="notification-area"></div>
-    <!-- Customer Search Modal -->
-    <div id="customer-search-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden flex items-center justify-center z-50">
-        <div class="bg-white p-6 rounded-lg shadow-lg max-w-2xl w-full max-h-[80vh] overflow-auto">
-            <div class="flex justify-between items-center mb-4">
-                <h3 class="text-lg font-bold text-black">Search Customers</h3>
-                <button onclick="hideCustomerModal()" class="text-gray-500 hover:text-gray-700">✕</button>
-            </div>
-            
-            <div class="mb-4">
-                <input type="text" id="customer-search-input" 
-                       class="w-full p-2 border rounded" 
-                       placeholder="Search by name, business name, or customer ID...">
-            </div>
-            
-            <div id="search-results" class="space-y-2">
-                <!-- Search results will be populated here -->
-            </div>
-        </div>
-    </div>
-    <!-- Search Results Modal -->
-    <div id="search-results-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
-        <div class="bg-white rounded-lg p-6 max-w-2xl w-full max-h-[80vh] overflow-y-auto">
-            <div class="flex justify-between items-center mb-4">
-                <h3 class="text-lg font-bold text-gray-900">Search Results</h3>
-                <button onclick="hideCustomerModal()" class="text-gray-500 hover:text-gray-700">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                    </svg>
-                </button>
-            </div>
-            <div id="search-results" class="space-y-4"></div>
-        </div>
-    </div>
-    <!-- Notification Container -->
-    <div id="notification-container" class="fixed top-4 right-4 z-50"></div>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const billingGroupCheckbox = document.getElementById('billing-group-checkbox');
@@ -331,33 +296,6 @@
             document.getElementById('actual-job-number').addEventListener('input', function() {
                 document.getElementById('secondary-po-prefix').textContent = this.value + '-';
             });
-        });
-
-        function showCustomerModal() {
-            document.getElementById('customer-search-modal').classList.remove('hidden');
-            document.getElementById('customer-search-input').focus();
-        }
-
-        function hideCustomerModal() {
-            document.getElementById('customer-search-modal').classList.add('hidden');
-            document.getElementById('search-results').innerHTML = '';
-        }
-
-        // Add event listener for customer search
-        document.getElementById('customer-search-input').addEventListener('input', debounce(function(e) {
-            const searchTerm = e.target.value.trim();
-            if (searchTerm.length >= 2) {
-                searchCustomers(searchTerm);
-            } else {
-                document.getElementById('search-results').innerHTML = '';
-            }
-        }, 300));
-
-        // Add keyboard support for closing modal with ESC
-        document.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape' && !document.getElementById('customer-search-modal').classList.contains('hidden')) {
-                hideCustomerModal();
-            }
         });
     </script>
 </body>
