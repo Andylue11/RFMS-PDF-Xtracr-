@@ -1,10 +1,33 @@
+import logging
+import sys
+from logging.handlers import RotatingFileHandler
+
+# Enhanced logging configuration
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(sys.stdout),  # Console output
+        RotatingFileHandler(
+            "app_dev.log",
+            maxBytes=10485760,  # 10MB
+            backupCount=5
+        )
+    ]
+)
+logger = logging.getLogger(__name__)
+
+# Log startup information
+logger.info("Starting RFMS PDF XTRACR in development mode")
+logger.debug("Debug logging enabled")
+
 from flask import Flask, render_template, request, jsonify, flash, redirect, url_for, session
 import os
 from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
-import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 import tempfile
+from test_rfms_api_connection import get_session_token, search_customers, get_customer_by_id, BASE_URL, STORE, API_KEY
 
 # Import models and database
 from models import db, Customer, Quote, Job, PdfData
@@ -16,25 +39,18 @@ from utils.rfms_api import RfmsApi
 # Load environment variables
 load_dotenv()
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.StreamHandler(),
-        logging.FileHandler("app.log")
-    ]
-)
-logger = logging.getLogger(__name__)
-
 # App configuration
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret-key')
-app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URI', 'sqlite:///rfms_xtracr.db')
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URI', 'sqlite:///rfms_xtracr_dev.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['UPLOAD_FOLDER'] = os.getenv('UPLOAD_FOLDER', 'uploads')
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max upload size
 app.config['ALLOWED_EXTENSIONS'] = {'pdf'}
+
+# Development mode settings
+app.config['DEBUG'] = True
+app.config['TESTING'] = False
 
 # Ensure upload directory exists
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
@@ -42,13 +58,36 @@ os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 # Initialize database with app
 db.init_app(app)
 
+# Create database and tables if they don't exist
+with app.app_context():
+    db.create_all()
+    logger.info("Development database initialized successfully")
+
 # Initialize RFMS API client
 rfms_api = RfmsApi(
-    base_url=os.getenv('RFMS_BASE_URL', 'https://api.rfms.online'),
+    base_url=os.getenv('RFMS_BASE_URL'),
     store_code=os.getenv('RFMS_STORE_CODE'),
     username=os.getenv('RFMS_USERNAME'),
     api_key=os.getenv('RFMS_API_KEY')
 )
+
+# Verify RFMS API configuration
+if not all([os.getenv('RFMS_BASE_URL'), os.getenv('RFMS_STORE_CODE'), 
+           os.getenv('RFMS_USERNAME'), os.getenv('RFMS_API_KEY')]):
+    logger.error("Missing required RFMS API configuration. Please check your .env file.")
+    raise ValueError("Missing required RFMS API configuration")
+
+# Add request logging middleware
+@app.before_request
+def log_request_info():
+    logger.debug('Headers: %s', request.headers)
+    logger.debug('Body: %s', request.get_data())
+
+@app.after_request
+def log_response_info(response):
+    logger.debug('Response Status: %s', response.status)
+    logger.debug('Response Headers: %s', response.headers)
+    return response
 
 # Helper functions
 def allowed_file(filename):
@@ -92,30 +131,40 @@ def upload_pdf_api():
     
     if file and allowed_file(file.filename):
         filename = secure_filename(file.filename)
-        # Create a temporary file path or use BytesIO directly if extractor supports it
-        # Since the extractor takes a file path, saving to a temporary file is necessary
+        file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        file.save(file_path)
         
-        # Use a temporary file that will be automatically deleted
-        with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp_file:
-            file.save(tmp_file.name)
-            temp_path = tmp_file.name
-            
         try:
-            # Extract data from PDF using the utility function
-            extracted_data = extract_data_from_pdf(temp_path)
+            # Extract data from PDF
+            extracted_data = extract_data_from_pdf(file_path)
             logger.info(f"Successfully extracted data for {filename}")
             
-            # Clean up the temporary file
-            os.remove(temp_path)
+            # Save extracted data to session for preview
+            session['extracted_data'] = extracted_data
+            
+            # Save to database for persistence
+            pdf_data = PdfData(
+                filename=filename,
+                customer_name=extracted_data.get('customer_name', ''),
+                business_name=extracted_data.get('business_name', ''),
+                po_number=extracted_data.get('po_number', ''),
+                scope_of_work=extracted_data.get('scope_of_work', ''),
+                dollar_value=extracted_data.get('dollar_value', 0),
+                extracted_data=extracted_data,
+                created_at=datetime.now()
+            )
+            
+            db.session.add(pdf_data)
+            db.session.commit()
             
             # Return the extracted data as JSON
             return jsonify(extracted_data), 200
         
         except Exception as e:
             logger.error(f"Error extracting data from PDF {filename}: {str(e)}")
-            # Clean up the temporary file in case of error
-            if os.path.exists(temp_path):
-                os.remove(temp_path)
+            # Clean up the file in case of error
+            if os.path.exists(file_path):
+                os.remove(file_path)
             return jsonify({"error": f"Error extracting data: {str(e)}"}), 500
     
     else:
@@ -209,45 +258,53 @@ def preview_data(pdf_id):
     pdf_data = PdfData.query.get_or_404(pdf_id)
     return render_template('preview.html', pdf_data=pdf_data)
 
+@app.route('/api/check_status')
+def check_api_status():
+    """Check if the RFMS API is available."""
+    try:
+        session_token = get_session_token(BASE_URL)
+        if session_token:
+            return jsonify({'status': 'online'})
+        return jsonify({'status': 'offline'})
+    except Exception as e:
+        logger.error(f"Error checking API status: {str(e)}")
+        return jsonify({'status': 'offline'})
+
 @app.route('/api/customers/search')
-def search_customers():
-    """Search for customers in RFMS API."""
+def search_customers_api():
+    """Search for customers by name or exact ID."""
     search_term = request.args.get('term', '')
+    page = int(request.args.get('page', 0))
     
     if not search_term:
-        logger.warning("Empty search term provided")
-        return jsonify({"error": "Search term is required"}), 400
+        return jsonify({"results": [], "total": 0})
+    
+    logger.info(f"Searching for customers with term: {search_term}, page: {page}")
     
     try:
-        logger.info(f"Searching for customers with term: {search_term}")
-        customers = rfms_api.find_customers(search_term)
+        # If the search term is a digit, treat as exact customer ID
+        if search_term.isdigit():
+            customer = rfms_api.find_customer_by_id(search_term)
+            if customer:
+                return jsonify({
+                    "results": [customer],
+                    "total": 1
+                })
+            else:
+                return jsonify({
+                    "results": [],
+                    "total": 0
+                })
         
-        if not customers:
-            logger.info(f"No customers found for search term: {search_term}")
-            return jsonify([])
+        # Otherwise, do a fuzzy search with pagination
+        customers = rfms_api.find_customers(search_term, page)
+        total = rfms_api.get_customer_count(search_term)
         
-        # Format response for frontend
-        formatted_customers = []
-        for customer in customers:
-            formatted_customer = {
-                'id': customer.get('id'),
-                'customer_source_id': customer.get('customer_source_id'),
-                'name': customer.get('name', ''),
-                'first_name': customer.get('first_name', ''),
-                'last_name': customer.get('last_name', ''),
-                'business_name': customer.get('business_name', ''),
-                'address': f"{customer.get('address1', '')}, {customer.get('city', '')}, {customer.get('state', '')} {customer.get('zip_code', '')}",
-                'address1': customer.get('address1', ''),
-                'address2': customer.get('address2', ''),
-                'city': customer.get('city', ''),
-                'state': customer.get('state', ''),
-                'zip_code': customer.get('zip_code', ''),
-                'country': customer.get('country', '')
-            }
-            formatted_customers.append(formatted_customer)
+        return jsonify({
+            "results": customers,
+            "total": total
+        })
         
-        logger.info(f"Found {len(formatted_customers)} customers for search term: {search_term}")
-        return jsonify(formatted_customers)
     except Exception as e:
         logger.error(f"Error searching customers: {str(e)}")
         return jsonify({"error": str(e)}), 500
@@ -277,45 +334,113 @@ def create_quote():
 @app.route('/api/create_job', methods=['POST'])
 def create_job():
     """Create a new job in RFMS."""
-    job_data = request.json
     try:
-        result = rfms_api.create_job(job_data)
+        job_data = request.json
+        extracted_data = job_data.get('extracted_data', {})
+
+        # Aggregate contacts for notes and ship-to phone
+        contacts = []
+        for contact in extracted_data.get('alternate_contacts', []):
+            if contact.get('type') in ['Best Contact', 'Authorised Contact', 'Real Estate Agent', 'Tenant', 'Site Contact']:
+                contacts.append(contact)
+
+        # Build contact string for notes
+        contact_lines = []
+        for c in contacts:
+            line = f"{c.get('type', '')}: {c.get('name', '')} {c.get('phone', '')} {c.get('email', '')}"
+            contact_lines.append(line)
+
+        # Work order notes
+        work_order_notes = extracted_data.get('scope_of_work', '')
+        if extracted_data.get('description_of_works'):
+            work_order_notes += "\n" + extracted_data['description_of_works']
+        if extracted_data.get('special_instructions'):
+            work_order_notes += "\nSpecial Instructions: " + extracted_data['special_instructions']
+        if contact_lines:
+            work_order_notes += "\nContacts:\n" + "\n".join(contact_lines)
+
+        # Private notes (could be the same or include more internal info)
+        private_notes = work_order_notes
+
+        # Public/custom notes (job description)
+        public_notes = extracted_data.get('job_description', '') or extracted_data.get('scope_of_work', '')
+
+        # Ship to phone
+        ship_to_phone = ""
+        if contacts:
+            for c in contacts:
+                if c.get('phone'):
+                    ship_to_phone = c['phone']
+                    break
+
+        # Format job data according to RFMS API requirements
+        formatted_job_data = {
+            "username": job_data.get('username'),
+            "order": {
+                "poNumber": job_data.get('po_number'),
+                "adSource": job_data.get('ad_source', ''),
+                "quoteDate": job_data.get('quote_date'),
+                "estimatedDeliveryDate": job_data.get('estimated_delivery_date'),
+                "jobNumber": f"{job_data.get('supervisor_name', '')}{job_data.get('supervisor_mobile', '')}",
+                "storeNumber": job_data.get('store_number', '49'),  # Default to store 49
+                "privateNotes": private_notes,
+                "publicNotes": public_notes,
+                "workOrderNotes": work_order_notes,
+                "customerId": job_data.get('sold_to_customer_id'),  # Use the existing customer ID
+                "shipToAddress": {
+                    "lastName": job_data.get('ship_to_last_name', ''),
+                    "firstName": job_data.get('ship_to_first_name', ''),
+                    "address1": job_data.get('ship_to_address', ''),
+                    "address2": job_data.get('ship_to_address2', ''),
+                    "city": job_data.get('ship_to_city', ''),
+                    "state": job_data.get('ship_to_state', ''),
+                    "postalCode": job_data.get('ship_to_zip_code', ''),
+                    "county": job_data.get('ship_to_county', ''),
+                    "phone2": ship_to_phone
+                },
+                "MiscCharges": float(job_data.get('dollar_value', 0)),
+                "lines": []
+            }
+        }
         
-        # Handle billing group if applicable
-        if job_data.get('is_billing_group', False):
-            prefix = job_data.get('po_prefix', '')
-            suffix = job_data.get('po_suffix', '')
-            second_value = job_data.get('second_value', 0)
+        # Create the job
+        job_result = rfms_api.create_job(formatted_job_data)
+        
+        # Handle billing group if needed
+        if job_data.get('is_billing_group'):
+            # Create second job with modified PO number
+            second_job_data = formatted_job_data.copy()
+            second_job_data['order']['poNumber'] = f"{job_data.get('po_prefix', '')}{job_data.get('po_suffix', '')}"
+            second_value = float(job_data.get('second_value', 0))
+            second_job_data['order']['MiscCharges'] = second_value
+            # lines remains empty unless there are actual line items
             
-            # Create second job with suffix
-            second_job_data = job_data.copy()
-            second_job_data['po_number'] = f"{prefix}-{suffix}"
-            second_job_data['dollar_value'] = second_value
+            second_job_result = rfms_api.create_job(second_job_data)
             
-            second_result = rfms_api.create_job(second_job_data)
+            # Add both jobs to billing group
+            billing_group = {
+                "job1": job_result,
+                "job2": second_job_result
+            }
             
-            # Add both jobs to a billing group
-            group_result = rfms_api.add_to_billing_group([result['id'], second_result['id']])
             return jsonify({
-                "first_job": result,
-                "second_job": second_result,
-                "billing_group": group_result
+                "success": True,
+                "message": "Jobs created successfully",
+                "jobs": billing_group
             })
         
-        return jsonify(result)
+        return jsonify({
+            "success": True,
+            "message": "Job created successfully",
+            "job": job_result
+        })
+        
     except Exception as e:
         logger.error(f"Error creating job: {str(e)}")
-        return jsonify({"error": str(e)}), 500
-
-@app.route('/api/check_status')
-def check_api_status():
-    """Check RFMS API connectivity status."""
-    try:
-        status = rfms_api.check_status()
-        return jsonify({"status": status})
-    except Exception as e:
-        logger.error(f"API status check failed: {str(e)}")
-        return jsonify({"status": "offline", "error": str(e)}), 500
+        return jsonify({
+            "success": False,
+            "message": f"Failed to create job: {str(e)}"
+        }), 500
 
 @app.route('/api/export-to-rfms', methods=['POST'])
 def export_to_rfms():
@@ -351,7 +476,7 @@ def export_to_rfms():
         
         # 2. Get the Sold To customer ID (assumes it was already obtained via search)
         sold_to_data = data['sold_to']
-        sold_to_customer_id = sold_to_data.get('id')
+        sold_to_customer_id = sold_to_data.get('customerSourceId')
         
         if not sold_to_customer_id:
             logger.warning("Missing Sold To customer ID")
@@ -404,7 +529,7 @@ def export_to_rfms():
             'description_of_works': description,
             'dollar_value': dollar_value,
             'salesperson1': 'Zoran Vekic',
-            'store_number': 1,
+            'store_number': 49,  # Set to store 49
             'service_type_id': 1,
             'contract_type_id': 1,
             'user_order_type_id': 3,
@@ -488,10 +613,27 @@ def clear_data():
     session.pop('extracted_data', None)
     return redirect(url_for('index'))
 
+@app.route('/api/search', methods=['GET'])
+def api_search():
+    term = request.args.get('term', '')
+    start = int(request.args.get('start', 0))
+    customers = search_customers(BASE_URL, term, start)
+    return jsonify(customers or [])
+
+@app.route('/api/customer/<int:customer_id>', methods=['GET'])
+def api_customer(customer_id):
+    customer = get_customer_by_id(BASE_URL, customer_id)
+    return jsonify(customer or {})
+
 if __name__ == '__main__':
     with app.app_context():
         # Create database tables
         db.create_all()
     
-    debug_mode = os.getenv('DEBUG', 'True').lower() in ('true', '1', 't')
-    app.run(debug=debug_mode, host='0.0.0.0', port=int(os.getenv('PORT', 5000))) 
+    # Run in development mode
+    app.run(
+        debug=True,
+        host='0.0.0.0',
+        port=int(os.getenv('PORT', 5000)),
+        use_reloader=True
+    ) 

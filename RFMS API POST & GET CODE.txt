@@ -82,7 +82,7 @@ print(data.decode("utf-8"))
       "terms": "",
       "termDays": 0,
       "creditLimit": 0,
-      "defaultStore": 01,
+      "defaultStore": 49,
       "internalNotes": "",
       "remarks": []
     }
@@ -95,7 +95,7 @@ print(data.decode("utf-8"))
 import http.client
 
 conn = http.client.HTTPSConnection("api.rfms.online")
-payload = "{\r\n    \"searchText\": \"car\",\r\n    \"stores\": [01, 01],\r\n    \"activeOnly\": false,\r\n    \"dateCreatedFrom\": \"01-01-2021\",\r\n    \"customerTypes\": [\"Commercial\"]\r\n}"
+payload = "{\r\n    \"searchText\": \"car\",\r\n    \"stores\": 49,01],\r\n    \"activeOnly\": false,\r\n    \"dateCreatedFrom\": \"01-01-2021\",\r\n    \"customerTypes\": [\"Commercial\"]\r\n}"
 headers = {}
 conn.request("POST", "/v2/customers/find/advanced", payload, headers)
 res = conn.getresponse()

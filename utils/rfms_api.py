@@ -37,31 +37,10 @@ class RfmsApi:
         }
         self.timeout = 10
         self.max_retries = 2
-        self.auth = None  # Will store the current auth tuple
-    
-    def ensure_session(self):
-        """
-        Ensure that we have a valid session token for API calls.
-        Only gets a new session if we don't have one or if the current one is expired.
-        
-        Returns:
-            bool: True if session is valid, False otherwise
-        """
-        # If we have a valid session token and it's not expired, use it
-        if self.session_token and self.session_expiry and datetime.now() < self.session_expiry:
-            self.auth = (self.store_code, self.session_token)
-            return True
-        
-        # Get a new session
-        return self.get_session()
+        self.auth = None
     
     def get_session(self):
-        """
-        Get a new session token from the RFMS API.
-        
-        Returns:
-            bool: True if successful, False otherwise
-        """
+        """Get a new session token from the RFMS API."""
         endpoint = f"{self.base_url}/v2/Session/Begin"
         
         # Use store_code and API key for initial authentication
@@ -69,6 +48,8 @@ class RfmsApi:
         
         try:
             logger.info(f"Getting new session token from {endpoint}")
+            logger.info(f"Using store_code: {self.store_code}")
+            logger.info(f"Using api_key: {self.api_key[:4]}...")
             
             response = requests.post(
                 endpoint, 
@@ -78,41 +59,38 @@ class RfmsApi:
             )
             
             if response.status_code == 200:
-                data = response.json()
-                self.session_token = data.get('sessionToken')
-                
-                if not self.session_token:
-                    logger.error("Session token not found in response")
+                try:
+                    data = response.json()
+                    if not isinstance(data, dict):
+                        logger.error(f"Invalid response format: {data}")
+                        return False
+                        
+                    self.session_token = data.get('sessionToken')
+                    if not self.session_token:
+                        logger.error("Session token not found in response")
+                        return False
+                    
+                    # Set up auth for future requests
+                    self.auth = (self.store_code, self.session_token)
+                    logger.info("Successfully obtained session token")
+                    return True
+                except json.JSONDecodeError:
+                    logger.error("Invalid JSON response from API")
                     return False
-                
-                # Set session expiry based on returned value
-                if 'sessionExpires' in data:
-                    try:
-                        expiry_str = data.get('sessionExpires')
-                        self.session_expiry = datetime.strptime(expiry_str, "%a, %d %b %Y %H:%M:%S %Z")
-                    except Exception as e:
-                        logger.warning(f"Could not parse session expiry: {str(e)}")
-                        self.session_expiry = datetime.now() + timedelta(minutes=20)
-                else:
-                    self.session_expiry = datetime.now() + timedelta(minutes=20)
-                
-                # Set up auth for future requests
-                self.auth = (self.store_code, self.session_token)
-                
-                logger.info(f"Successfully obtained session token, expires at: {self.session_expiry}")
-                return True
-            
             else:
                 logger.error(f"Failed to get session token. Status code: {response.status_code}")
-                try:
-                    logger.error(f"Response: {response.json()}")
-                except:
-                    logger.error(f"Response text: {response.text}")
+                logger.error(f"Response: {response.text}")
                 return False
                 
         except Exception as e:
             logger.error(f"Error getting session token: {str(e)}")
             return False
+    
+    def ensure_session(self):
+        """Ensure we have a valid session token."""
+        if not self.session_token:
+            return self.get_session()
+        return True
     
     def execute_request(self, method, url, payload=None, retry_count=0):
         """
@@ -150,7 +128,10 @@ class RfmsApi:
             # Check for successful response
             if response.status_code == 200:
                 try:
-                    return response.json()
+                    data = response.json()
+                    if isinstance(data, dict) and 'result' in data:
+                        return data['result']
+                    return data
                 except json.JSONDecodeError:
                     logger.error(f"Invalid JSON response from {url}")
                     raise Exception("Invalid JSON response from API")
@@ -180,106 +161,63 @@ class RfmsApi:
             raise
     
     def check_status(self):
-        """
-        Check if the RFMS API is available.
-        
-        Returns:
-            str: 'online' if API is available, 'offline' otherwise
-        """
-        # Attempt to connect to the API to determine real status
-        url = f"{self.base_url}/v2/Session/Begin"
-        
-        try:
-            # Set up basic auth with store_code as username and api_key as password
-            auth = (self.store_code, self.api_key)
-            
-            headers = {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json'
-            }
-            
-            response = requests.post(
-                url, 
-                headers=headers,
-                auth=auth,
-                timeout=self.timeout
-            )
-            
-            if response.status_code == 200:
-                return 'online'
-            else:
-                logger.warning(f"API connection failed with status code: {response.status_code}")
-                return 'offline'
-        
-        except Timeout:
-            logger.error("API status check timed out")
-            return 'offline'
-        except ConnectionError:
-            logger.error("API connection error during status check")
-            return 'offline'
-        except Exception as e:
-            logger.error(f"Error checking API status: {str(e)}")
-            return 'offline'
+        """Check if the RFMS API is available."""
+        return self.get_session()
     
-    def find_customers(self, search_term):
+    def find_customers(self, search_term, page=0):
         """
-        Search for customers by name using the RFMS API.
-        Uses POST request with store code and session token authentication.
+        Find customers by search term with pagination.
         
         Args:
-            search_term (str): The search term for finding customers
+            search_term (str): The search term to find customers
+            page (int): Page number for pagination (0-based)
             
         Returns:
             list: List of customer objects matching the search term
         """
-        logger.info(f"Finding customers with search term: {search_term}")
-        
         url = f"{self.base_url}/v2/customers/find"
         
-        # Exact payload structure with string boolean values
         payload = {
             "searchText": search_term,
-            "includeCustomers": "true",
-            "includeProspects": "false",
-            "includeInactive": "false"
+            "includeCustomers": True,
+            "includeProspects": False,
+            "includeInactive": False,
+            "startIndex": page * 10,
+            "storeNumber": self.store_number,
+            "customerType": "BUILDERS",
+            "referralType": "Standalone",
+            "entryType": "Customer",
+            "activeOnly": True,
+            "defaultStore": self.store_number
         }
         
         try:
-            # Ensure we have a valid session
-            if not self.ensure_session():
-                logger.error("Failed to establish session for customer search")
+            logger.info(f"Finding customers with term: {search_term}, page: {page}")
+            data = self.execute_request('POST', url, payload)
+            
+            if not data or "result" not in data:
+                logger.warning("No customers found in search response")
                 return []
             
-            # Make the request with exact headers
-            headers = {
-                'Content-Type': 'application/json'
-            }
+            customers = data.get("result", [])
             
-            # Use store code as username and session token as password
-            auth = (self.store_code, self.session_token)
+            # Format each customer for UI display
+            formatted_customers = []
+            for customer in customers:
+                formatted_customers.append({
+                    'id': customer.get('customerId', ''),
+                    'customer_source_id': customer.get('customerSourceId', ''),
+                    'name': customer.get('customerName', ''),
+                    'first_name': customer.get('firstName', ''),
+                    'last_name': customer.get('lastName', ''),
+                    'business_name': customer.get('customerBusinessName', ''),
+                    'address': f"{customer.get('customerAddress', '')}, {customer.get('customerCity', '')}, {customer.get('customerState', '')} {customer.get('customerZip', '')}",
+                    'phone': customer.get('customerPhone', ''),
+                    'email': customer.get('customerEmail', '')
+                })
             
-            response = requests.post(
-                url,
-                headers=headers,
-                auth=auth,
-                json=payload,
-                timeout=self.timeout
-            )
+            return formatted_customers
             
-            if response.status_code == 200:
-                data = response.json()
-                if "result" in data:
-                    customers = data.get("result", [])
-                    logger.info(f"Found {len(customers)} customers for search term: {search_term}")
-                    return self._format_customer_list(customers)
-                else:
-                    logger.warning(f"No customers found for search term: {search_term}")
-                    return []
-            else:
-                logger.error(f"Failed to search customers. Status code: {response.status_code}")
-                logger.error(f"Response: {response.text}")
-                return []
-                
         except Exception as e:
             logger.error(f"Error finding customers: {str(e)}")
             return []
@@ -298,40 +236,54 @@ class RfmsApi:
         
         try:
             logger.info(f"Finding customer by ID: {customer_id}")
-            data = self.execute_request('GET', url)
+            response = self.execute_request('GET', url)
             
-            if not data or "result" not in data:
+            # Handle case where response is a string (no customer found)
+            if isinstance(response, str):
                 logger.warning(f"No customer found with ID: {customer_id}")
                 return []
             
-            customer = data.get('result', {})
-            if customer:
-                # Format the customer data according to the API response structure
-                formatted_customer = {
-                    'id': customer.get('customerId', ''),
-                    'customer_source_id': customer.get('customerId', ''),
-                    'name': f"{customer.get('customerAddress', {}).get('firstName', '')} {customer.get('customerAddress', {}).get('lastName', '')}".strip(),
-                    'first_name': customer.get('customerAddress', {}).get('firstName', ''),
-                    'last_name': customer.get('customerAddress', {}).get('lastName', ''),
-                    'business_name': customer.get('customerAddress', {}).get('businessName', ''),
-                    'address1': customer.get('customerAddress', {}).get('address1', ''),
-                    'address2': customer.get('customerAddress', {}).get('address2', ''),
-                    'city': customer.get('customerAddress', {}).get('city', ''),
-                    'state': customer.get('customerAddress', {}).get('state', ''),
-                    'zip_code': customer.get('customerAddress', {}).get('postalCode', ''),
-                    'phone': customer.get('phone1', ''),
-                    'email': customer.get('email', ''),
-                    'customer_type': customer.get('customerType', ''),
-                    'tax_status': customer.get('taxStatus', ''),
-                    'tax_method': customer.get('taxMethod', ''),
-                    'preferred_salesperson1': customer.get('preferredSalesperson1', ''),
-                    'preferred_salesperson2': customer.get('preferredSalesperson2', ''),
-                    'store_number': customer.get('storeNumber', ''),
-                    'internal_notes': customer.get('notes', '')
-                }
-                return [formatted_customer]
+            # Handle case where response is None or empty
+            if not response:
+                logger.warning(f"No customer found with ID: {customer_id}")
+                return []
             
-            return []
+            # Format the customer data according to the API response structure
+            formatted_customer = {
+                'id': str(response.get('customerId', '')),
+                'customer_source_id': str(response.get('customerId', '')),
+                'name': f"{response.get('firstName', '')} {response.get('lastName', '')}".strip(),
+                'first_name': response.get('firstName', ''),
+                'last_name': response.get('lastName', ''),
+                'business_name': response.get('businessName', ''),
+                'address1': response.get('address1', ''),
+                'address2': response.get('address2', ''),
+                'city': response.get('city', ''),
+                'state': response.get('state', ''),
+                'zip_code': response.get('postalCode', ''),
+                'phone': response.get('phone1', ''),
+                'email': response.get('email', ''),
+                'customer_type': response.get('customerType', ''),
+                'tax_status': response.get('taxStatus', ''),
+                'tax_method': response.get('taxMethod', ''),
+                'preferred_salesperson1': response.get('preferredSalesperson1', ''),
+                'preferred_salesperson2': response.get('preferredSalesperson2', ''),
+                'store_number': str(response.get('storeNumber', '')),
+                'internal_notes': response.get('notes', ''),
+                'ship_to': {
+                    'name': f"{response.get('shipToFirstName', '')} {response.get('shipToLastName', '')}".strip(),
+                    'first_name': response.get('shipToFirstName', ''),
+                    'last_name': response.get('shipToLastName', ''),
+                    'business_name': response.get('shipToBusinessName', ''),
+                    'address1': response.get('shipToAddress1', ''),
+                    'address2': response.get('shipToAddress2', ''),
+                    'city': response.get('shipToCity', ''),
+                    'state': response.get('shipToState', ''),
+                    'zip_code': response.get('shipToPostalCode', ''),
+                    'county': response.get('shipToCounty', '')
+                }
+            }
+            return [formatted_customer]
             
         except Exception as e:
             logger.error(f"Error finding customer by ID: {str(e)}")
@@ -587,16 +539,12 @@ class RfmsApi:
         Create a new job in RFMS.
         
         Args:
-            job_data (dict): Job data
+            job_data (dict): Job data with customerId and shipToAddress
             
         Returns:
             dict: Created job object
         """
         try:
-            # Ensure required fields are present
-            if not all(key in job_data['order'] for key in ['CustomerSeqNum', 'PONumber', 'MiscCharges']):
-                raise ValueError("Missing required fields in job data")
-            
             # Get session token
             session_token = self.session_token
             if not session_token:
@@ -611,9 +559,13 @@ class RfmsApi:
             # Use session token for authentication
             auth = (self.store_code, session_token)
             
-            # Make the request
+            # Validate required fields
+            if not job_data.get('order', {}).get('customerId'):
+                raise ValueError("Missing required field: customerId")
+            
+            # Make the request to the correct endpoint
             response = requests.post(
-                f"{self.base_url}/v2/Order",
+                f"{self.base_url}/v2/order/create",
                 headers=headers,
                 auth=auth,
                 json=job_data
@@ -770,4 +722,51 @@ class RfmsApi:
             }
             formatted_customers.append(formatted_customer)
         
-        return formatted_customers 
+        return formatted_customers
+    
+    def get_customer_count(self, search_term):
+        """Get the total count of customers matching a search term."""
+        if not self.ensure_session():
+            logger.error("Failed to establish session for customer count")
+            return 0
+        
+        url = f"{self.base_url}/v2/customers/find"
+        
+        # Search payload for count
+        payload = {
+            "searchText": search_term,
+            "includeCustomers": True,
+            "includeProspects": False,
+            "includeInactive": False,
+            "startIndex": 0,
+            "storeNumber": 49,
+            "customerType": "BUILDERS",
+            "referralType": "Standalone",
+            "entryType": "Customer",
+            "activeOnly": True,
+            "defaultStore": 49,
+            "countOnly": True  # Request only the count
+        }
+        
+        try:
+            response = requests.post(
+                url,
+                headers=self.headers,
+                auth=self.auth,
+                json=payload,
+                timeout=self.timeout
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                total_count = data.get('totalCount', 0)
+                logger.info(f"Found {total_count} total customers for search term: {search_term}")
+                return total_count
+            else:
+                logger.error(f"Failed to get customer count. Status code: {response.status_code}")
+                logger.error(f"Response: {response.text}")
+                return 0
+                
+        except Exception as e:
+            logger.error(f"Error getting customer count: {str(e)}")
+            return 0 
