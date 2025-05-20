@@ -1,14 +1,25 @@
 import logging
+import sys
+from logging.handlers import RotatingFileHandler
 
+# Enhanced logging configuration
 logging.basicConfig(
-    level=logging.INFO,
+    level=logging.DEBUG,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.StreamHandler(),
-        logging.FileHandler("app.log")
+        logging.StreamHandler(sys.stdout),  # Console output
+        RotatingFileHandler(
+            "app_dev.log",
+            maxBytes=10485760,  # 10MB
+            backupCount=5
+        )
     ]
 )
 logger = logging.getLogger(__name__)
+
+# Log startup information
+logger.info("Starting RFMS PDF XTRACR in development mode")
+logger.debug("Debug logging enabled")
 
 from flask import Flask, render_template, request, jsonify, flash, redirect, url_for, session
 import os
@@ -31,11 +42,15 @@ load_dotenv()
 # App configuration
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret-key')
-app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URI', 'sqlite:///rfms_xtracr.db')
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URI', 'sqlite:///rfms_xtracr_dev.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['UPLOAD_FOLDER'] = os.getenv('UPLOAD_FOLDER', 'uploads')
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max upload size
 app.config['ALLOWED_EXTENSIONS'] = {'pdf'}
+
+# Development mode settings
+app.config['DEBUG'] = True
+app.config['TESTING'] = False
 
 # Ensure upload directory exists
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
@@ -46,7 +61,7 @@ db.init_app(app)
 # Create database and tables if they don't exist
 with app.app_context():
     db.create_all()
-    logger.info("Database initialized successfully")
+    logger.info("Development database initialized successfully")
 
 # Initialize RFMS API client
 rfms_api = RfmsApi(
@@ -61,6 +76,18 @@ if not all([os.getenv('RFMS_BASE_URL'), os.getenv('RFMS_STORE_CODE'),
            os.getenv('RFMS_USERNAME'), os.getenv('RFMS_API_KEY')]):
     logger.error("Missing required RFMS API configuration. Please check your .env file.")
     raise ValueError("Missing required RFMS API configuration")
+
+# Add request logging middleware
+@app.before_request
+def log_request_info():
+    logger.debug('Headers: %s', request.headers)
+    logger.debug('Body: %s', request.get_data())
+
+@app.after_request
+def log_response_info(response):
+    logger.debug('Response Status: %s', response.status)
+    logger.debug('Response Headers: %s', response.headers)
+    return response
 
 # Helper functions
 def allowed_file(filename):
@@ -603,5 +630,10 @@ if __name__ == '__main__':
         # Create database tables
         db.create_all()
     
-    debug_mode = os.getenv('DEBUG', 'True').lower() in ('true', '1', 't')
-    app.run(debug=debug_mode, host='0.0.0.0', port=int(os.getenv('PORT', 5000))) 
+    # Run in development mode
+    app.run(
+        debug=True,
+        host='0.0.0.0',
+        port=int(os.getenv('PORT', 5000)),
+        use_reloader=True
+    ) 
