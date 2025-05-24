@@ -1,0 +1,15 @@
+If you query the database using customers/find or customers/find/advanced, the customerID or customerSourceID would be used as the CustomerSeqNum when creating an order (if you intend to use an existing customer...otherwise, leave blank).
+
+As for starting the session, you need to do the following:
+1.	Begin a new session by using POST to https://api.rfms.online/v2/Session/Begin
+•	Using Basic Auth, the Username is your store queue (including the word "store") store-5291f4e3dca04334afede9f642ec6157
+•	Your password is your API key: 49bf22ea017f4b97aabc99def43c0b66
+2.	This should then return something like this:
+•	{
+    "storeId": "store-5291f4e3dca04334afede9f642ec6157",
+    "authorized": true,
+    "sessionToken": "rfmsapi-3c3cf51ef7f2475dbc2e1051b14c82ac",
+    "sessionExpires": "Tue, 13 May 2025 03:26:34 GMT"
+}
+3.	Your API session has now begun. Now you will start a new query with the same username (store-5291f4e3dca04334afede9f642ec6157) but using the sessionToken that you just received as your password. The session expiration will be extended each time that token is used. The session token will be discarded automatically after it hasn't been used for approximately 20 minutes, after which you would need to start a new session and receive a new sessionToken.
+

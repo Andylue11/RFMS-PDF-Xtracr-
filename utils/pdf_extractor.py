@@ -200,6 +200,22 @@ def clean_extracted_data(extracted_data):
         
         extracted_data['extra_phones'] = filtered_phones
 
+    # Clean up alternate_contacts: remove entries with invalid names or no phone/email, and strip newlines
+    cleaned_contacts = []
+    for contact in extracted_data.get('alternate_contacts', []):
+        name = contact.get('name', '').replace('\n', ' ').strip()
+        phone = contact.get('phone', '').strip()
+        email = contact.get('email', '').strip()
+        # Only keep if name is not empty, not 'Email', and has at least a phone or email
+        if name and name.lower() != 'email' and (phone or email):
+            cleaned_contacts.append({
+                'type': contact.get('type', ''),
+                'name': name,
+                'phone': phone,
+                'email': email
+            })
+    extracted_data['alternate_contacts'] = cleaned_contacts
+
 
 def check_essential_fields(data):
     """Check if essential fields are filled."""
@@ -268,6 +284,7 @@ def parse_extracted_text(text, extracted_data):
         if match:
             extracted_data['po_number'] = match.group(1).strip()
             break
+    logger.info(f"[EXTRACT] PO Number: {extracted_data['po_number']}")
     
     # Extract business name from SUBCONTRACTOR DETAILS section
     subcontractor_section = re.search(r"SUBCONTRACTOR\s+DETAILS([\s\S]+?)(?=JOB\s+DETAILS|SUPERVISOR\s+DETAILS|$)", text, re.IGNORECASE)
@@ -371,6 +388,7 @@ def parse_extracted_text(text, extracted_data):
                 break
             except ValueError:
                 continue
+    logger.info(f"[EXTRACT] Dollar Value: {extracted_data['dollar_value']}")
     
     # --- Extract all alternate contacts (Best, Real Estate, Site, Authorised) ---
     contact_types = [
@@ -384,16 +402,34 @@ def parse_extracted_text(text, extracted_data):
         section = re.search(rf"{regex}([\s\S]+?)(?=SUPERVISOR|JOB\s+DETAILS|$)", text, re.IGNORECASE)
         if section:
             contact_text = section.group(1)
-            # Name
+            # Decision Maker (for alternate contact)
+            decision_maker_match = re.search(r"Decision Maker:?[ \t]*([A-Za-z\s]+?)(?=\n|$)", contact_text, re.IGNORECASE)
+            if decision_maker_match:
+                name = decision_maker_match.group(1).strip()
+                # Phone
+                phone_match = re.search(r"Mobile:?[ \t]*([\d\(\)\-\s]+)", contact_text, re.IGNORECASE)
+                phone = phone_match.group(1).strip() if phone_match else ''
+                # Email
+                email_match = re.search(r"Email:?[ \t]*([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})", contact_text, re.IGNORECASE)
+                email = email_match.group(1).strip() if email_match else ''
+                # Only add if name is different from main customer
+                if name and name.lower() != main_customer_name:
+                    extracted_data['alternate_contact_name'] = name
+                    extracted_data['alternate_contact_phone'] = phone
+                    extracted_data['alternate_contact_email'] = email
+                    extracted_data['alternate_contacts'].append({
+                        'type': 'Decision Maker',
+                        'name': name,
+                        'phone': phone,
+                        'email': email
+                    })
+            # Fallback to previous logic for other alternates
             name_match = re.search(r"Name:?[ \t]*([A-Za-z\s]+?)(?=\n|$)", contact_text, re.IGNORECASE)
             name = name_match.group(1).strip() if name_match else ''
-            # Phone
             phone_match = re.search(r"(Mobile|Phone|Contact):?[ \t]*([\d\(\)\-\s]+)", contact_text, re.IGNORECASE)
             phone = phone_match.group(2).strip() if phone_match else ''
-            # Email
             email_match = re.search(r"Email:?[ \t]*([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})", contact_text, re.IGNORECASE)
             email = email_match.group(1).strip() if email_match else ''
-            # Only add if name is different from main customer
             if name and name.lower() != main_customer_name:
                 extracted_data['alternate_contacts'].append({
                     'type': label,
@@ -401,7 +437,6 @@ def parse_extracted_text(text, extracted_data):
                     'phone': phone,
                     'email': email
                 })
-            # For UI, still populate the first found as alternate_contact_*
             if label in ('Best Contact', 'Real Estate Agent') and not extracted_data['alternate_contact_name'] and name and name.lower() != main_customer_name:
                 extracted_data['alternate_contact_name'] = name
                 extracted_data['alternate_contact_phone'] = phone
@@ -425,6 +460,18 @@ def parse_extracted_text(text, extracted_data):
                     'phone2': phone2,
                     'email': ''
                 })
+
+    # After extracting supervisor name/phone
+    logger.info(f"[EXTRACT] Supervisor Name: {extracted_data['supervisor_name']}")
+    logger.info(f"[EXTRACT] Supervisor Phone: {extracted_data['supervisor_mobile']}")
+    # After extracting description of works
+    logger.info(f"[EXTRACT] Description of Works: {extracted_data['description_of_works']}")
+    # After extracting email
+    logger.info(f"[EXTRACT] Email: {extracted_data['email']}")
+    # After extracting all phone numbers
+    logger.info(f"[EXTRACT] Phone: {extracted_data['phone']}, Mobile: {extracted_data['mobile']}, Home: {extracted_data['home_phone']}, Work: {extracted_data['work_phone']}, Extra: {extracted_data['extra_phones']}")
+    # After extracting alternate contacts
+    logger.info(f"[EXTRACT] Alternate Contacts: {extracted_data['alternate_contacts']}")
 
 
 def extract_contact_details(text, extracted_data):
@@ -621,36 +668,51 @@ def extract_job_and_supervisor_details(text, extracted_data):
 
 
 def parse_address(address_str, extracted_data):
-    """Parse address string into components."""
-    if not address_str:
-        return
-    
-    # Try to parse Australian address format: street, suburb STATE postcode
-    # Example: 151 Warriewood Street Chandler QLD 4155
-    match = re.search(r"(.*?)\s+([A-Za-z]+)\s+([A-Z]{2,3})\s+(\d{4})", address_str)
-    
-    if match:
-        # Get the entire street portion up to the suburb
-        full_match = match.group(0)
-        city_state_zip = match.group(2) + " " + match.group(3) + " " + match.group(4)
-        street_part = address_str.replace(city_state_zip, "").strip()
-        
-        # Remove any trailing spaces or commas
-        street_part = re.sub(r'[,\s]+$', '', street_part)
-        
-        city = match.group(2).strip()
-        state = match.group(3).strip()
-        zip_code = match.group(4).strip()
-        
-        # Split street into address1 and address2 if needed
-        address_parts = street_part.split(',', 1)
-        extracted_data['address1'] = address_parts[0].strip()
-        if len(address_parts) > 1:
-            extracted_data['address2'] = address_parts[1].strip()
-        
-        extracted_data['city'] = city
-        extracted_data['state'] = state
-        extracted_data['zip_code'] = zip_code
+    """
+    Parse a full address string into address1, city, state, and zip_code.
+    Improved: address1 is only the street address, city is the suburb (even if multi-word), state/zip_code always filled if present.
+    """
+    street_suffixes = [
+        'Street', 'St', 'Road', 'Rd', 'Avenue', 'Ave', 'Boulevard', 'Blvd', 'Court', 'Ct', 'Drive', 'Dr',
+        'Lane', 'Ln', 'Place', 'Pl', 'Terrace', 'Terr', 'Way', 'Highway', 'Hwy', 'Crescent', 'Cres', 'Parade', 'Pde',
+        'Close', 'Cl', 'Square', 'Sq', 'Walk', 'Track', 'Loop', 'Row', 'View', 'Rise', 'Gardens', 'Grove', 'Mews'
+    ]
+    state_pattern = r'(NSW|VIC|QLD|SA|WA|TAS|NT|ACT)'
+    postcode_pattern = r'(\d{4})$'
+    parts = address_str.strip().split()
+    state = ''
+    zip_code = ''
+    # Find state and postcode from the end
+    for i in range(len(parts)-1, -1, -1):
+        if not zip_code and re.match(postcode_pattern, parts[i]):
+            zip_code = parts[i]
+            continue
+        if not state and re.match(state_pattern, parts[i], re.IGNORECASE):
+            state = parts[i].upper()
+            continue
+    # Remove state and postcode from parts
+    main_parts = [p for p in parts if p != state and p != zip_code]
+    # Find the last street suffix in main_parts
+    last_street_idx = -1
+    for idx, word in enumerate(main_parts):
+        if word.capitalize() in street_suffixes:
+            last_street_idx = idx
+    logger.info(f"[ADDRESS PARSE DEBUG] main_parts: {main_parts}, last_street_idx: {last_street_idx}")
+    if last_street_idx != -1:
+        extracted_data['address1'] = ' '.join(main_parts[:last_street_idx+1])
+        extracted_data['city'] = ' '.join(main_parts[last_street_idx+1:]).strip()
     else:
-        # If can't parse, just store the full address in address1
-        extracted_data['address1'] = address_str 
+        # If no street suffix, try to split before the last two words (city is often last two words)
+        if len(main_parts) > 2:
+            extracted_data['address1'] = ' '.join(main_parts[:-2])
+            extracted_data['city'] = ' '.join(main_parts[-2:])
+        elif len(main_parts) == 2:
+            extracted_data['address1'] = main_parts[0]
+            extracted_data['city'] = main_parts[1]
+        else:
+            extracted_data['address1'] = main_parts[0] if main_parts else ''
+            extracted_data['city'] = ''
+    extracted_data['state'] = state
+    extracted_data['zip_code'] = zip_code
+    # Add debug logging
+    logger.info(f"[ADDRESS PARSE] Raw: '{address_str}' | address1: '{extracted_data['address1']}', city: '{extracted_data['city']}', state: '{extracted_data['state']}', zip: '{extracted_data['zip_code']}'") 

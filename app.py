@@ -80,6 +80,11 @@ def index():
 @app.route('/upload-pdf', methods=['POST'])
 def upload_pdf_api():
     """Handle PDF upload and extraction via API endpoint."""
+    # Ensure RFMS session is ready for downstream actions
+    session_ok = rfms_api.ensure_session()
+    logger.info(f"RFMS session ready after PDF upload: {session_ok}, token: {rfms_api.session_token}, expiry: {rfms_api.session_expiry}")
+    if not session_ok:
+        return jsonify({"error": "Could not establish RFMS session. Please try again."}), 500
     if 'pdf_file' not in request.files:
         logger.warning("No file part in upload request.")
         return jsonify({"error": "No file part"}), 400
@@ -209,34 +214,42 @@ def preview_data(pdf_id):
     pdf_data = PdfData.query.get_or_404(pdf_id)
     return render_template('preview.html', pdf_data=pdf_data)
 
-@app.route('/api/customers/search')
+@app.route('/api/customers/search', methods=['POST'])
 def search_customers():
-    """Search for customers in RFMS API."""
-    search_term = request.args.get('term', '')
+    """Search for customers in RFMS API by name or customer ID."""
+    data = request.get_json()
+    search_term = data.get('term', '') if data else ''
     
     if not search_term:
         logger.warning("Empty search term provided")
-        return jsonify({"error": "Search term is required"}), 400
-    
+        return jsonify({"error": "Search term is required and must be sent as JSON in a POST request."}), 400
+
     try:
         logger.info(f"Searching for customers with term: {search_term}")
-        customers = rfms_api.find_customers(search_term)
+        # If the term is all digits, treat as customer ID
+        if search_term.isdigit():
+            customers = rfms_api.find_customer_by_id(search_term)
+        else:
+            customers = rfms_api.find_customer_by_name(search_term)
         
-        if not customers:
-            logger.info(f"No customers found for search term: {search_term}")
+        if not isinstance(customers, list) or not customers:
+            logger.info(f"No customers found or bad response for search term: {search_term}")
+            logger.info(f"API response to frontend: []")
             return jsonify([])
-        
+
         # Format response for frontend
         formatted_customers = []
         for customer in customers:
+            if not isinstance(customer, dict):
+                continue
             formatted_customer = {
                 'id': customer.get('id'),
-                'customer_source_id': customer.get('customer_source_id'),
+                'customer_source_id': customer.get('customer_source_id', customer.get('id')),
                 'name': customer.get('name', ''),
                 'first_name': customer.get('first_name', ''),
                 'last_name': customer.get('last_name', ''),
                 'business_name': customer.get('business_name', ''),
-                'address': f"{customer.get('address1', '')}, {customer.get('city', '')}, {customer.get('state', '')} {customer.get('zip_code', '')}",
+                'address': customer.get('address', ''),
                 'address1': customer.get('address1', ''),
                 'address2': customer.get('address2', ''),
                 'city': customer.get('city', ''),
@@ -247,6 +260,7 @@ def search_customers():
             formatted_customers.append(formatted_customer)
         
         logger.info(f"Found {len(formatted_customers)} customers for search term: {search_term}")
+        logger.info(f"API response to frontend: {formatted_customers}")
         return jsonify(formatted_customers)
     except Exception as e:
         logger.error(f"Error searching customers: {str(e)}")
@@ -321,50 +335,63 @@ def check_api_status():
 def export_to_rfms():
     """Export customer, job, and order data to RFMS API."""
     try:
-        # Get the data from the request
         data = request.json
-        
         if not data:
             logger.warning("No data provided for RFMS export")
             return jsonify({"error": "No data provided for export"}), 400
-        
-        # Validate that we have the necessary data sections
         required_sections = ['sold_to', 'ship_to', 'job_details']
         for section in required_sections:
             if section not in data:
                 logger.warning(f"Missing required section: {section}")
                 return jsonify({"error": f"Missing required section: {section}"}), 400
-        
         logger.info("Starting export to RFMS")
-        
         # 1. Create or update the Ship To customer in RFMS
         ship_to_data = data['ship_to']
+        # Build the customer creation payload for Ship To
+        customer_payload = {
+            "customerType": ship_to_data.get('customer_type', 'INSURANCE'),
+            "entryType": "Customer",
+            "customerAddress": {
+                "lastName": ship_to_data.get('last_name', ''),
+                "firstName": ship_to_data.get('first_name', ''),
+                "address1": ship_to_data.get('address1', ''),
+                "address2": ship_to_data.get('address2', ''),
+                "city": ship_to_data.get('city', ''),
+                "state": ship_to_data.get('state', ''),
+                "postalCode": ship_to_data.get('zip_code', ''),
+                "county": ship_to_data.get('county', '')
+            },
+            "phone1": ship_to_data.get('phone', ''),
+            "phone2": ship_to_data.get('phone2', ''),
+            "email": ship_to_data.get('email', ''),
+            "taxStatus": "Tax",
+            "taxMethod": "SalesTax",
+            "preferredSalesperson1": "Zoran Vekic",
+            "preferredSalesperson2": "",
+            "storeNumber": 49
+        }
         logger.info(f"Creating/updating Ship To customer: {ship_to_data.get('name')}")
-        
         try:
-            ship_to_result = rfms_api.create_customer(ship_to_data)
+            ship_to_result = rfms_api.create_customer(customer_payload)
             ship_to_customer_id = ship_to_result.get('id')
             logger.info(f"Ship To customer created/updated with ID: {ship_to_customer_id}")
         except Exception as e:
             logger.error(f"Error creating Ship To customer: {str(e)}")
             return jsonify({"error": f"Error creating Ship To customer: {str(e)}"}), 500
-        
         # 2. Get the Sold To customer ID (assumes it was already obtained via search)
         sold_to_data = data['sold_to']
         sold_to_customer_id = sold_to_data.get('id')
-        
         if not sold_to_customer_id:
             logger.warning("Missing Sold To customer ID")
             return jsonify({"error": "Missing Sold To customer ID"}), 400
-        
         # 3. Create the job in RFMS
         job_data = data['job_details']
-        
-        # If alternate_contact is present, append to description
         alt_contact = data.get('alternate_contact', {})
         description = job_data.get('description_of_works', '')
-        # Add all alternate contacts from the list
         alt_contacts_list = data.get('alternate_contacts', [])
+        # Private notes is now the PDF-extracted description
+        private_notes = description.rstrip('\n')
+        # Note/WorkOrderNote are now just the contact info
         notes_lines = []
         if alt_contact and (alt_contact.get('name') or alt_contact.get('phone') or alt_contact.get('phone2') or alt_contact.get('email')):
             best_contact_str = f"Best Contact: {alt_contact.get('name', '')} {alt_contact.get('phone', '')}"
@@ -381,103 +408,250 @@ def export_to_rfms():
                 if contact.get('email'):
                     line += f" ({contact.get('email')})"
                 notes_lines.append(line)
-        if notes_lines:
-            description += '\n' + '\n'.join(notes_lines)
-        
-        # Prepare the job data for the API
-        po_number = job_data.get('po_number', '')
-        dollar_value = job_data.get('dollar_value', 0)
-        # Build lines array for the PO# line item
-        lines = [{
-            'productId': f'PO#$$',
-            'colorId': f'PO#$$',
-            'quantity': dollar_value,
-            'priceLevel': 'Price4'
-        }]
-        
-        # Prepare the job data using the new format
-        prepared_job_data = {
-            'sold_to_customer_id': sold_to_customer_id,
-            'ship_to_customer_id': ship_to_customer_id,
-            'po_number': po_number,
-            'job_number': job_data.get('job_number'),
-            'description_of_works': description,
-            'dollar_value': dollar_value,
-            'salesperson1': 'Zoran Vekic',
-            'store_number': 1,
-            'service_type_id': 1,
-            'contract_type_id': 1,
-            'user_order_type_id': 3,
-            'lines': lines
+        notes_field = '\n'.join(notes_lines).rstrip('\n')
+        # Extract measure/start date if present
+        measure_date = job_data.get('measure_date', '')
+        # Supervisor Name/Phone for JobNumber
+        supervisor_name = job_data.get('supervisor_name', '')
+        supervisor_phone = job_data.get('supervisor_phone', '')
+        job_number = supervisor_name or supervisor_phone or job_data.get('po_number', '')
+        # Phone1 from PDF data (main contact phone)
+        phone1 = ship_to_data.get('phone', '').split()[0] if ship_to_data.get('phone') else ''
+        # Phone2 from Ship To phone2 if present
+        phone2 = ship_to_data.get('phone', '').split()[1] if ship_to_data.get('phone') and len(ship_to_data.get('phone').split()) > 1 else ''
+        # Build the order payload for the first job
+        order_payload = {
+            "username": "zoran.vekic",
+            "order": {
+                "useDocumentWebOrderFlag": False,
+                "originalMessageId": None,
+                "newInvoiceNumber": None,
+                "originalInvoiceNumber": None,
+                "SeqNum": 0,
+                "InvoiceNumber": "",
+                "OriginalQuoteNum": "",
+                "ActionFlag": "Insert",
+                "InvoiceType": None,
+                "IsQuote": False,
+                "IsWebOrder": True,
+                "Exported": False,
+                "CanEdit": False,
+                "LockTaxes": False,
+                "CustomerSource": "",
+                "CustomerSeqNum": sold_to_customer_id,
+                "CustomerUpSeqNum": sold_to_customer_id,
+                "CustomerFirstName": "",
+                "CustomerLastName": "",
+                "CustomerAddress1": "",
+                "CustomerAddress2": "",
+                "CustomerCity": "",
+                "CustomerState": "",
+                "CustomerPostalCode": "",
+                "CustomerCounty": "",
+                "Phone1": phone1,
+                "ShipToFirstName": ship_to_data.get('first_name', ''),
+                "ShipToLastName": ship_to_data.get('last_name', ''),
+                "ShipToAddress1": ship_to_data.get('address1', ''),
+                "ShipToAddress2": ship_to_data.get('address2', ''),
+                "ShipToCity": ship_to_data.get('city', ''),
+                "ShipToState": ship_to_data.get('state', ''),
+                "ShipToPostalCode": ship_to_data.get('zip_code', ''),
+                "ShipToCounty": "",
+                "Phone2": phone2,
+                "ShipToLocked": False,
+                "SalesPerson1": "Zoran Vekic",
+                "SalesPerson2": "",
+                "SalesRepLocked": False,
+                "CommisionSplitPercent": 0.0,
+                "Store": 49,
+                "Email": ship_to_data.get('email', ''),
+                "CustomNote": "",
+                "Note": notes_field,
+                "WorkOrderNote": notes_field,
+                "PrivateNotes": private_notes,
+                "PickingTicketNote": None,
+                "OrderDate": "",
+                "MeasureDate": measure_date,
+                "PromiseDate": "",
+                "PONumber": job_data.get('po_number', ''),
+                "CustomerType": "INSURANCE",
+                "JobNumber": job_number,
+                "DateEntered": datetime.now().strftime('%Y-%m-%d'),
+                "DatePaid": None,
+                "DueDate": "",
+                "Model": None,
+                "PriceLevel": 0,
+                "TaxStatus": "Tax",
+                "Occupied": False,
+                "Voided": False,
+                "AdSource": 0,
+                "TaxCode": None,
+                "OverheadMarginBase": None,
+                "TaxStatusLocked": False,
+                "Map": None,
+                "Zone": None,
+                "Phase": None,
+                "Tract": None,
+                "Block": None,
+                "Lot": None,
+                "Unit": None,
+                "Property": None,
+                "PSMemberNumber": 0,
+                "PSMemberName": None,
+                "PSBusinessName": None,
+                "TaxMethod": "",
+                "TaxInclusive": False,
+                "UserOrderType": 12,
+                "ServiceType": 9,
+                "ContractType": 2,
+                "Timeslot": 0,
+                "InstallStore": 49,
+                "AgeFrom": None,
+                "Completed": None,
+                "ReferralAmount": 0.0,
+                "ReferralLocked": False,
+                "PreAuthorization": None,
+                "SalesTax": 0.0,
+                "GrandInvoiceTotal": "",
+                "MaterialOnly": 0.0,
+                "Labor": 0.0,
+                "MiscCharges": job_data.get('dollar_value', 0),
+                "InvoiceTotal": job_data.get('dollar_value', 0),
+                "MiscTax": 0.0,
+                "RecycleFee": 0.0,
+                "TotalPaid": 0.0,
+                "Balance": job_data.get('dollar_value', 0),
+                "DiscountRate": 0.0,
+                "DiscountAmount": 0.0,
+                "ApplyRecycleFee": False,
+                "Attachements": None,
+                "PendingAttachments": None,
+                "Order": None,
+                "LockInfo": None,
+                "Message": None,
+                "Lines": [{
+                    'productId': f'PO#$$',
+                    'colorId': f'PO#$$',
+                    'quantity': job_data.get('dollar_value', 0),
+                    'priceLevel': 'Price4'
+                }]
+            }
         }
-        
-        logger.info(f"Creating job in RFMS: {prepared_job_data.get('po_number')}")
-        
+        logger.info(f"Creating job in RFMS: {order_payload['order'].get('PONumber')}")
         try:
-            # Create the main job
-            job_result = rfms_api.create_job(prepared_job_data)
+            job_result = rfms_api.create_job(order_payload)
             job_id = job_result.get('id')
             logger.info(f"Job created in RFMS with ID: {job_id}")
-            
             result = {
                 'success': True,
                 'message': 'Successfully exported data to RFMS',
                 'ship_to_customer': ship_to_result,
                 'job': job_result
             }
-            
-            # 4. Handle billing group/second PO if applicable
-            billing_group_data = data.get('billing_group')
-            if billing_group_data and billing_group_data.get('is_billing_group'):
-                logger.info("Processing second job for billing group")
-                
-                po_prefix = job_data.get('actual_job_number', '')
-                po_suffix = billing_group_data.get('po_suffix', '')
-                second_value = billing_group_data.get('second_value', 0)
-                
-                if not po_suffix or second_value <= 0:
-                    logger.warning("Invalid second job data: missing suffix or value ≤ 0")
-                    return jsonify({"error": "Invalid second job data"}), 400
-                
-                # Create a copy of the job data for the second job
-                second_job_data = prepared_job_data.copy()
-                second_job_data['po_number'] = f"{po_prefix}-{po_suffix}"
-                second_job_data['dollar_value'] = second_value
-                # Update lines for the second job
-                second_job_data['lines'] = [{
-                    'productId': f'PO#$$',
-                    'colorId': f'PO#$$',
-                    'quantity': second_value,
-                    'priceLevel': 'Price4'
-                }]
-                
-                logger.info(f"Creating second job in RFMS: {second_job_data.get('po_number')}")
-                
-                try:
-                    # Create the second job
-                    second_job_result = rfms_api.create_job(second_job_data)
-                    second_job_id = second_job_result.get('id')
-                    logger.info(f"Second job created in RFMS with ID: {second_job_id}")
-                    
-                    # Add both jobs to a billing group
-                    logger.info(f"Adding jobs to billing group: {job_id}, {second_job_id}")
-                    billing_group_result = rfms_api.add_to_billing_group([job_id, second_job_id])
-                    
-                    # Add the second job and billing group results to the API response
-                    result['second_job'] = second_job_result
-                    result['billing_group'] = billing_group_result
-                    
-                except Exception as e:
-                    logger.error(f"Error creating second job or billing group: {str(e)}")
-                    # Still return success for the first job, but include the error
-                    result['second_job_error'] = str(e)
-            
+            # Billing group logic
+            if data.get('billing_group') and data.get('second_job_details'):
+                second_job_data = data['second_job_details']
+                # Repeat the mapping for the second job
+                second_description = second_job_data.get('description_of_works', '')
+                # Private notes for second job is the PDF-extracted description
+                second_private_notes = second_description.rstrip('\n')
+                # Note/WorkOrderNote for second job is just the contact info (reuse logic if needed)
+                second_notes_field = notes_field
+                second_measure_date = second_job_data.get('measure_date', '')
+                second_supervisor_name = second_job_data.get('supervisor_name', '')
+                second_supervisor_phone = second_job_data.get('supervisor_phone', '')
+                second_job_number = second_supervisor_name or second_supervisor_phone or second_job_data.get('po_number', '')
+                second_order_payload = {
+                    "username": "zoran.vekic",
+                    "order": {
+                        **order_payload['order'],
+                        "PONumber": second_job_data.get('po_number', ''),
+                        "MiscCharges": second_job_data.get('dollar_value', 0),
+                        "InvoiceTotal": second_job_data.get('dollar_value', 0),
+                        "Balance": second_job_data.get('dollar_value', 0),
+                        "MeasureDate": second_measure_date,
+                        "JobNumber": second_job_number,
+                        "Note": second_notes_field,
+                        "WorkOrderNote": second_notes_field,
+                        "PrivateNotes": second_private_notes,
+                        "PickingTicketNote": None,
+                        "OrderDate": "",
+                        "PromiseDate": "",
+                        "PONumber": second_job_data.get('po_number', ''),
+                        "CustomerType": "INSURANCE",
+                        "DateEntered": datetime.now().strftime('%Y-%m-%d'),
+                        "DatePaid": None,
+                        "DueDate": "",
+                        "Model": None,
+                        "PriceLevel": 0,
+                        "TaxStatus": "Tax",
+                        "Occupied": False,
+                        "Voided": False,
+                        "AdSource": 0,
+                        "TaxCode": None,
+                        "OverheadMarginBase": None,
+                        "TaxStatusLocked": False,
+                        "Map": None,
+                        "Zone": None,
+                        "Phase": None,
+                        "Tract": None,
+                        "Block": None,
+                        "Lot": None,
+                        "Unit": None,
+                        "Property": None,
+                        "PSMemberNumber": 0,
+                        "PSMemberName": None,
+                        "PSBusinessName": None,
+                        "TaxMethod": "",
+                        "TaxInclusive": False,
+                        "UserOrderType": 12,
+                        "ServiceType": 9,
+                        "ContractType": 2,
+                        "Timeslot": 0,
+                        "InstallStore": 49,
+                        "AgeFrom": None,
+                        "Completed": None,
+                        "ReferralAmount": 0.0,
+                        "ReferralLocked": False,
+                        "PreAuthorization": None,
+                        "SalesTax": 0.0,
+                        "GrandInvoiceTotal": "",
+                        "MaterialOnly": 0.0,
+                        "Labor": 0.0,
+                        "MiscCharges": second_job_data.get('dollar_value', 0),
+                        "InvoiceTotal": second_job_data.get('dollar_value', 0),
+                        "MiscTax": 0.0,
+                        "RecycleFee": 0.0,
+                        "TotalPaid": 0.0,
+                        "Balance": second_job_data.get('dollar_value', 0),
+                        "DiscountRate": 0.0,
+                        "DiscountAmount": 0.0,
+                        "ApplyRecycleFee": False,
+                        "Attachements": None,
+                        "PendingAttachments": None,
+                        "Order": None,
+                        "LockInfo": None,
+                        "Message": None,
+                        "Lines": [{
+                            'productId': f'PO#$$',
+                            'colorId': f'PO#$$',
+                            'quantity': second_job_data.get('dollar_value', 0),
+                            'priceLevel': 'Price4'
+                        }]
+                    }
+                }
+                logger.info(f"Creating second job in RFMS: {second_order_payload['order'].get('PONumber')}")
+                second_job_result = rfms_api.create_job(second_order_payload)
+                second_job_id = second_job_result.get('id')
+                logger.info(f"Second job created in RFMS with ID: {second_job_id}")
+                # Add both jobs to a billing group
+                billing_group_result = rfms_api.add_to_billing_group([job_id, second_job_id])
+                result['second_job'] = second_job_result
+                result['billing_group'] = billing_group_result
             return jsonify(result)
-            
         except Exception as e:
             logger.error(f"Error creating job in RFMS: {str(e)}")
             return jsonify({"error": f"Error creating job in RFMS: {str(e)}"}), 500
-        
     except Exception as e:
         logger.error(f"Error during RFMS export: {str(e)}")
         return jsonify({"error": f"Error during RFMS export: {str(e)}"}), 500

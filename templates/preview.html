@@ -236,7 +236,11 @@
         if (searchTerm) {
             searchResults.innerHTML = '<p class="text-sm text-gray-500">Searching...</p>';
             
-            fetch(`/api/customers/search?term=${encodeURIComponent(searchTerm)}`)
+            fetch('/api/customers/search', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ term: searchTerm })
+            })
                 .then(response => response.json())
                 .then(data => {
                     if (data.error) {

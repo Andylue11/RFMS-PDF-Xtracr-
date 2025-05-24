@@ -18,7 +18,7 @@ document.addEventListener('DOMContentLoaded', function() {
     setupFormValidation();
     setupPdfUpload();
     setupBuilderSearch();
-    setupExportToRFMS();
+    setupAddCustomerAndCreateJob();
 });
 
 /**
@@ -344,7 +344,11 @@ function setupPdfUpload() {
 
             const extractedData = await response.json();
             console.log('Extracted Data:', extractedData);
-            populateShipTo(extractedData);
+            if (extractedData.data) {
+                populateShipTo(extractedData.data);
+            } else {
+                populateShipTo(extractedData);
+            }
             
             // Remove loading notification and show success
             if (document.body.contains(loadingNotification)) {
@@ -373,49 +377,63 @@ function setupPdfUpload() {
  * @param {object} data - The extracted data object from the backend.
  */
 function populateShipTo(data) {
-    // Populate Ship To fields
+    // Ship To fields
     document.getElementById('ship-to-name').value = data.customer_name || '';
     document.getElementById('ship-to-address1').value = data.address1 || '';
     document.getElementById('ship-to-address2').value = data.address2 || '';
     document.getElementById('ship-to-city').value = data.city || '';
-    document.getElementById('ship-to-state').value = data.state || '';
     document.getElementById('ship-to-zip').value = data.zip_code || '';
-    document.getElementById('ship-to-country').value = data.country || '';
+    if (document.getElementById('ship-to-country')) document.getElementById('ship-to-country').value = data.country || '';
 
-    // Handle phone numbers
-    let phoneNumbers = [];
-    if (data.phone) phoneNumbers.push(data.phone);
-    if (data.mobile) phoneNumbers.push(data.mobile);
-    if (data.home_phone) phoneNumbers.push(data.home_phone);
-    if (data.work_phone) phoneNumbers.push(data.work_phone);
-    if (data.extra_phones && data.extra_phones.length > 0) {
-        const mainPhonesCleaned = [data.phone, data.mobile, data.home_phone, data.work_phone]
-            .map(p => (p || '').replace(/\D/g, ''))
-            .filter(p => p);
-        const uniqueExtraPhones = data.extra_phones.filter(extraPhone => {
-            const cleanedExtra = (extraPhone || '').replace(/\D/g, '');
-            return cleanedExtra && !mainPhonesCleaned.includes(cleanedExtra);
-        });
-        phoneNumbers = phoneNumbers.concat(uniqueExtraPhones);
-    }
+    // Work Order Details
+    document.getElementById('po-number').value = data.po_number || '';
+    document.getElementById('dollar-value').value = data.dollar_value || '';
+    document.getElementById('supervisor-name').value = data.supervisor_name || '';
+    document.getElementById('supervisor-phone').value = data.supervisor_phone || data.supervisor_mobile || '';
+    document.getElementById('description-of-works').value = data.description_of_works || '';
 
-    // Format and populate phone fields
-    const formattedPhones = phoneNumbers.map(formatPhoneNumber);
-    document.getElementById('ship-to-phone1').value = formattedPhones[0] || '';
-    document.getElementById('ship-to-phone2').value = formattedPhones[1] || '';
-
+    // Email
     document.getElementById('ship-to-email').value = data.email || '';
 
-    // Populate Work Details fields from PDF
-    document.getElementById('supervisor-name').value = data.supervisor_name || '';
-    document.getElementById('supervisor-phone').value = data.supervisor_mobile || '';
-    document.getElementById('actual-job-number').value = data.actual_job_number || '';
-    document.getElementById('po-number').value = data.po_number || '';
-    document.getElementById('description-of-works').value = data.description_of_works || '';
-    document.getElementById('dollar-value').value = data.dollar_value || '';
+    // Phone numbers: prioritize phone, mobile, then extras
+    let phoneNumbers = [];
+    if (data.phone) phoneNumbers.push(data.phone);
+    if (data.mobile && data.mobile !== data.phone) phoneNumbers.push(data.mobile);
+    if (data.home_phone) phoneNumbers.push(data.home_phone);
+    if (data.work_phone) phoneNumbers.push(data.work_phone);
+    if (Array.isArray(data.extra_phones)) {
+        data.extra_phones.forEach(p => {
+            if (p && !phoneNumbers.includes(p)) phoneNumbers.push(p);
+        });
+    }
+    phoneNumbers = [...new Set(phoneNumbers.filter(Boolean))];
+    document.getElementById('ship-to-phone1').value = phoneNumbers[0] || '';
+    document.getElementById('ship-to-phone2').value = phoneNumbers[1] || '';
+
+    // Best Contact/Alternate Contact section - improved prioritization
+    let bestContact = null;
+    const priorities = [
+        'Decision Maker', 'Best Contact', 'Site Contact', 'Authorised Contact', 'Occupant Contact'
+    ];
+    if (Array.isArray(data.alternate_contacts)) {
+        for (const type of priorities) {
+            bestContact = data.alternate_contacts.find(c => c.type && c.type.toLowerCase().includes(type.toLowerCase()));
+            if (bestContact) break;
+        }
+        if (!bestContact && data.alternate_contacts.length > 0) {
+            bestContact = data.alternate_contacts[0];
+        }
+    }
+    document.getElementById('alternate-contact-name').value = bestContact ? bestContact.name || '' : '';
+    document.getElementById('alternate-contact-phone').value = bestContact ? bestContact.phone || '' : '';
+    document.getElementById('alternate-contact-phone2').value = bestContact ? bestContact.phone2 || '' : '';
+    if (document.getElementById('alternate-contact-email')) document.getElementById('alternate-contact-email').value = bestContact ? bestContact.email || '' : '';
+
+    // Store all alternates for export
+    window._lastExtractedAlternateContacts = data.alternate_contacts || [];
 
     // Update prefix for secondary PO based on actual job number
-    document.getElementById('secondary-po-prefix').textContent = (data.actual_job_number || '') + '-';
+    if (document.getElementById('secondary-po-prefix')) document.getElementById('secondary-po-prefix').textContent = (data.actual_job_number || '') + '-';
 }
 
 /**
@@ -444,7 +462,11 @@ function setupBuilderSearch() {
 
         try {
             console.log('Searching with term:', searchTerm);
-            const response = await fetchWithRetry(`/api/customers/search?term=${encodeURIComponent(searchTerm)}`);
+            const response = await fetchWithRetry(`/api/customers/search`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ term: searchTerm })
+            });
             const searchResults = await response.json();
             
             console.log('Search results:', searchResults);
@@ -599,72 +621,126 @@ function displaySearchResults(results) {
  */
 function populateSoldTo(builderData) {
     console.log('Populating Sold To with data:', builderData);
-    
-    // Clear existing data first
-    document.getElementById('sold-to-name').value = '';
-    document.getElementById('sold-to-address1').value = '';
-    document.getElementById('sold-to-address2').value = '';
-    document.getElementById('sold-to-city').value = '';
-    document.getElementById('sold-to-state').value = '';
-    document.getElementById('sold-to-zip').value = '';
-    document.getElementById('sold-to-country').value = '';
-    document.getElementById('sold-to-phone').value = '';
-    document.getElementById('sold-to-email').value = '';
-    
-    // Set customer ID (hidden field)
+
+    // Helper to pick the first non-empty value from a list of possible fields
+    function pick(...fields) {
+        for (const f of fields) {
+            if (f && typeof f === 'string' && f.trim()) return f.trim();
+        }
+        return '';
+    }
+
+    // Helper to find the first valid phone number in the object
+    function findPhone(obj) {
+        const phoneFields = [
+            'phone', 'customer_phone', 'customerPhone2', 'customerPhone3',
+            'mobile', 'work_phone', 'home_phone', 'extra_phones', 'phones', 'contact_phone', 'contactPhone', 'contactMobile'
+        ];
+        for (const key of phoneFields) {
+            if (Array.isArray(obj[key])) {
+                for (const p of obj[key]) {
+                    if (p && typeof p === 'string' && p.trim()) return p.trim();
+                }
+            } else if (obj[key] && typeof obj[key] === 'string' && obj[key].trim()) {
+                return obj[key].trim();
+            }
+        }
+        return '';
+    }
+
+    // Helper to find the first valid email in the object
+    function findEmail(obj) {
+        const emailFields = [
+            'email', 'customer_email', 'contact_email', 'contactEmail', 'emails'
+        ];
+        for (const key of emailFields) {
+            if (Array.isArray(obj[key])) {
+                for (const e of obj[key]) {
+                    if (e && typeof e === 'string' && e.trim()) return e.trim();
+                }
+            } else if (obj[key] && typeof obj[key] === 'string' && obj[key].trim()) {
+                return obj[key].trim();
+            }
+        }
+        return '';
+    }
+
+    // Name
+    document.getElementById('sold-to-name').value = pick(
+        builderData.name,
+        [builderData.first_name, builderData.last_name].filter(Boolean).join(' '),
+        builderData.business_name
+    );
+
+    // Address 1
+    document.getElementById('sold-to-address1').value = pick(
+        builderData.address1,
+        builderData.address,
+        builderData.address2
+    );
+
+    // Address 2
+    if (document.getElementById('sold-to-address2')) {
+        document.getElementById('sold-to-address2').value = pick(
+            builderData.address2
+        );
+    }
+
+    // City
+    document.getElementById('sold-to-city').value = pick(
+        builderData.city
+    );
+
+    // State
+    if (document.getElementById('sold-to-state')) {
+        document.getElementById('sold-to-state').value = pick(
+            builderData.state
+        );
+    }
+
+    // Zip/Postcode
+    document.getElementById('sold-to-zip').value = pick(
+        builderData.zip_code,
+        builderData.postcode
+    );
+
+    // Country
+    if (document.getElementById('sold-to-country')) {
+        document.getElementById('sold-to-country').value = pick(
+            builderData.country
+        );
+    }
+
+    // Phone (robust search)
+    document.getElementById('sold-to-phone').value = findPhone(builderData);
+
+    // Email (robust search)
+    document.getElementById('sold-to-email').value = findEmail(builderData);
+
+    // Salesperson
+    if (document.getElementById('sold-to-salesperson')) {
+        document.getElementById('sold-to-salesperson').value = pick(
+            builderData.preferred_salesperson1,
+            builderData.preferred_salesperson2
+        );
+    }
+
+    // Customer ID (id or customer_source_id)
     let builderIdField = document.getElementById('sold-to-customer-id');
     if (!builderIdField) {
         builderIdField = document.createElement('input');
-        builderIdField.type = 'hidden';
+        builderIdField.type = 'text';
         builderIdField.id = 'sold-to-customer-id';
+        builderIdField.className = 'input-dark rounded w-40';
+        builderIdField.readOnly = true;
         document.getElementById('sold-to-fields').appendChild(builderIdField);
     }
-    
-    // Basic validation
-    if (!builderData) {
-        console.error('No builder data provided');
-        return;
-    }
-    
-    // Populate fields with data
-    document.getElementById('sold-to-name').value = builderData.name || '';
-    builderIdField.value = builderData.id || '';
-    
-    // Process address
-    if (builderData.address) {
-        // If address is provided as a complete string, parse it
-        if (typeof builderData.address === 'string') {
-            const addressParts = builderData.address.split(',').map(part => part.trim());
-            
-            if (addressParts.length >= 1) {
-                document.getElementById('sold-to-address1').value = addressParts[0] || '';
-            }
-            if (addressParts.length >= 2) {
-                document.getElementById('sold-to-address2').value = addressParts[1] || '';
-            }
-            // Try to parse city, state, zip from the remaining parts
-            if (addressParts.length >= 3) {
-                // Last part likely contains city, state, zip
-                const cityStateZip = addressParts[addressParts.length - 1].split(' ');
-                
-                // Extract city (all except last two elements)
-                const city = cityStateZip.slice(0, -2).join(' ');
-                // State is likely the second-to-last element
-                const state = cityStateZip[cityStateZip.length - 2];
-                // Zip is likely the last element
-                const zip = cityStateZip[cityStateZip.length - 1];
-                
-                document.getElementById('sold-to-city').value = city || '';
-                document.getElementById('sold-to-state').value = state || '';
-                document.getElementById('sold-to-zip').value = zip || '';
-            }
-        }
-    }
-    
-    document.getElementById('sold-to-phone').value = builderData.phone || '';
-    document.getElementById('sold-to-email').value = builderData.email || '';
-    document.getElementById('sold-to-country').value = 'Australia';
-    
+    builderIdField.value = pick(
+        builderData.id,
+        builderData.customer_source_id
+    );
+
+    // Optionally: clear or set any other Sold To fields as needed
     console.log('Sold To fields populated successfully');
 }
 
@@ -673,86 +749,141 @@ function populateSoldTo(builderData) {
  */
 function clearSoldToFields() {
     document.getElementById('sold-to-name').value = '';
-    document.getElementById('sold-to-address1').value = '';
-    document.getElementById('sold-to-address2').value = '';
-    document.getElementById('sold-to-city').value = '';
-    document.getElementById('sold-to-state').value = '';
-    document.getElementById('sold-to-zip').value = '';
-    document.getElementById('sold-to-country').value = '';
     document.getElementById('sold-to-phone').value = '';
     document.getElementById('sold-to-email').value = '';
-    
-    // Clear hidden customer ID field if it exists
-    const builderIdField = document.getElementById('sold-to-customer-id');
-    if (builderIdField) {
-        builderIdField.value = '';
-    }
+    document.getElementById('sold-to-address1').value = '';
+    document.getElementById('sold-to-city').value = '';
+    document.getElementById('sold-to-zip').value = '';
+    document.getElementById('sold-to-salesperson').value = '';
+    document.getElementById('sold-to-customer-id').value = '';
 }
 
 /**
- * Gather all form data and send to /api/export-to-rfms
+ * Setup logic for Add Customer and Create Job buttons
  */
-function setupExportToRFMS() {
-    const exportButton = document.getElementById('export-to-rfms-button');
-    if (!exportButton) return;
+function setupAddCustomerAndCreateJob() {
+    const addCustomerButton = document.getElementById('add-customer-button');
+    const createJobButton = document.getElementById('create-job-button');
+    if (!addCustomerButton || !createJobButton) return;
+    let createdCustomerId = null;
+    createJobButton.disabled = true;
 
-    exportButton.addEventListener('click', async () => {
-        // Validate required fields before submitting
+    // Helper to reset job creation state
+    function resetJobCreationState() {
+        createdCustomerId = null;
+        createJobButton.disabled = true;
+    }
+
+    // Reset state when form is cleared or PDF is uploaded
+    const clearTriggers = [
+        document.getElementById('upload-button'),
+        document.getElementById('pdf-upload'),
+        document.getElementById('clear-form-button')
+    ];
+    clearTriggers.forEach(el => {
+        if (el) {
+            el.addEventListener('click', resetJobCreationState);
+        }
+    });
+
+    addCustomerButton.addEventListener('click', async () => {
+        // Gather Ship To data
+        const shipTo = {
+            first_name: document.getElementById('ship-to-first-name')?.value || '',
+            last_name: document.getElementById('ship-to-last-name')?.value || '',
+            address1: document.getElementById('ship-to-address1').value || '',
+            address2: document.getElementById('ship-to-address2').value || '',
+            city: document.getElementById('ship-to-city').value || '',
+            state: document.getElementById('ship-to-state')?.value || '',
+            zip_code: document.getElementById('ship-to-zip').value || '',
+            county: document.getElementById('ship-to-county')?.value || '',
+            phone: document.getElementById('ship-to-phone1')?.value || '',
+            phone2: document.getElementById('ship-to-phone2')?.value || '',
+            email: document.getElementById('ship-to-email').value || '',
+            customer_type: 'INSURANCE',
+            business_name: document.getElementById('ship-to-business-name')?.value || ''
+        };
+        // Ensure required fields are present (even if empty)
+        shipTo.business_name = shipTo.business_name || '';
+        shipTo.first_name = shipTo.first_name || '';
+        shipTo.last_name = shipTo.last_name || '';
+        shipTo.state = shipTo.state || '';
+        addCustomerButton.disabled = true;
+        addCustomerButton.textContent = 'Processing...';
+        try {
+            const response = await fetchWithRetry('/api/create_customer', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(shipTo)
+            });
+            const result = await response.json();
+            if (result && result.id) {
+                createdCustomerId = result.id;
+                showNotification('Customer created in RFMS!', 'success');
+                createJobButton.disabled = false;
+            } else {
+                showNotification('Failed to create customer in RFMS.', 'error');
+                createJobButton.disabled = true;
+            }
+        } catch (error) {
+            handleApiError(error, 'creating customer in RFMS');
+            createJobButton.disabled = true;
+        } finally {
+            addCustomerButton.disabled = false;
+            addCustomerButton.textContent = 'Add Customer';
+        }
+    });
+
+    createJobButton.addEventListener('click', async () => {
+        if (!createdCustomerId) {
+            showNotification('Please add the customer to RFMS first.', 'warning');
+            createJobButton.disabled = true;
+            return;
+        }
+        // Gather Sold To data
         const soldToName = document.getElementById('sold-to-name').value.trim();
         const soldToCustomerId = document.getElementById('sold-to-customer-id') ? 
             document.getElementById('sold-to-customer-id').value.trim() : '';
         const shipToName = document.getElementById('ship-to-name').value.trim();
         const poNumber = document.getElementById('po-number').value.trim();
-        
         const missingFields = [];
         if (!soldToName) missingFields.push('Builder Name');
         if (!soldToCustomerId) missingFields.push('Builder ID');
         if (!shipToName) missingFields.push('Ship To Name');
         if (!poNumber) missingFields.push('PO Number');
-        
         if (missingFields.length > 0) {
             showNotification(`Please complete the following required fields: ${missingFields.join(', ')}`, 'warning');
             return;
         }
-        
-        // Gather Sold To data
         const soldTo = {
             id: soldToCustomerId,
             name: soldToName,
             address1: document.getElementById('sold-to-address1').value,
             address2: document.getElementById('sold-to-address2').value,
             city: document.getElementById('sold-to-city').value,
-            state: document.getElementById('sold-to-state').value,
             zip_code: document.getElementById('sold-to-zip').value,
             country: document.getElementById('sold-to-country').value,
             phone: document.getElementById('sold-to-phone').value,
             email: document.getElementById('sold-to-email').value
         };
-
-        // Gather Ship To data
         const shipTo = {
             name: shipToName,
             address1: document.getElementById('ship-to-address1').value,
             address2: document.getElementById('ship-to-address2').value,
             city: document.getElementById('ship-to-city').value,
-            state: document.getElementById('ship-to-state').value,
             zip_code: document.getElementById('ship-to-zip').value,
             country: document.getElementById('ship-to-country').value,
             phone: document.getElementById('ship-to-phone1').value + ' ' + document.getElementById('ship-to-phone2').value,
-            email: document.getElementById('ship-to-email').value
+            email: document.getElementById('ship-to-email').value,
+            id: createdCustomerId
         };
-
-        // Gather alternate contact info
         const altContact = {
             name: document.getElementById('alternate-contact-name').value,
             phone: document.getElementById('alternate-contact-phone').value,
             phone2: document.getElementById('alternate-contact-phone2').value,
             email: document.getElementById('alternate-contact-email').value
         };
-
-        // Gather Job Details
         let descriptionOfWorks = document.getElementById('description-of-works').value;
-        // If alternate contact is present, append to work order notes
         if (altContact.name || altContact.phone || altContact.phone2 || altContact.email) {
             let bestContactStr = `Best Contact: ${altContact.name || ''} ${altContact.phone || ''}`;
             if (altContact.phone2) bestContactStr += `, ${altContact.phone2}`;
@@ -766,8 +897,6 @@ function setupExportToRFMS() {
             description_of_works: descriptionOfWorks,
             dollar_value: parseFloat(document.getElementById('dollar-value').value) || 0
         };
-
-        // Gather Billing Group info if checked
         const billingGroup = {};
         const billingGroupCheckbox = document.getElementById('billing-group-checkbox');
         if (billingGroupCheckbox && billingGroupCheckbox.checked) {
@@ -775,8 +904,6 @@ function setupExportToRFMS() {
             billingGroup.po_suffix = document.getElementById('secondary-po-suffix').value;
             billingGroup.second_value = parseFloat(document.getElementById('second-po-dollar-value').value) || 0;
         }
-
-        // Build the payload
         const payload = {
             sold_to: soldTo,
             ship_to: shipTo,
@@ -785,35 +912,25 @@ function setupExportToRFMS() {
             alternate_contact: altContact,
             alternate_contacts: window._lastExtractedAlternateContacts || []
         };
-
-        // Show loading notification
-        const loadingNotification = showNotification('Exporting to RFMS...', 'info', 0);
-        exportButton.disabled = true;
-        exportButton.textContent = 'Processing...';
-
+        createJobButton.disabled = true;
+        createJobButton.textContent = 'Processing...';
+        const loadingNotification = showNotification('Creating job in RFMS...', 'info', 0);
         try {
             const response = await fetchWithRetry('/api/export-to-rfms', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
-
             const result = await response.json();
-            showNotification('Exported to RFMS successfully!', 'success');
-            console.log('RFMS Export Result:', result);
-            
-            // Option: Display success details
+            showNotification('Job created in RFMS!', 'success');
             if (result.job_id) {
                 showNotification(`Job created with ID: ${result.job_id}`, 'success', 5000);
             }
-            
         } catch (error) {
-            handleApiError(error, 'exporting to RFMS');
+            handleApiError(error, 'creating job in RFMS');
         } finally {
-            exportButton.disabled = false;
-            exportButton.textContent = 'Export to RFMS';
-            
-            // Remove loading notification
+            createJobButton.disabled = false;
+            createJobButton.textContent = 'Create Job';
             const persistentNotification = document.getElementById('notification-loading');
             if (persistentNotification) {
                 document.body.removeChild(persistentNotification);

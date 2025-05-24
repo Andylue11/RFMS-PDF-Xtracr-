@@ -90,41 +90,37 @@
             </div>
         </header>
 
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start" style="align-items: flex-start;">
+        <div class="grid grid-cols-1 lg:grid-cols-3 lg:grid-rows-3 gap-4 items-start" style="align-items: flex-start; margin-top: 0;">
             <!-- Column A -->
             <div class="flex flex-col space-y-0" style="margin-top:0;">
-                <section id="upload-section" class="bg-charcoal rounded-lg shadow compact-section mb-0 pb-0 border-4 border-white" style="margin-bottom:-6px; padding-bottom:2px;">
+                <section id="upload-section" class="bg-charcoal rounded-lg shadow compact-section mb-0 pb-0 border-4 border-white">
                     <h2 class="section-title text-heavy mb-1 text-atoz-green">Upload Purchase Order PDF</h2>
                     <input type="file" id="pdf-upload" accept=".pdf" class="input-dark rounded w-full mb-1">
                     <button id="upload-button" class="w-full bg-atoz-green text-black font-bold compact-btn rounded hover:bg-atoz-yellow transition text-base">Clear Data, Upload and Extract</button>
                 </section>
-                <section id="po-number-section" class="bg-charcoal rounded-lg shadow compact-section mb-0 pb-0 border-4 border-white" style="margin-bottom:-6px; padding-bottom:2px;">
-                    <label for="po-number" class="block mb-1">Purchase Order Number</label>
-                    <input type="text" id="po-number" class="input-dark rounded w-full mb-1 text-lg">
-                </section>
-                <section id="po-value-section" class="bg-charcoal rounded-lg shadow compact-section mb-0 pb-0 border-4 border-white" style="margin-bottom:-6px; padding-bottom:2px;">
-                    <label for="dollar-value" class="block mb-1">Purchase Order Value ($)</label>
-                    <input type="number" id="dollar-value" step="0.01" class="input-dark rounded w-full mb-1 text-lg">
-                </section>
-                <section id="work-details-section" class="bg-charcoal rounded-lg shadow compact-section mb-0 pb-0 border-4 border-white" style="margin-bottom:-6px; padding-bottom:2px;">
+                <section id="work-details-section" class="bg-charcoal rounded-lg shadow compact-section mb-0 pb-0 border-4 border-white">
                     <h2 class="section-title text-heavy mb-0 text-atoz-green">Work Order Details</h2>
-                    <div class="mb-0" style="margin-bottom:2px;">
+                    <div class="mb-0">
+                        <label for="po-number" class="block">Purchase Order Number</label>
+                        <input type="text" id="po-number" class="input-dark rounded w-full mb-1 text-lg">
+                    </div>
+                    <div class="mb-0">
+                        <label for="dollar-value" class="block">Purchase Order Value ($)</label>
+                        <input type="number" id="dollar-value" step="0.01" class="input-dark rounded w-full mb-1 text-lg">
+                    </div>
+                    <div class="mb-0">
                         <label for="supervisor-name" class="block">Supervisor Name</label>
-                        <input type="text" id="supervisor-name" class="input-dark rounded w-full">
+                        <input type="text" id="supervisor-name" class="input-dark rounded w-full mb-1 text-lg">
                     </div>
-                    <div class="mb-0" style="margin-bottom:2px;">
+                    <div class="mb-2">
                         <label for="supervisor-phone" class="block">Supervisor Phone Number</label>
-                        <input type="text" id="supervisor-phone" class="input-dark rounded w-full">
-                    </div>
-                    <div class="mb-0" style="margin-bottom:2px;">
-                        <label for="actual-job-number" class="block">Job Number</label>
-                        <input type="text" id="actual-job-number" class="input-dark rounded w-full" readonly>
+                        <input type="text" id="supervisor-phone" class="input-dark rounded w-full mb-1 text-lg">
                     </div>
                 </section>
             </div>
             <!-- Column B -->
             <div class="flex flex-col justify-start" style="margin-top:0;">
-                <div class="bg-charcoal rounded-lg shadow compact-section mb-0 pb-0 border-4 border-white">
+                <div class="bg-charcoal rounded-lg shadow compact-section mb-0 pb-0 border-4 border-white" style="margin-top:0;">
                     <h2 class="section-title text-heavy mb-1 text-atoz-yellow">Sold To (RFMS Customer)</h2>
                     <div class="flex items-center mb-1">
                         <input type="text" id="builder-search-input" placeholder="EnterName or CustomerID" class="input-dark rounded flex-grow mr-2 text-base">
@@ -136,12 +132,16 @@
                             <input type="text" id="sold-to-name" class="input-dark rounded w-full">
                         </div>
                         <div>
-                            <label for="sold-to-address1">Address Line 1</label>
-                            <input type="text" id="sold-to-address1" class="input-dark rounded w-full">
+                            <label for="sold-to-phone">Phone</label>
+                            <input type="text" id="sold-to-phone" class="input-dark rounded w-full">
                         </div>
                         <div>
-                            <label for="sold-to-address2">Address Line 2</label>
-                            <input type="text" id="sold-to-address2" class="input-dark rounded w-full">
+                            <label for="sold-to-email">Email</label>
+                            <input type="email" id="sold-to-email" class="input-dark rounded w-full">
+                        </div>
+                        <div>
+                            <label for="sold-to-address1">Address Line 1</label>
+                            <input type="text" id="sold-to-address1" class="input-dark rounded w-full">
                         </div>
                         <div class="grid grid-cols-3 gap-2">
                             <div>
@@ -157,29 +157,34 @@
                                 <input type="text" id="sold-to-zip" class="input-dark rounded w-full">
                             </div>
                         </div>
-                        <div>
-                            <label for="sold-to-country">Country</label>
-                            <input type="text" id="sold-to-country" class="input-dark rounded w-full">
-                        </div>
-                        <div>
-                            <label for="sold-to-phone">Phone</label>
-                            <input type="text" id="sold-to-phone" class="input-dark rounded w-full">
-                        </div>
-                        <div>
-                            <label for="sold-to-email">Email</label>
-                            <input type="email" id="sold-to-email" class="input-dark rounded w-full">
+                        <div style="margin-top: 18px;"></div>
+                        <div class="flex items-center mt-4">
+                            <label for="sold-to-customer-id" class="mr-2 font-bold">RFMS Customer ID</label>
+                            <input type="text" id="sold-to-customer-id" class="input-dark rounded w-40" readonly>
                         </div>
                     </div>
                 </div>
             </div>
             <!-- Column C -->
-            <div class="flex flex-col space-y-0" style="margin-top:0;">
-                <div class="bg-charcoal rounded-lg shadow compact-section mb-0 pb-0 border-4 border-white">
+            <div class="flex flex-col space-y-0 lg:row-span-3" style="margin-top:0;">
+                <div class="bg-charcoal rounded-lg shadow compact-section mb-0 pb-0 border-4 border-white" style="margin-top:0;">
                     <h2 class="section-title text-heavy mb-1 text-atoz-yellow">Ship To (PDF Extracted)</h2>
                     <div id="ship-to-fields" class="space-y-1">
                         <div>
                             <label for="ship-to-name">Name</label>
                             <input type="text" id="ship-to-name" class="input-dark rounded w-full">
+                        </div>
+                        <div>
+                            <label for="ship-to-phone1" class="block mb-1">Phone 1</label>
+                            <input type="text" id="ship-to-phone1" class="input-dark rounded w-full text-lg">
+                        </div>
+                        <div>
+                            <label for="ship-to-phone2" class="block mb-1">Phone 2</label>
+                            <input type="text" id="ship-to-phone2" class="input-dark rounded w-full text-lg">
+                        </div>
+                        <div>
+                            <label for="ship-to-email">Email Address</label>
+                            <input type="email" id="ship-to-email" class="input-dark rounded w-full">
                         </div>
                         <div>
                             <label for="ship-to-address1">Address Line 1</label>
@@ -189,46 +194,46 @@
                             <label for="ship-to-address2">Address Line 2</label>
                             <input type="text" id="ship-to-address2" class="input-dark rounded w-full">
                         </div>
-                        <div class="grid grid-cols-3 gap-2">
-                            <div>
+                        <div class="flex gap-2">
+                            <div class="w-2/3">
                                 <label for="ship-to-city">City</label>
                                 <input type="text" id="ship-to-city" class="input-dark rounded w-full">
                             </div>
-                            <div>
-                                <label for="ship-to-state">State</label>
-                                <input type="text" id="ship-to-state" class="input-dark rounded w-full">
-                            </div>
-                            <div>
+                            <div class="w-1/3">
                                 <label for="ship-to-zip">Postcode</label>
                                 <input type="text" id="ship-to-zip" class="input-dark rounded w-full">
                             </div>
                         </div>
+                    </div>
+                </div>
+                <div class="bg-gray-800 rounded-lg shadow compact-section border-4 border-white mb-0 pb-1" style="min-height: 0;">
+                    <label class="block text-atoz-yellow text-heavy mb-2 text-lg" for="alternate-contact-name">Best Contact / Real Estate Agent / Site Contact / Authorised Contact</label>
+                    <div class="grid grid-cols-1 gap-3 mt-1">
                         <div>
-                            <label for="ship-to-country">Country</label>
-                            <input type="text" id="ship-to-country" class="input-dark rounded w-full">
+                            <label for="alternate-contact-name" class="block mb-1">Name / Business / Address</label>
+                            <textarea id="alternate-contact-name" rows="3" class="input-dark rounded w-full text-lg" placeholder="Full name, business, address if needed" style="min-height:110px;"></textarea>
                         </div>
                         <div class="grid grid-cols-2 gap-3">
                             <div class="flex flex-col w-full">
-                                <label for="ship-to-phone1" class="block mb-1">Phone 1</label>
-                                <input type="text" id="ship-to-phone1" class="input-dark rounded w-full text-lg">
+                                <label for="alternate-contact-phone" class="block mb-1">Phone 1</label>
+                                <input type="text" id="alternate-contact-phone" class="input-dark rounded w-full text-lg">
                             </div>
                             <div class="flex flex-col w-full">
-                                <label for="ship-to-phone2" class="block mb-1">Phone 2</label>
-                                <input type="text" id="ship-to-phone2" class="input-dark rounded w-full text-lg">
+                                <label for="alternate-contact-phone2" class="block mb-1">Phone 2</label>
+                                <input type="text" id="alternate-contact-phone2" class="input-dark rounded w-full text-lg">
                             </div>
                         </div>
-                        <div>
-                            <label for="ship-to-email">Email Address</label>
-                            <input type="email" id="ship-to-email" class="input-dark rounded w-full">
-                        </div>
                     </div>
+                    <div class="text-xs text-gray-400 mt-2">If present and different from main customer, this will be included in Work Order Notes as Best Contact.</div>
                 </div>
+                <section id="action-buttons" class="flex justify-center space-x-2 mt-2">
+                    <button id="add-customer-button" class="bg-blue-600 text-white font-bold compact-btn rounded hover:bg-blue-700 transition">Add Customer</button>
+                    <button id="create-job-button" class="bg-atoz-green text-black font-bold compact-btn rounded hover:bg-atoz-yellow transition">Create Job</button>
+                </section>
             </div>
-        </div>
-        <!-- Row 2: Description of Works (A+B) and Alternate Contacts (C) in the same row -->
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start mt-0">
+            <!-- Description of Works spanning columns A and B only -->
             <div class="lg:col-span-2">
-                <div class="bg-charcoal rounded-lg shadow compact-section mb-0 pb-1 border-4 border-white" style="margin-top:-18px;">
+                <div class="bg-charcoal rounded-lg shadow compact-section mb-0 pb-1 border-4 border-white w-full" style="margin-top:0;">
                     <label for="description-of-works" class="block">Description of Works</label>
                     <textarea id="description-of-works" rows="9" class="input-dark rounded w-full text-lg" style="min-height: 200px;"></textarea>
                     <div class="flex items-center mt-1">
@@ -249,33 +254,6 @@
                         </div>
                     </div>
                 </div>
-            </div>
-            <div class="lg:col-span-1 flex flex-col space-y-0">
-                <div class="bg-gray-800 rounded-lg shadow compact-section border-4 border-white mb-0 pb-1" style="margin-top:-50px; min-height: 155px;">
-                    <label class="block text-atoz-yellow text-heavy mb-2 text-lg" for="alternate-contact-name">Best Contact / Real Estate Agent / Site Contact / Authorised Contact</label>
-                    <div class="grid grid-cols-1 gap-3 mt-1">
-                        <div>
-                            <label for="alternate-contact-name" class="block mb-1">Name / Business / Address</label>
-                            <textarea id="alternate-contact-name" rows="3" class="input-dark rounded w-full text-lg" placeholder="Full name, business, address if needed" style="min-height:110px;"></textarea>
-                        </div>
-                        <div class="grid grid-cols-2 gap-3">
-                            <div class="flex flex-col w-full">
-                                <label for="alternate-contact-phone" class="block mb-1">Phone 1</label>
-                                <input type="text" id="alternate-contact-phone" class="input-dark rounded w-full text-lg">
-                            </div>
-                            <div class="flex flex-col w-full">
-                                <label for="alternate-contact-phone2" class="block mb-1">Phone 2</label>
-                                <input type="text" id="alternate-contact-phone2" class="input-dark rounded w-full text-lg">
-                            </div>
-                        </div>
-                    </div>
-                    <div class="text-xs text-gray-400 mt-2">If present and different from main customer, this will be included in Work Order Notes as Best Contact.</div>
-                </div>
-                <!-- Action Buttons under alternate contacts (column C) -->
-                <section id="action-buttons" class="flex justify-center space-x-2 mt-2">
-                    <button id="commit-data-button" class="bg-atoz-yellow text-black font-bold compact-btn rounded hover:bg-atoz-green transition">Commit Data</button>
-                    <button id="export-to-rfms-button" class="bg-atoz-green text-black font-bold compact-btn rounded hover:bg-atoz-yellow transition">Export to RFMS</button>
-                </section>
             </div>
         </div>
     </div>
