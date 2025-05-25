@@ -5,6 +5,8 @@ import os
 import base64
 from datetime import datetime, timedelta
 from requests.exceptions import RequestException, Timeout, ConnectionError
+from models import db, RFMSSession
+import http.client
 
 logger = logging.getLogger(__name__)
 
@@ -52,51 +54,62 @@ class RfmsApi:
             headers.update(extra_headers)
         return headers
 
+    def get_stored_session(self):
+        session_row = RFMSSession.query.first()
+        if session_row:
+            return session_row.token, session_row.expiry
+        return None, None
+
+    def store_session(self, token, expiry):
+        session_row = RFMSSession.query.first()
+        if session_row:
+            session_row.token = token
+            session_row.expiry = expiry
+        else:
+            session_row = RFMSSession(token=token, expiry=expiry)
+            db.session.add(session_row)
+        db.session.commit()
+
     def ensure_session(self):
-        """
-        Ensure that we have a valid session token for API calls.
-        Only gets a new session if we don't have one or if the current one is expired.
-        Returns:
-            bool: True if session is valid, False otherwise
-        """
-        now = datetime.now()
+        now = datetime.utcnow()
         skew = timedelta(seconds=10)
-        logger.debug(
-            f"[SESSION] Checking session token: {self.session_token}, expiry: {self.session_expiry}, now: {now}"
-        )
-        if (
-            self.session_token
-            and self.session_expiry
-            and now < self.session_expiry - skew
-        ):
-            logger.debug(
-                f"[SESSION] Reusing existing RFMS API session token: {self.session_token}"
-            )
+        token, expiry = self.get_stored_session()
+        logger.debug(f"[SESSION] ensure_session: now (UTC)={now} ({type(now)}), expiry={expiry} ({type(expiry)})")
+        # If expiry is a string, try to parse it as UTC
+        if expiry and not isinstance(expiry, datetime):
+            try:
+                expiry = datetime.strptime(expiry, "%Y-%m-%d %H:%M:%S")
+                logger.debug(f"[SESSION] Parsed expiry from string as UTC: {expiry}")
+            except Exception as e:
+                logger.warning(f"[SESSION] Could not parse expiry: {expiry}, error: {e}")
+                expiry = None
+        if token and expiry and now < expiry - skew:
+            logger.info(f"[SESSION] Reusing existing session token: {token}, expiry: {expiry} (UTC), now: {now} (UTC)")
+            self.session_token = token
+            self.session_expiry = expiry
             return True
-        logger.info(
-            f"[SESSION] Session token missing or expired. Previous token: {self.session_token}, expiry: {self.session_expiry}, now: {now}. Triggering handshake."
-        )
-        return self.get_session()
+        logger.info(f"[SESSION] Session token missing or expired. Previous token: {token}, expiry: {expiry}, now: {now}. Triggering handshake.")
+        token, expiry = self.get_session()
+        if token and expiry:
+            self.session_token = token
+            self.session_expiry = expiry
+            self.store_session(token, expiry)
+            return True
+        return False
 
     def get_session(self):
         """
         Get a new session token from the RFMS API using Basic Auth.
         Returns:
-            bool: True if successful, False otherwise
+            tuple: (token, expiry) if successful, (None, None) otherwise
         """
         url = f"{self.base_url}/v2/Session/Begin"
         headers = self._get_headers(include_session=False)
         auth = self._get_auth(for_handshake=True)
-        logger.debug(
-            f"[SESSION] get_session called. Current token: {self.session_token}, expiry: {self.session_expiry}, now: {datetime.now()}"
-        )
+        logger.debug(f"[SESSION] get_session called. Current token: {self.session_token}, expiry: {self.session_expiry}, now: {datetime.now()}")
         try:
-            logger.info(
-                f"Attempting to begin session at {url} with store code {self.store_code}"
-            )
-            logger.debug(
-                f"[RFMS API] Outgoing handshake auth: (username: {auth[0]}, password: {'*' * len(auth[1])})"
-            )
+            logger.info(f"Attempting to begin session at {url} with store code {self.store_code}")
+            logger.debug(f"[RFMS API] Outgoing handshake auth: (username: {auth[0]}, password: {'*' * len(auth[1])})")
             logger.debug(f"[RFMS API] Outgoing headers: {headers}")
             response = requests.post(
                 url, headers=headers, auth=auth, timeout=self.timeout
@@ -104,37 +117,32 @@ class RfmsApi:
             logger.info(f"RFMS API response status: {response.status_code}")
             if response.status_code == 200:
                 data = response.json()
-                self.session_token = data.get("sessionToken")
-                self.session_expiry = None
-                if not self.session_token:
-                    logger.error(
-                        f"Session begin succeeded but no sessionToken in response: {data}"
-                    )
-                    return False
+                logger.debug(f"[SESSION] Session response data: {data}")
+                token = data.get("sessionToken")
+                expiry = None
+                if not token:
+                    logger.error(f"Session begin succeeded but no sessionToken in response: {data}")
+                    return None, None
                 if "sessionExpires" in data:
+                    logger.debug(f"[SESSION] sessionExpires from API: {data['sessionExpires']}")
                     try:
-                        self.session_expiry = datetime.strptime(
+                        expiry = datetime.strptime(
                             data["sessionExpires"], "%a, %d %b %Y %H:%M:%S GMT"
                         )
                     except Exception as e:
-                        logger.warning(
-                            f"Failed to parse sessionExpires: {data.get('sessionExpires')}, error: {e}"
-                        )
-                        self.session_expiry = None
-                if not self.session_expiry:
-                    self.session_expiry = datetime.now() + timedelta(minutes=15)
-                logger.info(
-                    f"Successfully obtained RFMS API session token: {self.session_token}, expires at: {self.session_expiry}"
-                )
-                return True
+                        logger.warning(f"Failed to parse sessionExpires: {data.get('sessionExpires')}, error: {e}")
+                        expiry = None
+                if not expiry:
+                    expiry = datetime.now() + timedelta(minutes=15)
+                    logger.debug(f"[SESSION] Fallback session_expiry set to: {expiry}")
+                logger.info(f"Successfully obtained RFMS API session token: {token}, expires at: {expiry}")
+                return token, expiry
             else:
-                logger.error(
-                    f"Session begin failed: {response.status_code} {response.text}"
-                )
-                return False
+                logger.error(f"Session begin failed: {response.status_code} {response.text}")
+                return None, None
         except Exception as e:
             logger.error(f"Error getting RFMS API session: {str(e)}")
-            return False
+            return None, None
 
     def execute_request(self, method, url, payload=None, retry_count=0):
         """
@@ -251,31 +259,41 @@ class RfmsApi:
             logger.error(f"Error checking API status: {str(e)}")
             return "offline"
 
-    def find_customers(self, search_term):
-        logger.info(f"Finding customers with search term: {search_term}")
+    def find_customers(self, search_term, page=0, include_inactive=True):
+        logger.info(f"Finding customers with search term: {search_term}, include_inactive=True")
         self.ensure_session()
-        url = f"{self.base_url}/v2/customers/find"
-        payload = {
+        # Extract host from base_url
+        host = self.base_url.replace("https://", "").replace("http://", "").split("/")[0]
+        conn = http.client.HTTPSConnection(host)
+        payload_dict = {
             "searchText": search_term,
             "includeCustomers": True,
             "includeProspects": False,
-            "includeInactive": False,
-            "startIndex": 0,
+            "includeInactive": True,
             "storeNumber": 49,
-            "entryType": "Customer",
-            "referralType": "standalone",
+            "customerSource": "Customer",
+            "referralType": "Standalone"
         }
+        if page > 0:
+            payload_dict["startIndex"] = page * 10
+        payload = json.dumps(payload_dict)
+        headers = {
+            'Content-Type': 'application/json'
+        }
+        conn.request("POST", "/v2/customers/find", payload, headers)
+        res = conn.getresponse()
+        data = res.read()
         try:
-            data = self.execute_request("POST", url, payload)
-            if isinstance(data, list):
-                return data
-            if isinstance(data, dict):
+            result = json.loads(data.decode("utf-8"))
+            if isinstance(result, list):
+                return result
+            if isinstance(result, dict):
                 for key in ["customers", "result", "data"]:
-                    if key in data and isinstance(data[key], list):
-                        return data[key]
+                    if key in result:
+                        return result[key]
             return []
         except Exception as e:
-            logger.error(f"Error finding customers: {str(e)}")
+            logger.error(f"Error parsing customer search response: {e}")
             return []
 
     def probe_customers_endpoint(self, search_term):
@@ -446,31 +464,31 @@ class RfmsApi:
             logger.error(f"Error finding customer by ID: {str(e)}")
             return []
 
-    def find_customer_by_name(self, name):
-        logger.info(f"Finding customers by name: {name}")
+    def find_customer_by_name(self, name, include_inactive=True):
+        logger.info(f"Finding customers by name: {name}, include_inactive=True")
         self.ensure_session()
-        url = f"{self.base_url}/v2/customers/find"
         payload = {
             "searchText": name,
             "includeCustomers": True,
             "includeProspects": False,
-            "includeInactive": False,
-            "startIndex": 0,
+            "includeInactive": True,
             "storeNumber": 49,
-            "entryType": "Customer",
-            "referralType": "standalone",
+            "customerSource": "Customer",
+            "referralType": "Standalone"
         }
+        # If you want to support pagination for name search, add startIndex as needed
         try:
+            url = f"{self.base_url}/v2/customers/find"
             data = self.execute_request("POST", url, payload)
             if isinstance(data, list):
                 return data
             if isinstance(data, dict):
                 for key in ["customers", "result", "data"]:
-                    if key in data and isinstance(data[key], list):
+                    if key in data:
                         return data[key]
             return []
         except Exception as e:
-            logger.error(f"Error finding customers by name: {str(e)}")
+            logger.error(f"Error finding customers by name: {e}")
             return []
 
     def get_customer(self, customer_id):
@@ -730,6 +748,9 @@ class RfmsApi:
                 f"[RFMS API] Outgoing auth: (username: {auth[0]}, password: {'*' * len(str(auth[1]))})"
             )
             logger.debug(f"[RFMS API] Outgoing headers: {headers}")
+            # Remove 'stores' key if present
+            if 'stores' in search_params:
+                del search_params['stores']
             response = requests.post(
                 url,
                 headers=headers,

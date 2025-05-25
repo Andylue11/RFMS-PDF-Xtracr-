@@ -262,7 +262,7 @@ def search_customers():
         if search_term.isdigit():
             customers = rfms_api.find_customer_by_id(search_term)
         else:
-            customers = rfms_api.find_customer_by_name(search_term)
+            customers = rfms_api.find_customer_by_name(search_term, include_inactive=True)
 
         if not isinstance(customers, list) or not customers:
             logger.info(

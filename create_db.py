@@ -3,6 +3,7 @@
 # Managed by file watcher
 # === WATCHER HEADER END ===
 from app import app, db
+from models import RFMSSession
 
 if __name__ == '__main__':
     with app.app_context():

@@ -9,3 +9,4 @@ from models.customer import Customer
 from models.quote import Quote
 from models.job import Job
 from models.pdf_data import PdfData
+from models.rfms_session import RFMSSession
