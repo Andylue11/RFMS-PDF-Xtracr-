@@ -1,3 +1,7 @@
+# === WATCHER HEADER START ===
+# File: create_db.py
+# Managed by file watcher
+# === WATCHER HEADER END ===
 from app import app, db
 
 if __name__ == '__main__':

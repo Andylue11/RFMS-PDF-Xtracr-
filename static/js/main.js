@@ -725,7 +725,7 @@ function populateSoldTo(builderData) {
         );
     }
 
-    // Customer ID (id or customer_source_id)
+    // Customer ID (RFMS Customer ID)
     let builderIdField = document.getElementById('sold-to-customer-id');
     if (!builderIdField) {
         builderIdField = document.createElement('input');
@@ -735,10 +735,7 @@ function populateSoldTo(builderData) {
         builderIdField.readOnly = true;
         document.getElementById('sold-to-fields').appendChild(builderIdField);
     }
-    builderIdField.value = pick(
-        builderData.id,
-        builderData.customer_source_id
-    );
+    builderIdField.value = builderData.customer_source_id || '';
 
     // Optionally: clear or set any other Sold To fields as needed
     console.log('Sold To fields populated successfully');

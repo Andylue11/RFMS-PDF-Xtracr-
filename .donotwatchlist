@@ -1,0 +1,12 @@
+# List regex patterns for files/paths to exclude (one per line)
+# Lines starting with # are ignored
+# Example patterns:
+# secret/.*      # Excludes all files in 'secret' directory
+# .*\.log$       # Excludes all .log files
+# .*secret.*     # Excludes any file with 'secret' in the path
+# Patterns to exclude from tree display
+node_modules
+dist
+build/.*
+tmp/.*
+guilty_pleasures    # Hide our guilty pleasures from the tree

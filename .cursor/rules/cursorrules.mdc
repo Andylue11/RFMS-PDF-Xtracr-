@@ -1,0 +1,340 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# CURSOR RULES VERSION: 1.0
+# Last updated: 2024-06-09
+# Changelog:
+# - Initial consolidation and migration from .cursorrules
+# - Added checkpoint/versioning system
+# - [Add future changes here with date and description]
+#
+# NOTE: Any changes to these rules or the project tree must be approved and logged here.
+
+# === WATCHER HEADER START ===
+# File: .cursorrules
+# Managed by file watcher
+# Project Tree Structure:
+#   See PROJECT_TREE.md for the full project tree.
+#
+# NOTE TO ASSISTANT: Remember to add new files to .watchlist to receive headers.
+#       Files not in .watchlist won't receive headers, even if visible in this tree.
+#
+# NOTE TO ASSISTANT: If you notice directories that don't add value to the context
+#       (like build outputs, cache, etc), suggest adding them to .donotwatchlist
+#       to keep the tree structure focused and clean.
+#
+# ├── .DS_Store  # unwatched
+# ├── .cursor
+# │   ├── .DS_Store  # unwatched
+# │   └── rules
+# │       └── cursorrules.mdc  # unwatched
+# ├── .cursorrules  # unwatched
+# ├── .donotwatchlist  # unwatched
+# ├── .env
+# ├── .env-example
+# ├── .env-test  # unwatched
+# ├── .gitignore  # unwatched
+# ├── .venv
+# │   ├── .DS_Store  # unwatched
+# │   ├── bin
+# │   │   ├── Activate.ps1  # unwatched
+# │   │   ├── activate  # unwatched
+# │   │   ├── activate.csh  # unwatched
+# │   │   ├── activate.fish  # unwatched
+# │   │   ├── black  # unwatched
+# │   │   ├── blackd  # unwatched
+# │   │   ├── dotenv  # unwatched
+# │   │   ├── dumppdf.py  # unwatched
+# │   │   ├── flask  # unwatched
+# │   │   ├── normalizer  # unwatched
+# │   │   ├── pdf2txt.py  # unwatched
+# │   │   ├── pdfplumber  # unwatched
+# │   │   ├── pip  # unwatched
+# │   │   ├── pip3  # unwatched
+# │   │   ├── pip3.9  # unwatched
+# │   │   ├── py.test  # unwatched
+# │   │   ├── pymupdf  # unwatched
+# │   │   ├── pypdfium2  # unwatched
+# │   │   ├── pytest  # unwatched
+# │   │   ├── python  # unwatched
+# │   │   ├── python3  # unwatched
+# │   │   ├── python3.9  # unwatched
+# │   │   └── watchmedo  # unwatched
+# │   ├── include
+# │   ├── lib
+# │   │   ├── .DS_Store  # unwatched
+# │   │   └── python3.9
+# │   │       ├── .DS_Store  # unwatched
+# │   │       └── site-packages
+# │   │           ├── 30fcd23745efe32ce681__mypyc.cpython-39-darwin.so  # unwatched
+# │   │           ├── PIL
+# │   │           │   ├── .dylibs
+# │   │           │   │   ├── libXau.6.dylib  # unwatched
+# │   │           │   │   ├── libbrotlicommon.1.1.0.dylib  # unwatched
+# │   │           │   │   ├── libbrotlidec.1.1.0.dylib  # unwatched
+# │   │           │   │   ├── libfreetype.6.dylib  # unwatched
+# │   │           │   │   ├── libharfbuzz.0.dylib  # unwatched
+# │   │           │   │   ├── libjpeg.62.4.0.dylib  # unwatched
+# │   │           │   │   ├── liblcms2.2.dylib  # unwatched
+# │   │           │   │   ├── liblzma.5.dylib  # unwatched
+# │   │           │   │   ├── libopenjp2.2.5.3.dylib  # unwatched
+# │   │           │   │   ├── libpng16.16.dylib  # unwatched
+# │   │           │   │   ├── libsharpyuv.0.dylib  # unwatched
+# │   │           │   │   ├── libtiff.6.dylib  # unwatched
+# │   │           │   │   ├── libwebp.7.dylib  # unwatched
+# │   │           │   │   ├── libwebpdemux.2.dylib  # unwatched
+# │   │           │   │   ├── libwebpmux.3.dylib  # unwatched
+# │   │           │   │   ├── libxcb.1.1.0.dylib  # unwatched
+# │   │           │   │   └── libz.1.3.1.zlib-ng.dylib  # unwatched
+# │   │           │   ├── AvifImagePlugin.py  # unwatched
+# │   │           │   ├── BdfFontFile.py  # unwatched
+# │   │           │   ├── BlpImagePlugin.py  # unwatched
+# │   │           │   ├── BmpImagePlugin.py  # unwatched
+# │   │           │   ├── BufrStubImagePlugin.py  # unwatched
+# │   │           │   ├── ContainerIO.py  # unwatched
+# │   │           │   ├── CurImagePlugin.py  # unwatched
+# │   │           │   ├── DcxImagePlugin.py  # unwatched
+# │   │           │   ├── DdsImagePlugin.py  # unwatched
+# │   │           │   ├── EpsImagePlugin.py  # unwatched
+# │   │           │   ├── ExifTags.py  # unwatched
+# │   │           │   ├── FitsImagePlugin.py  # unwatched
+# │   │           │   ├── FliImagePlugin.py  # unwatched
+# │   │           │   ├── FontFile.py  # unwatched
+# │   │           │   ├── FpxImagePlugin.py  # unwatched
+# │   │           │   ├── FtexImagePlugin.py  # unwatched
+# │   │           │   ├── GbrImagePlugin.py  # unwatched
+# │   │           │   ├── GdImageFile.py  # unwatched
+# │   │           │   ├── GifImagePlugin.py  # unwatched
+# │   │           │   ├── GimpGradientFile.py  # unwatched
+# │   │           │   ├── GimpPaletteFile.py  # unwatched
+# │   │           │   ├── GribStubImagePlugin.py  # unwatched
+# │   │           │   ├── Hdf5StubImagePlugin.py  # unwatched
+# │   │           │   ├── IcnsImagePlugin.py  # unwatched
+# │   │           │   ├── IcoImagePlugin.py  # unwatched
+# │   │           │   ├── ImImagePlugin.py  # unwatched
+# │   │           │   ├── Image.py  # unwatched
+# │   │           │   ├── ImageChops.py  # unwatched
+# │   │           │   ├── ImageCms.py  # unwatched
+# │   │           │   ├── ImageColor.py  # unwatched
+# │   │           │   ├── ImageDraw.py  # unwatched
+# │   │           │   ├── ImageDraw2.py  # unwatched
+# │   │           │   ├── ImageEnhance.py  # unwatched
+# │   │           │   ├── ImageFile.py  # unwatched
+# │   │           │   ├── ImageFilter.py  # unwatched
+# │   │           │   ├── ImageFont.py  # unwatched
+# │   │           │   ├── ImageGrab.py  # unwatched
+# │   │           │   ├── ImageMath.py  # unwatched
+# │   │           │   ├── ImageMode.py  # unwatched
+# │   │           │   ├── ImageMorph.py  # unwatched
+# │   │           │   ├── ImageOps.py  # unwatched
+# │   │           │   ├── ImagePalette.py  # unwatched
+# │   │           │   ├── ImagePath.py  # unwatched
+# │   │           │   ├── ImageQt.py  # unwatched
+# │   │           │   ├── ImageSequence.py  # unwatched
+# │   │           │   ├── ImageShow.py  # unwatched
+# │   │           │   ├── ImageStat.py  # unwatched
+# │   │           │   ├── ImageTk.py  # unwatched
+# │   │           │   ├── ImageTransform.py  # unwatched
+# │   │           │   ├── ImageWin.py  # unwatched
+# │   │           │   ├── ImtImagePlugin.py  # unwatched
+# │   │           │   ├── IptcImagePlugin.py  # unwatched
+# │   │           │   ├── Jpeg2KImagePlugin.py  # unwatched
+# │   │           │   ├── JpegImagePlugin.py  # unwatched
+# │   │           │   ├── JpegPresets.py  # unwatched
+# │   │           │   ├── McIdasImagePlugin.py  # unwatched
+# │   │           │   ├── MicImagePlugin.py  # unwatched
+# │   │           │   ├── MpegImagePlugin.py  # unwatched
+# │   │           │   ├── MpoImagePlugin.py  # unwatched
+# │   │           │   ├── MspImagePlugin.py  # unwatched
+# │   │           │   ├── PSDraw.py  # unwatched
+# │   │           │   ├── PaletteFile.py  # unwatched
+# │   │           │   ├── PalmImagePlugin.py  # unwatched
+# │   │           │   ├── PcdImagePlugin.py  # unwatched
+# │   │           │   ├── PcfFontFile.py  # unwatched
+# │   │           │   ├── PcxImagePlugin.py  # unwatched
+# │   │           │   ├── PdfImagePlugin.py  # unwatched
+# │   │           │   ├── PdfParser.py  # unwatched
+# │   │           │   ├── PixarImagePlugin.py  # unwatched
+# │   │           │   ├── PngImagePlugin.py  # unwatched
+# │   │           │   ├── PpmImagePlugin.py  # unwatched
+# │   │           │   ├── PsdImagePlugin.py  # unwatched
+# │   │           │   ├── QoiImagePlugin.py  # unwatched
+# │   │           │   ├── SgiImagePlugin.py  # unwatched
+# │   │           │   ├── SpiderImagePlugin.py  # unwatched
+# │   │           │   ├── SunImagePlugin.py  # unwatched
+# │   │           │   ├── TarIO.py  # unwatched
+# │   │           │   ├── TgaImagePlugin.py  # unwatched
+# │   │           │   ├── TiffImagePlugin.py  # unwatched
+# │   │           │   ├── TiffTags.py  # unwatched
+# │   │           │   ├── WalImageFile.py  # unwatched
+# │   │           │   ├── WebPImagePlugin.py  # unwatched
+# │   │           │   ├── WmfImagePlugin.py  # unwatched
+# │   │           │   ├── XVThumbImagePlugin.py  # unwatched
+# │   │           │   ├── XbmImagePlugin.py  # unwatched
+# │   │           │   ├── XpmImagePlugin.py  # unwatched
+# │   │           │   ├── __init__.py  # unwatched
+# │   │           │   ├── __main__.py  # unwatched
+# │   │           │   ├── _avif.pyi  # unwatched
+# │   │           │   ├── _binary.py  # unwatched
+# │   │           │   ├── _deprecate.py  # unwatched
+# │   │           │   ├── _imaging.cpython-39-darwin.so  # unwatched
+# │   │           │   ├── _imaging.pyi  # unwatched
+# │   │           │   ├── _imagingcms.cpython-39-darwin.so  # unwatched
+# │   │           │   ├── _imagingcms.pyi  # unwatched
+# │   │           │   ├── _imagingft.cpython-39-darwin.so  # unwatched
+# │   │           │   ├── _imagingft.pyi  # unwatched
+# │   │           │   ├── _imagingmath.cpython-39-darwin.so  # unwatched
+# │   │           │   ├── _imagingmath.pyi  # unwatched
+# │   │           │   ├── _imagingmorph.cpython-39-darwin.so  # unwatched
+# │   │           │   ├── _imagingmorph.pyi  # unwatched
+# │   │           │   ├── _imagingtk.cpython-39-darwin.so  # unwatched
+# │   │           │   ├── _imagingtk.pyi  # unwatched
+# │   │           │   ├── _tkinter_finder.py  # unwatched
+# │   │           │   ├── _typing.py  # unwatched
+# │   │           │   ├── _util.py  # unwatched
+# │   │           │   ├── _version.py  # unwatched
+# │   │           │   ├── _webp.cpython-39-darwin.so  # unwatched
+# │   │           │   ├── _webp.pyi  # unwatched
+# │   │           │   ├── features.py  # unwatched
+# │   │           │   ├── py.typed  # unwatched
+# │   │           │   └── report.py  # unwatched
+# │   │           ├── PyPDF2
+# │   │           │   ├── __init__.py  # unwatched
+# │   │           │   ├── _cmap.py  # unwatched
+# │   │           │   ├── _codecs
+# │   │           │   │   ├── __init__.py  # unwatched
+# │   │           │   │   ├── adobe_glyphs.py  # unwatched
+# │   │           │   │   ├── pdfdoc.py  # unwatched
+# │   │           │   │   ├── std.py  # unwatched
+# │   │           │   │   ├── symbol.py  # unwatched
+# │   │           │   │   └── zapfding.py  # unwatched
+# │   │           │   ├── _encryption.py  # unwatched
+# │   │           │   ├── _merger.py  # unwatched
+# │   │           │   ├── _page.py  # unwatched
+# │   │           │   ├── _reader.py  # unwatched
+# │   │           │   ├── _tools.py  # unwatched
+# │   │           │   └── _utils.py  # unwatched
+# │   │           └── _version.py  # unwatched
+# │   └── rules
+# │       └── cursorrules.mdc  # unwatched
+# └── .donotwatchlist  # unwatched
+#     └── .env
+#         └── .env-example
+#
+# ALWAYS: Coding workflow preferences
+# -   Focus on the areas of code relevant to the task
+# -   Do not touch code that is unrelated to the task
+# -   Write thorough tests for all major functionality
+# -   Avoid making major changes to the patterns and architecture of how a feature works after  it has shown to work well, unless explicitly instructed.
+# -   Always think about what other methods and areas of code might be affected by code changes
+# -   Always refer to all the txt files when coding for the api from the "rfms api docs" folder
+# Technical stack
+# -   Python for the backend
+# -   html/js for the frontend
+# -   SQL databases, never JSON file storage
+# -   Separate databases for dev, test, and prod
+# -   Elasticsearch for search, using elastic.co hosting
+# -   Elastic.co will have dev and prod indexes
+# -   Python tests
+#
+# ALWAYS: Coding pattern preferences
+# -   Always prefer simple solutions
+# -   Avoid duplication of code whenever possible, which means checking for other areas of the codebase that might already have similar code and functionality
+# -   Write code that takes into account the different environments: dev, test, and prod
+# -   You are careful to only make changes that are requested or you are confident are well understood and related to the change being requested
+# -   When fixing an issue or bug, do not introduce a new pattern or technology without first exhausting all options for the existing implementation. And if you finally do this, make sure to remove the old ipmlementation afterwards so we don't have duplicate logic.
+# -   Keep the codebase very clean and organized
+# -   Avoid writing scripts in files if possible, especially if the script is likely only to be run once
+# -   Avoid having files over 200-300 lines of code. Refactor at that point.
+# -   Mocking data is only needed for tests, never mock data for dev or prod
+# -   Never add stubbing or fake data patterns to code that affects the dev or prod environments
+# -   Never overwrite my env file without first asking and confirming
+# 
+## RFMS Quote Creator Improvements
+
+This document outlines the improvements made to the RFMS Quote Creator application based on the established coding rules and best practices.
+
+## Restructured Application
+
+1. **Modular Architecture**
+   - Implemented a proper Flask application factory pattern
+   - Separated concerns into dedicated modules
+   - Applied the Blueprint pattern for routes
+
+2. **Environment-Specific Configuration**
+   - Created a configuration system that supports dev, test, and prod environments
+   - Used environment variables for sensitive configuration
+   - Added default values for configuration items
+
+3. **Database Integration**
+   - Added SQLAlchemy models for data persistence
+   - Implemented local caching of customer and quote data
+   - Used proper database relationships between models
+
+4. **Utilities**
+   - Created dedicated utility modules for PDF extraction and API interaction
+   - Improved error handling and logging throughout the application
+   - Added docstrings and type hints for better code maintainability
+
+5. **Testing**
+   - Added comprehensive unit tests for PDF extraction and RFMS client
+   - Implemented test fixtures for better test organization
+
+## Code Quality Improvements
+
+1. **Code Organization**
+   - Kept files under 300 lines
+   - Used proper Python packaging with __init__.py files
+   - Organized code into logical directories
+
+2. **Error Handling**
+   - Added robust error handling with appropriate logging
+   - Implemented user-friendly error messages in the API responses
+   - Used try/except blocks to catch and handle specific exceptions
+
+3. **Documentation**
+   - Added docstrings to all classes and methods
+   - Created a comprehensive README.md
+   - Included inline comments for complex logic
+
+4. **UI/UX Improvements**
+   - Separated CSS and JavaScript into dedicated files
+   - Added better form validation and error reporting
+   - Improved feedback during API operations
+
+## Technical Stack Alignment
+
+1. **Backend**
+   - Used Python Flask for the web server
+   - Implemented SQLAlchemy for database operations
+   - Added support for environment-specific configuration
+
+2. **Frontend**
+   - Used plain HTML/CSS/JS without unnecessary frameworks
+   - Implemented clean, simple UI with clear user flow
+   - Added proper error handling and feedback
+
+3. **Storage**
+   - Replaced file-based storage with proper database models
+   - Implemented SQLite for development and testing
+   - Added support for different database configurations per environment
+
+## Future Improvements
+
+1. **Elasticsearch Integration**
+   - Add Elasticsearch for searching through quotes and customers
+   - Implement separate dev and prod indices
+
+2. **Authentication**
+   - Add proper user authentication system
+   - Implement role-based access control
+
+3. **Advanced PDF Processing**
+   - Improve PDF extraction accuracy with machine learning
+   - Support for different PDF formats and layouts
+
+4. **Monitoring and Logging**
+   - Add more comprehensive logging
+   - Implement error tracking and monitoring 

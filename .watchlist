@@ -1,0 +1,16 @@
+# Files to receive headers and be monitored
+# One file per line
+path/to/your/file.txt
+# One file per line
+app.py
+utils/*.py
+models/*.py
+templates/*.html
+static/js/*.js
+static/css/*.css
+requirements.txt
+.env
+.env-example
+create_db.py
+run_test_app.py
+
