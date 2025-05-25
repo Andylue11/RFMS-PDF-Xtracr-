@@ -11,7 +11,6 @@ This file contains the current project tree for RFMS PDF Xtracr. Please update t
 │       └── cursorrules.mdc  # unwatched
 ├── .cursorrules  # unwatched
 ├── .donotwatchlist  # unwatched
-├── .env
 ├── .env-example
 ├── .env-test  # unwatched
 ├── .gitignore  # unwatched

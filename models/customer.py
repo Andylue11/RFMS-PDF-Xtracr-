@@ -133,3 +133,47 @@ class Customer(db.Model):
             customer.sales_rep = rfms_data["salesRep"]
 
         return customer
+
+
+class ApprovedCustomer(db.Model):
+    """
+    Stores approved/accepted 'sold to' customers for persistent caching.
+    """
+    __tablename__ = 'approved_customer'
+    id = db.Column(db.Integer, primary_key=True)
+    rfms_customer_id = db.Column(db.String(50), nullable=False, unique=True)
+    name = db.Column(db.String(100))
+    first_name = db.Column(db.String(50))
+    last_name = db.Column(db.String(50))
+    business_name = db.Column(db.String(100))
+    address = db.Column(db.String(100))
+    city = db.Column(db.String(50))
+    state = db.Column(db.String(2))
+    zip_code = db.Column(db.String(15))
+    country = db.Column(db.String(50), default="Australia")
+    phone = db.Column(db.String(20))
+    email = db.Column(db.String(100))
+    approved_at = db.Column(db.DateTime, default=datetime.now)
+    updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
+
+    def __repr__(self):
+        return f"<ApprovedCustomer {self.name} ({self.rfms_customer_id})>"
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "rfms_customer_id": self.rfms_customer_id,
+            "name": self.name,
+            "first_name": self.first_name,
+            "last_name": self.last_name,
+            "business_name": self.business_name,
+            "address": self.address,
+            "city": self.city,
+            "state": self.state,
+            "zip_code": self.zip_code,
+            "country": self.country,
+            "phone": self.phone,
+            "email": self.email,
+            "approved_at": self.approved_at.strftime("%Y-%m-%d %H:%M:%S"),
+            "updated_at": self.updated_at.strftime("%Y-%m-%d %H:%M:%S"),
+        }

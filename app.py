@@ -18,16 +18,18 @@ from dotenv import load_dotenv
 import logging
 from datetime import datetime
 import tempfile
+import json
 
 # Import models and database
 from models import db, Customer, Quote, Job, PdfData
+from models.customer import ApprovedCustomer
 
 # Import utility modules
 from utils.pdf_extractor import extract_data_from_pdf
 from utils.rfms_api import RfmsApi
 
 # Load environment variables
-load_dotenv()
+load_dotenv(dotenv_path=".env")
 
 # Configure logging
 logging.basicConfig(
@@ -241,9 +243,19 @@ def preview_data(pdf_id):
 
 @app.route("/api/customers/search", methods=["POST"])
 def search_customers():
-    """Search for customers in RFMS API by name or customer ID."""
+    """Search for customers in RFMS API by name or customer ID.
+    For name searches, uses the locked-in builder search payload with pagination support:
+        - includeCustomers: True
+        - includeInactive: True
+        - storeNumber: '49,1'
+        - customerType: 'BUILDERS'
+        - customerSource: 'Customer'
+        - startIndex: (for pagination, default 0)
+    The returned customer ID or customerSourceId should be used for the RFMS ID field in the UI and for uploads.
+    """
     data = request.get_json()
     search_term = data.get("term", "") if data else ""
+    start_index = int(data.get("start_index", 0)) if data else 0
 
     if not search_term:
         logger.warning("Empty search term provided")
@@ -257,51 +269,41 @@ def search_customers():
         )
 
     try:
-        logger.info(f"Searching for customers with term: {search_term}")
+        logger.info(f"Searching for customers with term: {search_term}, start_index: {start_index}")
+        # Check for approved customer in DB
+        approved_matches = []
+        if search_term:
+            approved_matches = ApprovedCustomer.query.filter(
+                (ApprovedCustomer.name.ilike(f"%{search_term}%")) |
+                (ApprovedCustomer.business_name.ilike(f"%{search_term}%")) |
+                (ApprovedCustomer.first_name.ilike(f"%{search_term}%")) |
+                (ApprovedCustomer.last_name.ilike(f"%{search_term}%"))
+            ).all()
+            if approved_matches:
+                logger.info(f"[APPROVED_CUSTOMER] Cache hit for search '{search_term}': {[a.rfms_customer_id for a in approved_matches]}")
+                return jsonify([a.to_dict() for a in approved_matches])
+
         # If the term is all digits, treat as customer ID
         if search_term.isdigit():
-            customers = rfms_api.find_customer_by_id(search_term)
+            # find_customer_by_id already returns formatted dicts
+            formatted_customers = rfms_api.find_customer_by_id(search_term)
         else:
-            customers = rfms_api.find_customer_by_name(search_term, include_inactive=True)
+            # Use locked-in builder search for name lookups, with pagination
+            customers = rfms_api.find_customer_by_name(search_term, include_inactive=True, start_index=start_index)
+            formatted_customers = rfms_api._format_customer_list(customers)
 
-        if not isinstance(customers, list) or not customers:
+        if not isinstance(formatted_customers, list) or not formatted_customers:
             logger.info(
                 f"No customers found or bad response for search term: {search_term}"
             )
             logger.info(f"API response to frontend: []")
             return jsonify([])
 
-        # Format response for frontend
-        formatted_customers = []
-        for customer in customers:
-            if not isinstance(customer, dict):
-                continue
-            formatted_customer = {
-                "id": customer.get("id"),
-                "customer_source_id": customer.get(
-                    "customer_source_id", customer.get("id")
-                ),
-                "name": customer.get("name", ""),
-                "first_name": customer.get("first_name", ""),
-                "last_name": customer.get("last_name", ""),
-                "business_name": customer.get("business_name", ""),
-                "address": customer.get("address", ""),
-                "address1": customer.get("address1", ""),
-                "address2": customer.get("address2", ""),
-                "city": customer.get("city", ""),
-                "state": customer.get("state", ""),
-                "zip_code": customer.get("zip_code", ""),
-                "country": customer.get("country", ""),
-                "phone": customer.get("phone", ""),
-                "email": customer.get("email", ""),
-                "use_sold_to_business_name": customer.get("use_sold_to_business_name", False),
-            }
-            formatted_customers.append(formatted_customer)
-
         logger.info(
-            f"Found {len(formatted_customers)} customers for search term: {search_term}"
+            f"Found {len(formatted_customers)} customers for search term: {search_term} (start_index: {start_index})"
         )
         logger.info(f"API response to frontend: {formatted_customers}")
+        logger.info(f"[SEARCH_CUSTOMERS] Returning customer IDs: {[c['id'] for c in formatted_customers]}")
         return jsonify(formatted_customers)
     except Exception as e:
         logger.error(f"Error searching customers: {str(e)}")
@@ -311,9 +313,55 @@ def search_customers():
 @app.route("/api/create_customer", methods=["POST"])
 def create_customer():
     """Create a new customer in RFMS."""
-    customer_data = request.json
+    data = request.json
+    if data is None:
+        return jsonify({"error": "No data provided"}), 400
+
+    # Accept both old and new payloads
+    if "customer" not in data and "ship_to" not in data:
+        customer = data
+        ship_to = data
+    else:
+        customer = data.get("customer", {})
+        ship_to = data.get("ship_to", {})
+
+    # Build the customer and shipToAddress payloads
+    customer_payload = {
+        "name": customer.get("customer_name") or customer.get("business_name") or ship_to.get("name") or "",
+        "firstName": customer.get("first_name") or ship_to.get("first_name", ""),
+        "lastName": customer.get("last_name") or ship_to.get("last_name", ""),
+        "address1": customer.get("address1") or ship_to.get("address1", ""),
+        "address2": customer.get("address2") or ship_to.get("address2", ""),
+        "city": customer.get("city") or ship_to.get("city", ""),
+        "state": customer.get("state") or ship_to.get("state", ""),
+        "postalCode": customer.get("zip_code") or ship_to.get("zip_code", ""),
+        "country": customer.get("country") or ship_to.get("country", "Australia"),
+        "phone": customer.get("phone") or customer.get("phone1") or "",
+        "email": customer.get("email", ""),
+        "customerType": "INSURANCE",
+        "entryType": "Customer",
+        "activeDate": datetime.now().strftime("%Y-%m-%d"),
+        "storeCode": 1,
+        "taxStatus": "Tax",
+        "taxMethod": "SalesTax",
+        "preferredSalesperson1": customer.get("preferredSalesperson1", ""),
+        "preferredSalesperson2": customer.get("preferredSalesperson2", ""),
+    }
+    ship_to_address = {
+        "name": customer.get("customer_name") or customer.get("business_name") or ship_to.get("name") or "",
+        "firstName": customer.get("first_name") or ship_to.get("first_name", ""),
+        "lastName": customer.get("last_name") or ship_to.get("last_name", ""),
+        "address1": customer.get("address1") or ship_to.get("address1", ""),
+        "address2": customer.get("address2") or ship_to.get("address2", ""),
+        "city": customer.get("city") or ship_to.get("city", ""),
+        "state": customer.get("state") or ship_to.get("state", ""),
+        "postalCode": customer.get("zip_code") or ship_to.get("zip_code", ""),
+        "country": customer.get("country") or ship_to.get("country", "Australia"),
+    }
+    payload = {"customer": customer_payload, "shipToAddress": ship_to_address}
+    logger.info(f"[CREATE_CUSTOMER] Outgoing payload: {json.dumps(payload, indent=2)}")
     try:
-        result = rfms_api.create_customer(customer_data)
+        result = rfms_api.create_customer(payload)
         return jsonify(result)
     except Exception as e:
         logger.error(f"Error creating customer: {str(e)}")
@@ -324,6 +372,11 @@ def create_customer():
 def create_quote():
     """Create a new quote in RFMS."""
     quote_data = request.json
+    customer_id = quote_data.get('customer_id')
+    logger.info(f"[CREATE_QUOTE] Using customer ID: {customer_id}")
+    if not customer_id:
+        logger.error("[CREATE_QUOTE] Missing customer_id in quote_data")
+        return jsonify({"error": "Missing customer_id in quote data."}), 400
     try:
         result = rfms_api.create_quote(quote_data)
         return jsonify(result)
@@ -336,6 +389,13 @@ def create_quote():
 def create_job():
     """Create a new job in RFMS."""
     job_data = request.json
+    customer_id = None
+    if job_data and 'order' in job_data:
+        customer_id = job_data['order'].get('CustomerSeqNum')
+    logger.info(f"[CREATE_JOB] Using customer ID: {customer_id}")
+    if not customer_id:
+        logger.error("[CREATE_JOB] Missing customer ID in job_data['order']")
+        return jsonify({"error": "Missing customer ID in job data."}), 400
     try:
         result = rfms_api.create_job(job_data)
 
@@ -433,8 +493,9 @@ def export_to_rfms():
         # 2. Get the Sold To customer ID (assumes it was already obtained via search)
         sold_to_data = data["sold_to"]
         sold_to_customer_id = sold_to_data.get("id")
+        logger.info(f"[EXPORT_TO_RFMS] Using Sold To customer ID: {sold_to_customer_id}")
         if not sold_to_customer_id:
-            logger.warning("Missing Sold To customer ID")
+            logger.error("[EXPORT_TO_RFMS] Missing Sold To customer ID")
             return jsonify({"error": "Missing Sold To customer ID"}), 400
         # 3. Create the job in RFMS
         job_data = data["job_details"]
@@ -746,6 +807,51 @@ def clear_data():
     """Clear current extracted data for next upload."""
     session.pop("extracted_data", None)
     return redirect(url_for("index"))
+
+
+@app.route("/api/approved_customer", methods=["POST"])
+def save_approved_customer():
+    data = request.json
+    rfms_customer_id = data.get("customer_source_id") or data.get("id")
+    if not rfms_customer_id:
+        return jsonify({"error": "Missing customer_source_id"}), 400
+    # Check if already exists
+    approved = ApprovedCustomer.query.filter_by(rfms_customer_id=rfms_customer_id).first()
+    if approved:
+        # Update fields
+        approved.name = data.get("name", approved.name)
+        approved.first_name = data.get("first_name", approved.first_name)
+        approved.last_name = data.get("last_name", approved.last_name)
+        approved.business_name = data.get("business_name", approved.business_name)
+        approved.address = data.get("address1", approved.address)
+        approved.city = data.get("city", approved.city)
+        approved.state = data.get("state", approved.state)
+        approved.zip_code = data.get("zip_code", approved.zip_code)
+        approved.country = data.get("country", approved.country)
+        approved.phone = data.get("phone", approved.phone)
+        approved.email = data.get("email", approved.email)
+        db.session.commit()
+        logger.info(f"[APPROVED_CUSTOMER] Updated: {approved}")
+        return jsonify({"status": "updated", "customer": approved.to_dict()})
+    # Create new
+    approved = ApprovedCustomer(
+        rfms_customer_id=rfms_customer_id,
+        name=data.get("name"),
+        first_name=data.get("first_name"),
+        last_name=data.get("last_name"),
+        business_name=data.get("business_name"),
+        address=data.get("address1"),
+        city=data.get("city"),
+        state=data.get("state"),
+        zip_code=data.get("zip_code"),
+        country=data.get("country"),
+        phone=data.get("phone"),
+        email=data.get("email"),
+    )
+    db.session.add(approved)
+    db.session.commit()
+    logger.info(f"[APPROVED_CUSTOMER] Saved: {approved}")
+    return jsonify({"status": "saved", "customer": approved.to_dict()})
 
 
 if __name__ == "__main__":

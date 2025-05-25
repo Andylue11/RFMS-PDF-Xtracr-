@@ -7,6 +7,8 @@ from datetime import datetime, timedelta
 from requests.exceptions import RequestException, Timeout, ConnectionError
 from models import db, RFMSSession
 import http.client
+import time
+from functools import lru_cache
 
 logger = logging.getLogger(__name__)
 
@@ -270,7 +272,6 @@ class RfmsApi:
             "includeCustomers": True,
             "includeProspects": False,
             "includeInactive": True,
-            "storeNumber": 49,
             "customerSource": "Customer",
             "referralType": "Standalone"
         }
@@ -320,6 +321,8 @@ class RfmsApi:
             return str(e)
 
     def find_customer_by_id(self, customer_id):
+        start_time = time.monotonic()
+        logger.info(f"[TIMER] find_customer_by_id started")
         """
         Find a customer by ID using the customer endpoint.
         Args:
@@ -330,7 +333,10 @@ class RfmsApi:
         url = f"{self.base_url}/v2/customer/{customer_id}"
         try:
             logger.info(f"Finding customer by ID: {customer_id}")
+            api_start = time.monotonic()
             data = self.execute_request("GET", url)
+            api_end = time.monotonic()
+            logger.info(f"[TIMER] API call duration: {api_end - api_start:.2f}s")
             logger.info(f"[RAW API RESPONSE] /v2/customer/{{customer_id}}: {data}")
             if not data or "result" not in data:
                 logger.warning(f"No customer found with ID: {customer_id}")
@@ -459,37 +465,52 @@ class RfmsApi:
                     "storeNumber", detail.get("defaultStore", "")
                 ),
             }
+            end_time = time.monotonic()
+            logger.info(f"[TIMER] find_customer_by_id total duration: {end_time - start_time:.2f}s")
             return [formatted_customer]
         except Exception as e:
             logger.error(f"Error finding customer by ID: {str(e)}")
+            logger.info(f"[TIMER] find_customer_by_id errored after {time.monotonic() - start_time:.2f}s")
             return []
 
-    def find_customer_by_name(self, name, include_inactive=True):
-        logger.info(f"Finding customers by name: {name}, include_inactive=True")
+    @lru_cache(maxsize=32)
+    def _cached_find_customer_by_name(self, name, start_index):
+        logger.info(f"[CACHE] Miss for ({name}, {start_index})")
+        return self._find_customer_by_name_uncached(name, start_index)
+
+    def _find_customer_by_name_uncached(self, name, start_index):
+        # This is the original logic from find_customer_by_name, minus logging and timing
         self.ensure_session()
         payload = {
             "searchText": name,
             "includeCustomers": True,
-            "includeProspects": False,
             "includeInactive": True,
-            "storeNumber": 49,
-            "customerSource": "Customer",
-            "referralType": "Standalone"
+            "storeNumber": "49"
         }
-        # If you want to support pagination for name search, add startIndex as needed
+        if start_index > 0:
+            payload["startIndex"] = start_index
+        url = f"{self.base_url}/v2/customers/find"
+        data = self.execute_request("POST", url, payload)
+        if isinstance(data, dict) and "detail" in data and data["detail"]:
+            return data["detail"]
+        for key in ["customers", "result", "data"]:
+            if key in data and data[key]:
+                return data[key]
+        return []
+
+    def find_customer_by_name(self, name, include_inactive=True, start_index=0):
+        start_time = time.monotonic()
+        logger.info(f"[TIMER] find_customer_by_name started")
+        # Use the cache
         try:
-            url = f"{self.base_url}/v2/customers/find"
-            data = self.execute_request("POST", url, payload)
-            if isinstance(data, list):
-                return data
-            if isinstance(data, dict):
-                for key in ["customers", "result", "data"]:
-                    if key in data:
-                        return data[key]
-            return []
+            result = self._cached_find_customer_by_name(name, start_index)
+            logger.info(f"[CACHE] Hit for ({name}, {start_index})")
         except Exception as e:
-            logger.error(f"Error finding customers by name: {e}")
-            return []
+            logger.error(f"[CACHE] Error: {e}")
+            result = self._find_customer_by_name_uncached(name, start_index)
+        end_time = time.monotonic()
+        logger.info(f"[TIMER] find_customer_by_name total duration: {end_time - start_time:.2f}s")
+        return result
 
     def get_customer(self, customer_id):
         """
@@ -548,6 +569,13 @@ class RfmsApi:
         Returns:
             dict: Created customer object
         """
+        # Log valid customer values for reference
+        try:
+            valid_values = self.get_customer_values()
+            logger.info(f"[RFMS_API][CUSTOMER_VALUES] Valid customer values: {json.dumps(valid_values, indent=2)}")
+        except Exception as e:
+            logger.warning(f"[RFMS_API][CUSTOMER_VALUES] Could not fetch valid customer values: {e}")
+
         url = f"{self.base_url}/api/v2/Customer"
         required_fields = [
             "business_name",
@@ -566,11 +594,23 @@ class RfmsApi:
             raise ValueError(
                 f"Missing required customer data: {', '.join(missing_fields)}"
             )
+        # Prepare ship to address
+        ship_to = customer_data.get("ship_to", {})
+        ship_to_address = {
+            "name": ship_to.get("name") or customer_data.get("business_name", "") or customer_data.get("customer_name", ""),
+            "firstName": ship_to.get("first_name") or customer_data.get("first_name", ""),
+            "lastName": ship_to.get("last_name") or customer_data.get("last_name", ""),
+            "address1": ship_to.get("address1") or customer_data.get("address1", ""),
+            "address2": ship_to.get("address2") or customer_data.get("address2", ""),
+            "city": ship_to.get("city") or customer_data.get("city", ""),
+            "state": ship_to.get("state") or customer_data.get("state", ""),
+            "postalCode": ship_to.get("zip_code") or customer_data.get("zip_code", ""),
+            "country": ship_to.get("country") or customer_data.get("country", "Australia"),
+        }
         payload = {
             "customer": {
                 "name": customer_data.get("business_name", "")
                 or customer_data.get("customer_name", ""),
-                "salutation": customer_data.get("salutation", ""),
                 "firstName": customer_data.get("first_name", ""),
                 "lastName": customer_data.get("last_name", ""),
                 "address1": customer_data.get("address1", ""),
@@ -580,10 +620,12 @@ class RfmsApi:
                 "country": customer_data.get("country", "Australia"),
                 "phone": customer_data.get("phone", ""),
                 "email": customer_data.get("email", ""),
-                "type": "INSURANCE",
+                "customerType": "INSURANCE",
+                "entryType": "Customer",
                 "activeDate": datetime.now().strftime("%Y-%m-%d"),
-                "storeCode": 49,
-            }
+                "storeCode": 1,
+            },
+            "shipToAddress": ship_to_address
         }
         try:
             headers = self._get_headers()
@@ -592,6 +634,7 @@ class RfmsApi:
                 f"[RFMS API] Outgoing auth: (username: {auth[0]}, password: {'*' * len(str(auth[1]))})"
             )
             logger.debug(f"[RFMS API] Outgoing headers: {headers}")
+            logger.info(f"[RFMS_API][CREATE_CUSTOMER] Payload: {json.dumps(payload, indent=2)}")
             response = requests.post(
                 url, headers=headers, auth=auth, json=payload, timeout=self.timeout
             )
@@ -615,9 +658,11 @@ class RfmsApi:
         Returns:
             dict: Created quote object
         """
+        customer_id = quote_data.get('customer_id')
+        logger.info(f"[RFMS_API][CREATE_QUOTE] Using customer ID: {customer_id}")
+        if not customer_id:
+            raise ValueError("Missing customer_id in quote_data")
         url = f"{self.base_url}/api/v2/Quote"
-        if not quote_data.get("customer_id"):
-            raise ValueError("Missing required field: customer_id")
         payload = {
             "quote": {
                 "customerId": quote_data.get("customer_id"),
@@ -678,11 +723,12 @@ class RfmsApi:
             dict: Created job object
         """
         try:
-            if not all(
-                key in job_data["order"]
-                for key in ["CustomerSeqNum", "PONumber", "MiscCharges"]
-            ):
-                raise ValueError("Missing required fields in job data")
+            customer_id = None
+            if job_data and 'order' in job_data:
+                customer_id = job_data['order'].get('CustomerSeqNum')
+            logger.info(f"[RFMS_API][CREATE_JOB] Using customer ID: {customer_id}")
+            if not customer_id:
+                raise ValueError("Missing customer ID in job_data['order']")
             session_token = self.session_token
             if not session_token:
                 raise Exception("Failed to get session token")
@@ -789,52 +835,153 @@ class RfmsApi:
             return {}
 
     def _format_customer_list(self, customers):
-        """
-        Helper method to format customer data consistently.
-
-        Args:
-            customers (list): List of customer objects from API
-
-        Returns:
-            list: Formatted customer objects
-        """
+        start_time = time.monotonic()
+        logger.info(f"[TIMER] _format_customer_list started")
         formatted_customers = []
-
         for customer in customers:
+            if not isinstance(customer, dict):
+                continue
+            # If 'detail' key exists, merge it for field extraction
+            detail = customer.get("detail", {}) if isinstance(customer.get("detail", {}), dict) else {}
+            def pick_any_field(*fields):
+                for f in fields:
+                    if f and isinstance(f, str) and f.strip():
+                        return f.strip()
+                return ""
+            customer_source_id = (
+                customer.get("customerSourceId") or customer.get("customerId") or detail.get("customerSourceId") or detail.get("customerId")
+            )
+            name = pick_any_field(
+                customer.get("customerName"),
+                customer.get("customerBusinessName"),
+                customer.get("shipToName"),
+                customer.get("shipToBusinessName"),
+                detail.get("customerName"),
+                detail.get("customerBusinessName"),
+                detail.get("shipToName"),
+                detail.get("shipToBusinessName"),
+            )
+            first_name = pick_any_field(
+                customer.get("customerFirstName"),
+                customer.get("shipToFirstName"),
+                detail.get("customerFirstName"),
+                detail.get("shipToFirstName"),
+            )
+            last_name = pick_any_field(
+                customer.get("customerLastName"),
+                customer.get("shipToLastName"),
+                name,
+                detail.get("customerLastName"),
+                detail.get("shipToLastName"),
+            )
+            business_name = pick_any_field(
+                customer.get("customerBusinessName"),
+                customer.get("shipToBusinessName"),
+                detail.get("customerBusinessName"),
+                detail.get("shipToBusinessName"),
+            )
+            address = pick_any_field(
+                customer.get("customerAddress"),
+                customer.get("shipToAddress"),
+                detail.get("customerAddress"),
+                detail.get("shipToAddress"),
+            )
+            address1 = pick_any_field(
+                customer.get("customerAddress"),
+                customer.get("customerAddress1"),
+                customer.get("shipToAddress"),
+                customer.get("shipToAddress1"),
+                detail.get("customerAddress"),
+                detail.get("customerAddress1"),
+                detail.get("shipToAddress"),
+                detail.get("shipToAddress1"),
+            )
+            address2 = pick_any_field(
+                customer.get("customerAddress2"),
+                customer.get("shipToAddress2"),
+                detail.get("customerAddress2"),
+                detail.get("shipToAddress2"),
+            )
+            city = pick_any_field(
+                customer.get("customerCity"),
+                customer.get("shipToCity"),
+                detail.get("customerCity"),
+                detail.get("shipToCity"),
+            )
+            state = pick_any_field(
+                customer.get("customerState"),
+                customer.get("shipToState"),
+                detail.get("customerState"),
+                detail.get("shipToState"),
+            )
+            zip_code = pick_any_field(
+                customer.get("customerZIP"),
+                customer.get("shipToZIP"),
+                detail.get("customerZIP"),
+                detail.get("shipToZIP"),
+            )
+            country = pick_any_field(
+                customer.get("customerCountry"),
+                customer.get("shipToCountry"),
+                detail.get("customerCountry"),
+                detail.get("shipToCountry"),
+            )
+            phone = pick_any_field(
+                customer.get("customerPhone"),
+                customer.get("shipToPhone"),
+                customer.get("customerPhone1"),
+                customer.get("customerPhone2"),
+                customer.get("customerPhone3"),
+                detail.get("customerPhone"),
+                detail.get("shipToPhone"),
+                detail.get("customerPhone1"),
+                detail.get("customerPhone2"),
+                detail.get("customerPhone3"),
+            )
+            email = pick_any_field(
+                customer.get("customerEmail"),
+                customer.get("shipToEmail"),
+                detail.get("customerEmail"),
+                detail.get("shipToEmail"),
+            )
+            use_sold_to_business_name = customer.get("useSoldToBusinessName", False) or detail.get("useSoldToBusinessName", False)
+            # Improved logging for customer source ID and missing fields
+            logger.warning(f"[DEBUG] Raw customer dict: {customer}")
+            logger.info(f"[CUSTOMER_FORMAT] customerSourceId: {customer_source_id}, name: {name}, first_name: {first_name}, last_name: {last_name}, business_name: {business_name}, address1: {address1}, city: {city}, state: {state}, zip: {zip_code}")
+            missing_fields = [
+                k for k, v in {
+                    'id': customer_source_id,
+                    'name': name,
+                    'first_name': first_name,
+                    'last_name': last_name,
+                    'address1': address1,
+                    'city': city,
+                    'state': state,
+                    'zip_code': zip_code
+                }.items() if not v
+            ]
+            if missing_fields:
+                logger.warning(f"[CUSTOMER_FORMAT] Missing fields for customerSourceId {customer_source_id}: {missing_fields}")
             formatted_customer = {
-                "id": customer.get("customerSourceId", ""),
-                "customer_source_id": customer.get("customerSourceId", ""),
-                "name": customer.get("customerName", ""),
-                "first_name": customer.get("customerFirstName", ""),
-                "last_name": customer.get("customerLastName", ""),
-                "business_name": customer.get("customerBusinessName", ""),
-                "address1": customer.get("customerAddress", ""),
-                "address2": customer.get("customerAddress2", ""),
-                "city": customer.get("customerCity", ""),
-                "state": customer.get("customerState", ""),
-                "zip_code": customer.get("customerZIP", ""),
-                "phone": customer.get("customerPhone", ""),
-                "email": customer.get("customerEmail", ""),
-                "customer_type": customer.get("customerType", ""),
-                "tax_status": customer.get("taxStatus", ""),
-                "tax_method": customer.get("taxMethod", ""),
-                "preferred_salesperson1": customer.get("preferredSalesperson1", ""),
-                "preferred_salesperson2": customer.get("preferredSalesperson2", ""),
-                "store_number": customer.get("defaultStore", ""),
-                "internal_notes": customer.get("internalNotes", ""),
-                "ship_to": {
-                    "name": customer.get("shipToName", ""),
-                    "first_name": customer.get("shipToFirstName", ""),
-                    "last_name": customer.get("shipToLastName", ""),
-                    "business_name": customer.get("shipToBusinessName", ""),
-                    "address1": customer.get("shipToAddress", ""),
-                    "address2": customer.get("shipToAddress2", ""),
-                    "city": customer.get("shipToCity", ""),
-                    "state": customer.get("shipToState", ""),
-                    "zip_code": customer.get("shipToZIP", ""),
-                    "county": customer.get("shipToCounty", ""),
-                },
+                "id": customer_source_id,
+                "customer_source_id": customer_source_id,
+                "name": name,
+                "first_name": first_name,
+                "last_name": last_name,
+                "business_name": business_name,
+                "address": address,
+                "address1": address1,
+                "address2": address2,
+                "city": city,
+                "state": state,
+                "zip_code": zip_code,
+                "country": country,
+                "phone": phone,
+                "email": email,
+                "use_sold_to_business_name": use_sold_to_business_name,
             }
+            logger.warning(f"[DEBUG] Formatted customer: {formatted_customer}")
             formatted_customers.append(formatted_customer)
-
+        end_time = time.monotonic()
+        logger.info(f"[TIMER] _format_customer_list duration: {end_time - start_time:.2f}s for {len(formatted_customers)} customers")
         return formatted_customers

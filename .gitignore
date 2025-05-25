@@ -79,9 +79,10 @@ celerybeat-schedule
 # Environments
 #.env # Temporarily tracking this file
 .venv
-env/
+# env/  # We are tracking this directory now
 venv/
-ENV/
+
+
 env.bak/
 venv.bak/
 

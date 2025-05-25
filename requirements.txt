@@ -2,3 +2,5 @@
 # File: requirements.txt
 # Managed by file watcher
 # === WATCHER HEADER END ===
+
+Flask-SQLAlchemy
