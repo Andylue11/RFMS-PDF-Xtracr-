@@ -562,88 +562,25 @@ class RfmsApi:
     def create_customer(self, customer_data):
         """
         Create a new customer in RFMS.
-
+        
         Args:
             customer_data (dict): Customer data
-
+            
         Returns:
             dict: Created customer object
         """
-        # Log valid customer values for reference
+        url = f"{self.base_url}/v2/customer"
+        
+        # Validate required fields
+        required_fields = ['customerType', 'entryType', 'customerAddress']
+        missing_fields = [field for field in required_fields if field not in customer_data]
+        
+        if missing_fields:
+            raise ValueError(f"Missing required customer data: {', '.join(missing_fields)}")
+        
         try:
-            valid_values = self.get_customer_values()
-            logger.info(f"[RFMS_API][CUSTOMER_VALUES] Valid customer values: {json.dumps(valid_values, indent=2)}")
-        except Exception as e:
-            logger.warning(f"[RFMS_API][CUSTOMER_VALUES] Could not fetch valid customer values: {e}")
-
-        url = f"{self.base_url}/api/v2/Customer"
-        required_fields = [
-            "business_name",
-            "first_name",
-            "last_name",
-            "address1",
-            "city",
-            "state",
-        ]
-        missing_fields = [
-            field
-            for field in required_fields
-            if not customer_data.get(field) and not customer_data.get("customer_name")
-        ]
-        if missing_fields and not customer_data.get("customer_name"):
-            raise ValueError(
-                f"Missing required customer data: {', '.join(missing_fields)}"
-            )
-        # Prepare ship to address
-        ship_to = customer_data.get("ship_to", {})
-        ship_to_address = {
-            "name": ship_to.get("name") or customer_data.get("business_name", "") or customer_data.get("customer_name", ""),
-            "firstName": ship_to.get("first_name") or customer_data.get("first_name", ""),
-            "lastName": ship_to.get("last_name") or customer_data.get("last_name", ""),
-            "address1": ship_to.get("address1") or customer_data.get("address1", ""),
-            "address2": ship_to.get("address2") or customer_data.get("address2", ""),
-            "city": ship_to.get("city") or customer_data.get("city", ""),
-            "state": ship_to.get("state") or customer_data.get("state", ""),
-            "postalCode": ship_to.get("zip_code") or customer_data.get("zip_code", ""),
-            "country": ship_to.get("country") or customer_data.get("country", "Australia"),
-        }
-        payload = {
-            "customer": {
-                "name": customer_data.get("business_name", "")
-                or customer_data.get("customer_name", ""),
-                "firstName": customer_data.get("first_name", ""),
-                "lastName": customer_data.get("last_name", ""),
-                "address1": customer_data.get("address1", ""),
-                "city": customer_data.get("city", ""),
-                "state": customer_data.get("state", ""),
-                "postalCode": customer_data.get("zip_code", ""),
-                "country": customer_data.get("country", "Australia"),
-                "phone": customer_data.get("phone", ""),
-                "email": customer_data.get("email", ""),
-                "customerType": "INSURANCE",
-                "entryType": "Customer",
-                "activeDate": datetime.now().strftime("%Y-%m-%d"),
-                "storeCode": 1,
-            },
-            "shipToAddress": ship_to_address
-        }
-        try:
-            headers = self._get_headers()
-            auth = self._get_auth()
-            logger.debug(
-                f"[RFMS API] Outgoing auth: (username: {auth[0]}, password: {'*' * len(str(auth[1]))})"
-            )
-            logger.debug(f"[RFMS API] Outgoing headers: {headers}")
-            logger.info(f"[RFMS_API][CREATE_CUSTOMER] Payload: {json.dumps(payload, indent=2)}")
-            response = requests.post(
-                url, headers=headers, auth=auth, json=payload, timeout=self.timeout
-            )
-            if response.status_code == 200:
-                data = response.json()
-                return data.get("result", {}).get("customer", {})
-            else:
-                logger.error(f"Error creating customer: {response.text}")
-                raise Exception(f"Error creating customer: {response.text}")
+            data = self.execute_request('POST', url, customer_data)
+            return data
         except Exception as e:
             logger.error(f"Error creating customer: {str(e)}")
             raise Exception(f"Error creating customer: {str(e)}")
