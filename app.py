@@ -50,6 +50,13 @@ app.config["UPLOAD_FOLDER"] = os.getenv("UPLOAD_FOLDER", "uploads")
 app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024  # 16MB max upload size
 app.config["ALLOWED_EXTENSIONS"] = {"pdf"}
 
+# Disable caching in development
+@app.after_request
+def add_header(response):
+    if 'Cache-Control' not in response.headers:
+        response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+    return response
+
 # Ensure upload directory exists
 os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
 
@@ -360,7 +367,7 @@ def create_customer():
         customer = data.get("customer", {})
         ship_to = data.get("ship_to", {})
 
-    # Build the RFMS API payload structure correctly
+    # Build the RFMS API payload structure correctly - using the successful structure from test_rfms_workflow.py
     payload = {
         "customerType": "INSURANCE",
         "entryType": "Customer",
@@ -375,8 +382,17 @@ def create_customer():
             "postalCode": customer.get("zip_code") or ship_to.get("zip_code", ""),
             "country": customer.get("country") or ship_to.get("country", "Australia"),
         },
-        # NOTE: shipToAddress is not supported during customer creation in RFMS API
-        # It needs to be updated separately after customer creation
+        "shipToAddress": {
+            "firstName": ship_to.get("first_name") or customer.get("first_name", ""),
+            "lastName": ship_to.get("last_name") or customer.get("last_name", ""),
+            "businessName": ship_to.get("name") or ship_to.get("business_name") or customer.get("business_name") or "",
+            "address1": ship_to.get("address1") or ship_to.get("address", "") or customer.get("address1", ""),
+            "address2": ship_to.get("address2") or customer.get("address2", ""),
+            "city": ship_to.get("city") or customer.get("city", ""),
+            "state": ship_to.get("state") or customer.get("state", ""),
+            "postalCode": ship_to.get("zip_code") or customer.get("zip_code", ""),
+            "country": ship_to.get("country") or customer.get("country", "Australia"),
+        },
         "phone1": customer.get("phone") or customer.get("phone1") or "",
         "phone2": customer.get("phone2") or "",
         "phone3": customer.get("phone3") or "",
@@ -385,10 +401,35 @@ def create_customer():
         "email": customer.get("email", ""),
         "taxStatus": "Tax",
         "taxMethod": "SalesTax",
-        "storeNumber": 49,  # Updated to use store 49 as per existing codebase
+        "storeNumber": "49",  # Use string format as in successful test
         "activeDate": datetime.now().strftime("%Y-%m-%d"),
         "preferredSalesperson1": customer.get("preferredSalesperson1", ""),
         "preferredSalesperson2": customer.get("preferredSalesperson2", ""),
+        # Add all the flat fields that were in the successful payload
+        "CustomerFirstName": customer.get("first_name") or ship_to.get("first_name", ""),
+        "CustomerLastName": customer.get("last_name") or ship_to.get("last_name", ""),
+        "CustomerAddress1": customer.get("address1") or ship_to.get("address1", ""),
+        "CustomerAddress2": customer.get("address2") or ship_to.get("address2", ""),
+        "CustomerCity": customer.get("city") or ship_to.get("city", ""),
+        "CustomerState": customer.get("state") or ship_to.get("state", ""),
+        "CustomerPostalCode": customer.get("zip_code") or ship_to.get("zip_code", ""),
+        "CustomerCounty": "",
+        "ShipToFirstName": ship_to.get("first_name") or customer.get("first_name", ""),
+        "ShipToLastName": ship_to.get("last_name") or customer.get("last_name", ""),
+        "ShipToAddress1": ship_to.get("address1") or ship_to.get("address", "") or customer.get("address1", ""),
+        "ShipToAddress2": ship_to.get("address2") or customer.get("address2", ""),
+        "ShipToCity": ship_to.get("city") or customer.get("city", ""),
+        "ShipToState": ship_to.get("state") or customer.get("state", ""),
+        "ShipToPostalCode": ship_to.get("zip_code") or customer.get("zip_code", ""),
+        "ShipToCounty": "",
+        "Phone2": customer.get("phone2") or "",
+        "Phone3": customer.get("phone3") or "",
+        "ShipToLocked": False,
+        "SalesPerson1": "ZORAN VEKIC",
+        "SalesPerson2": "",
+        "SalesRepLocked": False,
+        "CommisionSplitPercent": 0.0,
+        "Store": 1
     }
     
     logger.info(f"[CREATE_CUSTOMER] Outgoing payload: {json.dumps(payload, indent=2)}")
@@ -505,100 +546,11 @@ def export_to_rfms():
         alt_contact = data.get("alternate_contact", {})
         alt_contacts_list = data.get("alternate_contacts", [])
         
-        # Step 1: Create Ship To customer in RFMS if needed
-        ship_to_customer_id = ship_to_data.get("customer_id")
+        # Use the sold-to customer for both sold-to and ship-to since it contains both addresses
+        # The successful customer creation structure includes both customerAddress and shipToAddress
+        ship_to_customer_id = sold_to_customer_id  # Use same customer ID for both
         
-        if not ship_to_customer_id:
-            logger.info("Creating Ship To customer in RFMS...")
-            
-            # Build customer creation payload for Ship To
-            ship_to_customer_payload = {
-                "first_name": ship_to_data.get("first_name", ""),
-                "last_name": ship_to_data.get("last_name", ""),
-                "business_name": ship_to_data.get("business_name", ""),
-                "address1": ship_to_data.get("address1", "") or ship_to_data.get("address", ""),
-                "address2": ship_to_data.get("address2", ""),
-                "city": ship_to_data.get("city", ""),
-                "state": ship_to_data.get("state", ""),
-                "zip_code": ship_to_data.get("zip_code", ""),
-                "country": ship_to_data.get("country", "Australia"),
-                "phone": ship_to_data.get("phone", ""),
-                "email": ship_to_data.get("email", "")
-            }
-            
-            try:
-                ship_to_result = ensure_rfms_api().create_customer({
-                    "customerType": "INSURANCE",
-                    "entryType": "Customer",
-                    "customerAddress": {
-                        "lastName": ship_to_customer_payload["last_name"],
-                        "firstName": ship_to_customer_payload["first_name"],
-                        "businessName": ship_to_customer_payload["business_name"],
-                        "address1": ship_to_customer_payload["address1"],
-                        "address2": ship_to_customer_payload["address2"],
-                        "city": ship_to_customer_payload["city"],
-                        "state": ship_to_customer_payload["state"],
-                        "postalCode": ship_to_customer_payload["zip_code"],
-                        "country": ship_to_customer_payload["country"]
-                    },
-                    # NOTE: shipToAddress not supported during customer creation
-                    "phone1": ship_to_customer_payload["phone"],
-                    "email": ship_to_customer_payload["email"],
-                    "taxStatus": "Tax",
-                    "taxMethod": "SalesTax",
-                    "storeNumber": 49
-                })
-                
-                # Extract customer ID from response
-                ship_to_customer_id = None
-                if isinstance(ship_to_result, dict):
-                    # Check different possible locations for customer ID
-                    ship_to_customer_id = (
-                        ship_to_result.get("id") or 
-                        ship_to_result.get("customerId") or 
-                        ship_to_result.get("customerSourceId")
-                    )
-                    
-                    # Check in result.customer
-                    if not ship_to_customer_id and "customer" in ship_to_result:
-                        customer_data = ship_to_result["customer"]
-                        ship_to_customer_id = (
-                            customer_data.get("id") or 
-                            customer_data.get("customerId") or 
-                            customer_data.get("customerSourceId")
-                        )
-                    
-                    # Check in result.result
-                    if not ship_to_customer_id and "result" in ship_to_result:
-                        result_data = ship_to_result["result"]
-                        if isinstance(result_data, dict):
-                            ship_to_customer_id = (
-                                result_data.get("id") or 
-                                result_data.get("customerId") or 
-                                result_data.get("customerSourceId")
-                            )
-                            
-                            # Check in result.result.customer
-                            if not ship_to_customer_id and "customer" in result_data:
-                                customer_data = result_data["customer"]
-                                ship_to_customer_id = (
-                                    customer_data.get("id") or 
-                                    customer_data.get("customerId") or 
-                                    customer_data.get("customerSourceId")
-                                )
-                
-                if ship_to_customer_id:
-                    logger.info(f"Ship To customer created with ID: {ship_to_customer_id}")
-                else:
-                    logger.error("Ship To customer created but no customer ID found in response")
-                    logger.error(f"Ship To creation response: {ship_to_result}")
-                    return jsonify({"error": "Ship To customer created but no customer ID returned"}), 500
-                    
-            except Exception as e:
-                logger.error(f"Error creating Ship To customer: {str(e)}")
-                return jsonify({"error": f"Error creating Ship To customer: {str(e)}"}), 500
-        else:
-            logger.info(f"Using existing Ship To customer ID: {ship_to_customer_id}")
+        logger.info(f"Using same customer ID for both Sold To and Ship To: {sold_to_customer_id}")
         
         # Build CustomNote from alternate contacts
         custom_note_lines = []
@@ -634,10 +586,18 @@ def export_to_rfms():
         supervisor_phone = job_data.get("supervisor_phone", "") or job_data.get("supervisor_mobile", "")
         job_number = f"{supervisor_name} {supervisor_phone}".strip() or job_data.get("po_number", "")
         
-        # Phone mapping
+        # Phone mapping from PDF data
         phone1 = ship_to_data.get("phone", "")
         phone2 = ship_to_data.get("phone2", "") or ship_to_data.get("mobile", "")
         phone3 = ship_to_data.get("phone3", "") or ship_to_data.get("work_phone", "")
+        
+        # Ship To data from PDF extraction for the order fields
+        ship_to_first_name = ship_to_data.get("first_name", "").strip() or "Unknown"
+        ship_to_last_name = ship_to_data.get("last_name", "").strip() or "Customer"
+        ship_to_address1 = (ship_to_data.get("address1", "") or ship_to_data.get("address", "")).strip() or "Address Required"
+        ship_to_city = ship_to_data.get("city", "").strip() or "Brisbane"  # Use Brisbane as default
+        ship_to_state = ship_to_data.get("state", "").strip() or "QLD"
+        ship_to_postal_code = ship_to_data.get("zip_code", "").strip() or "4000"
         
         # Build the order payload according to the user's exact structure
         order_payload = {
@@ -653,13 +613,13 @@ def export_to_rfms():
                 "ActionFlag": "Insert",
                 "InvoiceType": None,
                 "IsQuote": False,
-                "IsWebOrder": True,
+                "IsWebOrder": False,
                 "Exported": False,
                 "CanEdit": False,
                 "LockTaxes": False,
                 "CustomerSource": "Customer",
                 "CustomerSeqNum": sold_to_customer_id,
-                "CustomerUpSeqNum": ship_to_customer_id,  # Use Ship To customer ID here
+                "CustomerUpSeqNum": sold_to_customer_id,  # Use same customer for both
                 # Customer data from selected "Sold To" customer
                 "CustomerFirstName": sold_to_data.get("first_name", ""),
                 "CustomerLastName": sold_to_data.get("last_name", ""),
@@ -670,14 +630,14 @@ def export_to_rfms():
                 "CustomerPostalCode": sold_to_data.get("zip_code", ""),
                 "CustomerCounty": "",
                 "Phone1": phone1,
-                # Ship To data from PDF extraction
-                "ShipToFirstName": ship_to_data.get("first_name", ""),
-                "ShipToLastName": ship_to_data.get("last_name", ""),
-                "ShipToAddress1": ship_to_data.get("address1", "") or ship_to_data.get("address", ""),
+                # Ship To data - use PDF extracted site address data
+                "ShipToFirstName": ship_to_first_name,
+                "ShipToLastName": ship_to_last_name,
+                "ShipToAddress1": ship_to_address1,
                 "ShipToAddress2": ship_to_data.get("address2", ""),
-                "ShipToCity": ship_to_data.get("city", ""),
-                "ShipToState": ship_to_data.get("state", ""),
-                "ShipToPostalCode": ship_to_data.get("zip_code", ""),
+                "ShipToCity": ship_to_city,
+                "ShipToState": ship_to_state,
+                "ShipToPostalCode": ship_to_postal_code,
                 "Phone2": phone2,
                 "Phone3": phone3,
                 "ShipToLocked": False,
@@ -685,7 +645,7 @@ def export_to_rfms():
                 "SalesPerson2": "",
                 "SalesRepLocked": False,
                 "CommisionSplitPercent": 0.0,
-                "Store": 1,  # Updated from 49 to 01
+                "Store": 1,  # Changed back to 1 with correct endpoint
                 "Email": ship_to_data.get("email", ""),
                 "CustomNote": custom_note,  # Best Contacts etc...
                 "Note": note_field,  # Description of works
@@ -726,7 +686,7 @@ def export_to_rfms():
                 "ServiceType": 9,
                 "ContractType": 2,
                 "Timeslot": 0,
-                "InstallStore": 1,  # Updated from 49 to 01
+                "InstallStore": 1,  # Changed back to 1 with correct endpoint
                 "AgeFrom": None,
                 "Completed": None,
                 "ReferralAmount": 0.0,

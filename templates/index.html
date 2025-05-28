@@ -157,6 +157,16 @@
                             </div>
                         </div>
                         <div style="margin-top: 18px;"></div>
+                        <div>
+                            <label for="sold-to-salesperson">Salesperson</label>
+                            <select id="sold-to-salesperson" class="input-dark rounded w-full">
+                                <option value="">Select Salesperson</option>
+                                <option value="BOB">BOB</option>
+                                <option value="ANDREW">ANDREW</option>
+                                <option value="HOUSE">HOUSE</option>
+                                <option value="FRANK">FRANK</option>
+                            </select>
+                        </div>
                         <div class="flex items-center mt-4">
                             <label for="sold-to-customer-id" class="mr-2 font-bold">RFMS Customer ID</label>
                             <input type="text" id="sold-to-customer-id" class="input-dark rounded w-40" readonly>
@@ -176,10 +186,12 @@
                         <div>
                             <label for="ship-to-phone1" class="block mb-1">Phone 1</label>
                             <input type="text" id="ship-to-phone1" class="input-dark rounded w-full text-lg">
+                            <p class="text-xs text-gray-400 mt-1">Maps to Created Job Phone1 & Phone3 of customer file</p>
                         </div>
                         <div>
                             <label for="ship-to-phone2" class="block mb-1">Phone 2</label>
                             <input type="text" id="ship-to-phone2" class="input-dark rounded w-full text-lg">
+                            <p class="text-xs text-gray-400 mt-1">Maps to Created Job Phone2 & Phone4 of customer file</p>
                         </div>
                         <div>
                             <label for="ship-to-email">Email Address</label>
@@ -205,7 +217,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="bg-gray-800 rounded-lg shadow compact-section border-4 border-white mb-0 pb-1" style="min-height: 0;">
+                <div class="bg-gray-800 rounded-lg shadow compact-section border-4 border-white mb-0 pb-1" style="margin-top: 20px; min-height: 0;">
                     <label class="block text-atoz-yellow text-heavy mb-2 text-lg" for="alternate-contact-name">Best Contact / Real Estate Agent / Site Contact / Authorised Contact</label>
                     <div class="grid grid-cols-1 gap-3 mt-1">
                         <div>
@@ -234,7 +246,7 @@
             <div class="lg:col-span-2">
                 <div class="bg-charcoal rounded-lg shadow compact-section mb-0 pb-1 border-4 border-white w-full" style="margin-top:0;">
                     <label for="description-of-works" class="block">Description of Works</label>
-                    <textarea id="description-of-works" rows="9" class="input-dark rounded w-full text-lg" style="min-height: 200px;"></textarea>
+                    <textarea id="description-of-works" rows="12" class="input-dark rounded w-full text-lg" style="min-height: 300px;"></textarea>
                     <div class="flex items-center mt-1">
                         <input type="checkbox" id="billing-group-checkbox" class="h-6 w-6 text-atoz-green border-gray-300 rounded mr-3">
                         <label for="billing-group-checkbox" class="text-base font-bold">This PO is part of a billing group / has a second PO?</label>
