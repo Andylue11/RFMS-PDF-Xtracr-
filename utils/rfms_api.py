@@ -43,11 +43,32 @@ class RfmsApi:
         self.timeout = 10
         self.max_retries = 2
         self.auth = None  # Will store the current auth tuple
+        
+        # Validate required credentials
+        self._validate_credentials()
+
+    def _validate_credentials(self):
+        """Validate that all required credentials are present."""
+        missing = []
+        if not self.store_code:
+            missing.append("store_code")
+        if not self.api_key:
+            missing.append("api_key")
+        
+        if missing:
+            raise ValueError(f"Missing required RFMS API credentials: {', '.join(missing)}. "
+                           f"Please check your environment variables.")
 
     def _get_auth(self, for_handshake=False):
+        # Ensure credentials are still valid
+        if not self.store_code or not self.api_key:
+            raise ValueError("RFMS API credentials are not properly configured")
+            
         if for_handshake:
             return (self.store_code, self.api_key)
         else:
+            if not self.session_token:
+                raise ValueError("Session token is not available. Please ensure session is established.")
             return (self.store_code, self.session_token)
 
     def _get_headers(self, extra_headers=None, include_session=False):
@@ -485,7 +506,7 @@ class RfmsApi:
             "searchText": name,
             "includeCustomers": True,
             "includeInactive": True,
-            "storeNumber": "49"
+            "storeNumber": "1"
         }
         if start_index > 0:
             payload["startIndex"] = start_index
