@@ -697,7 +697,7 @@ class RfmsApi:
             )
             logger.debug(f"[RFMS API] Outgoing headers: {headers}")
             response = requests.post(
-                f"{self.base_url}/v2/Order", headers=headers, auth=auth, json=job_data
+                f"{self.base_url}/v2/order/create", headers=headers, auth=auth, json=job_data
             )
             if response.status_code == 200:
                 return response.json()

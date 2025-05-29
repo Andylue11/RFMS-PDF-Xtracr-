@@ -30,6 +30,7 @@ from models.customer import ApprovedCustomer
 # Import utility modules
 from utils.pdf_extractor import extract_data_from_pdf
 from utils.rfms_api import RfmsApi
+from utils.email_utils import EmailSender
 
 # Configure logging
 logging.basicConfig(
@@ -514,6 +515,71 @@ def check_api_status():
         return jsonify({"status": "offline", "error": str(e)}), 500
 
 
+@app.route("/api/salesperson_values")
+def get_salesperson_values():
+    """Get list of available salesperson values from RFMS."""
+    try:
+        # Get a sample customer list to extract salesperson values
+        customers = ensure_rfms_api().find_customer_by_name("", include_inactive=False, start_index=0)
+        
+        # Extract unique salesperson values
+        salesperson_values = set()
+        
+        if isinstance(customers, list):
+            for customer in customers:
+                if isinstance(customer, dict):
+                    sp1 = customer.get("preferredSalesperson1", "").strip()
+                    sp2 = customer.get("preferredSalesperson2", "").strip()
+                    if sp1:
+                        salesperson_values.add(sp1)
+                    if sp2:
+                        salesperson_values.add(sp2)
+        
+        # Add default values
+        salesperson_values.add("ZORAN VEKIC")
+        
+        # Convert to sorted list
+        values_list = sorted(list(salesperson_values))
+        
+        return jsonify(values_list)
+    except Exception as e:
+        logger.error(f"Error getting salesperson values: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/get_default_salesperson")
+def get_default_salesperson():
+    """Get the default salesperson value."""
+    try:
+        # You can expand this to get from config or database
+        default_salesperson = "ZORAN VEKIC"
+        
+        # Optionally get list of all salesperson values too
+        customers = ensure_rfms_api().find_customer_by_name("", include_inactive=False, start_index=0)
+        salesperson_values = set()
+        
+        if isinstance(customers, list):
+            for customer in customers:
+                if isinstance(customer, dict):
+                    sp1 = customer.get("preferredSalesperson1", "").strip()
+                    sp2 = customer.get("preferredSalesperson2", "").strip()
+                    if sp1:
+                        salesperson_values.add(sp1)
+                    if sp2:
+                        salesperson_values.add(sp2)
+        
+        salesperson_values.add(default_salesperson)
+        values_list = sorted(list(salesperson_values))
+        
+        return jsonify({
+            "default": default_salesperson,
+            "values": values_list
+        })
+    except Exception as e:
+        logger.error(f"Error getting default salesperson: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+
 @app.route("/api/export-to-rfms", methods=["POST"])
 def export_to_rfms():
     """Export customer, job, and order data to RFMS API."""
@@ -586,9 +652,22 @@ def export_to_rfms():
         supervisor_phone = job_data.get("supervisor_phone", "") or job_data.get("supervisor_mobile", "")
         job_number = f"{supervisor_name} {supervisor_phone}".strip() or job_data.get("po_number", "")
         
-        # Phone mapping from PDF data
-        phone1 = ship_to_data.get("phone", "")
-        phone2 = ship_to_data.get("phone2", "") or ship_to_data.get("mobile", "")
+        # Phone mapping with fallback logic
+        # Get Phone 3 and Phone 4 from UI (these are user-entered)
+        phone3_value = ship_to_data.get("phone3", "")  # Phone 3 from UI
+        phone4_value = ship_to_data.get("phone4", "")  # Phone 4 from UI
+        
+        # Get Phone 1 and Phone 2 from PDF extraction (fallback values)
+        pdf_phone1 = ship_to_data.get("pdf_phone1", "") or ship_to_data.get("phone", "")
+        pdf_phone2 = ship_to_data.get("pdf_phone2", "") or ship_to_data.get("phone2", "") or ship_to_data.get("mobile", "")
+        
+        # Apply fallback logic for job creation
+        job_phone1 = phone3_value if phone3_value else pdf_phone1  # Use Phone 3, fallback to PDF Phone 1
+        job_phone2 = phone4_value if phone4_value else pdf_phone2  # Use Phone 4, fallback to PDF Phone 2
+        
+        # Legacy phone mapping (keeping for compatibility)
+        phone1 = pdf_phone1
+        phone2 = pdf_phone2
         phone3 = ship_to_data.get("phone3", "") or ship_to_data.get("work_phone", "")
         
         # Ship To data from PDF extraction for the order fields
@@ -615,7 +694,7 @@ def export_to_rfms():
                 "IsQuote": False,
                 "IsWebOrder": False,
                 "Exported": False,
-                "CanEdit": False,
+                "CanEdit": True,
                 "LockTaxes": False,
                 "CustomerSource": "Customer",
                 "CustomerSeqNum": sold_to_customer_id,
@@ -629,7 +708,7 @@ def export_to_rfms():
                 "CustomerState": sold_to_data.get("state", ""),
                 "CustomerPostalCode": sold_to_data.get("zip_code", ""),
                 "CustomerCounty": "",
-                "Phone1": phone1,
+                "Phone1": job_phone1,
                 # Ship To data - use PDF extracted site address data
                 "ShipToFirstName": ship_to_first_name,
                 "ShipToLastName": ship_to_last_name,
@@ -638,7 +717,7 @@ def export_to_rfms():
                 "ShipToCity": ship_to_city,
                 "ShipToState": ship_to_state,
                 "ShipToPostalCode": ship_to_postal_code,
-                "Phone2": phone2,
+                "Phone2": job_phone2,
                 "Phone3": phone3,
                 "ShipToLocked": False,
                 "SalesPerson1": "ZORAN VEKIC",
