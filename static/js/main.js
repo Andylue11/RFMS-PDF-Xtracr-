@@ -413,12 +413,12 @@ function setupPdfUpload() {
     const uploadBtn = document.getElementById('upload-pdf-btn');
     const fileInput = document.getElementById('pdf-file-input');
     const clearDataBtn = document.getElementById('clear-data-btn');
-    
+
     if (!uploadBtn || !fileInput) {
         console.error('PDF upload elements not found');
         return;
     }
-    
+
     // Upload button click handler
     uploadBtn.addEventListener('click', () => {
         fileInput.click();
@@ -428,7 +428,7 @@ function setupPdfUpload() {
     fileInput.addEventListener('change', async (event) => {
         const file = event.target.files[0];
         if (!file) return;
-        
+
         const formData = new FormData();
         formData.append('pdf_file', file);
         
@@ -444,12 +444,12 @@ function setupPdfUpload() {
             if (!response.ok) {
                 throw new Error(`Upload failed: ${response.statusText}`);
             }
-            
+
             const extractedData = await response.json();
             console.log('Extracted data:', extractedData);
             
             // Populate the ship-to fields with extracted data
-            populateShipTo(extractedData);
+                populateShipTo(extractedData);
             
             showNotification('PDF uploaded and data extracted successfully!', 'success');
             
@@ -598,12 +598,12 @@ function setupBuilderSearch() {
     const searchInput = document.getElementById('sold-to-search');
     const searchButton = document.getElementById('sold-to-search-btn');
     const resultsDiv = document.getElementById('sold-to-results');
-    
+
     if (!searchInput || !searchButton) {
         console.error('Builder search elements not found');
         return;
     }
-    
+
     // Search button click handler
     searchButton.addEventListener('click', async () => {
         const searchTerm = searchInput.value.trim();
@@ -611,7 +611,7 @@ function setupBuilderSearch() {
             alert('Please enter a search term');
             return;
         }
-        
+
         try {
             const response = await fetchWithRetry('/api/customers/search', {
                 method: 'POST',
@@ -672,9 +672,9 @@ function setupBuilderSearch() {
                     
                     // Clear results
                     resultsDiv.innerHTML = '<p class="text-green-500">Customer selected</p>';
-                });
-            });
-            
+        });
+    });
+    
         } catch (error) {
             console.error('Search error:', error);
             resultsDiv.innerHTML = `<p class="text-red-500">Search failed: ${error.message}</p>`;

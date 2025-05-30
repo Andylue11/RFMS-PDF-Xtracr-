@@ -93,7 +93,7 @@ if missing_credentials:
     rfms_api = None
 else:
     # Initialize RFMS API client with validated credentials
-    rfms_api = RfmsApi(
+rfms_api = RfmsApi(
         base_url=rfms_base_url,
         store_code=rfms_store_code,
         username=rfms_username,
@@ -373,15 +373,15 @@ def create_customer():
         "customerType": "INSURANCE",
         "entryType": "Customer",
         "customerAddress": {
-            "firstName": customer.get("first_name") or ship_to.get("first_name", ""),
-            "lastName": customer.get("last_name") or ship_to.get("last_name", ""),
+        "firstName": customer.get("first_name") or ship_to.get("first_name", ""),
+        "lastName": customer.get("last_name") or ship_to.get("last_name", ""),
             "businessName": customer.get("customer_name") or customer.get("business_name") or ship_to.get("name") or "",
-            "address1": customer.get("address1") or ship_to.get("address1", ""),
-            "address2": customer.get("address2") or ship_to.get("address2", ""),
-            "city": customer.get("city") or ship_to.get("city", ""),
-            "state": customer.get("state") or ship_to.get("state", ""),
-            "postalCode": customer.get("zip_code") or ship_to.get("zip_code", ""),
-            "country": customer.get("country") or ship_to.get("country", "Australia"),
+        "address1": customer.get("address1") or ship_to.get("address1", ""),
+        "address2": customer.get("address2") or ship_to.get("address2", ""),
+        "city": customer.get("city") or ship_to.get("city", ""),
+        "state": customer.get("state") or ship_to.get("state", ""),
+        "postalCode": customer.get("zip_code") or ship_to.get("zip_code", ""),
+        "country": customer.get("country") or ship_to.get("country", "Australia"),
         },
         "shipToAddress": {
             "firstName": ship_to.get("first_name") or customer.get("first_name", ""),

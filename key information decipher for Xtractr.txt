@@ -1,0 +1,31 @@
+#campbells pdf
+#
+dollar value is listed under the header reference Totals Totals which will then have Subtotal  $700.00 GST $70.00 Total $770.00 we want the Subtotal value 
+Right hand side of pdf first page the list of keyid references are Job Number: ccc55132, Client Reference: H042246952|ammi, Customer: firstname surname, Site Address: 2 Walker Avenue, Palm Beach QLD 4221, Site Contact: firstname surname - "relationship to customer", Contact No. Phone1, Phone2 etc..
+ 
+#Australian Restoration Company
+#Second or Third line down on Left is the following
+Order Number: PO104804-BU01-001 ##is the purchase order number Suffix is after last 4 digits"-###"
+Project Manager: = supervisor firstname and surname
+P: = Supervisor Phone number/mobile number
+E: name@ispprovider.com.au =  Supervisors email address not used at this time
+Customer Details: = CustomerFirstname Customerlastname
+Site Address: = address line 1 &/or 2, City/Suburb STATE zipCode/PostalCode 
+Customer Phone: = Customer Phone1
+<highlighter Header> = Product description for description of works
+then all data down to "All amounts shown are exclusive of GST"
+Dollar Value is under the <header named Total>
+Dollar value = "Sub Total     $3,588.00" #value extracted <$3,588.00> 
+
+#Townsend Building Services
+#Listed in grid form reading left to right
+Site Contact name = Customer name
+Subtotal = Dollar value
+Site Address = address line 1 &/or 2, City/Suburb STATE zipCode/PostalCode 
+Additional Notes/Instructions = Work Order notes
+<header "Flooring" Or "Floor Preperation" etc which is directal under the last grid section of pdf and is on page 2 and below until you read new Header named "Total">= Description of works 
+
+#Rizon Group
+#
+Customer names and address details is in Top Righthand side grid box labeled "Client / Site Details"
+Address format is street number road name, city/suburb,State  postalcode ##All directly under eachothers line which are all directly under the custmers firstname and surname on the first line of the righthand side grid box on page 1

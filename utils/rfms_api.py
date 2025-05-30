@@ -43,7 +43,7 @@ class RfmsApi:
         self.timeout = 10
         self.max_retries = 2
         self.auth = None  # Will store the current auth tuple
-        
+
         # Validate required credentials
         self._validate_credentials()
 
@@ -583,10 +583,10 @@ class RfmsApi:
     def create_customer(self, customer_data):
         """
         Create a new customer in RFMS.
-        
+
         Args:
             customer_data (dict): Customer data
-            
+
         Returns:
             dict: Created customer object
         """

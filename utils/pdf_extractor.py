@@ -4,6 +4,7 @@ import os
 import pdfplumber
 import PyPDF2
 import fitz  # PyMuPDF
+import traceback
 
 logger = logging.getLogger(__name__)
 
@@ -45,14 +46,14 @@ TEMPLATE_CONFIGS = {
             r"Contract\s+No[.:]?\s*(PBG-\d+-\d+)",
         ],
         "customer_patterns": [
-            r"Client[:\s]+([A-Za-z\s&]+?)(?=\n|Job)",
+            r"Client[:\s]+\n?([A-Za-z\s&]+?)(?=\n|Job)",
             r"Customer[:\s]+([A-Za-z\s]+?)(?=\n)",
             r"SITE\s+CONTACT[:\s]+([A-Za-z\s]+?)(?=\n)",
         ],
         "description_patterns": [
-            r"NOTES[:\s]*(.+?)(?=All amounts|Total|$)",
+            r"NOTES[:\s]*\n([\s\S]+?)(?=All amounts|Total|$)",
             r"Scope\s+of\s+Works[:\s]*(.+?)(?=All amounts|Total|$)",
-            r"PBG-\d+-\d+\s*(.+?)(?=All amounts|Total|$)",
+            r"PBG-\d+-\d+\s*\n([\s\S]+?)(?=All amounts|Total|$)",
         ],
         "supervisor_section_pattern": r"Supervisor[:\s]",
         "dollar_patterns": [
@@ -70,38 +71,45 @@ TEMPLATE_CONFIGS = {
             r"Contract\s+Number[.:]?\s*(CCC\d+-\d+)",
         ],
         "customer_patterns": [
-            r"Customer[:\s]+([A-Za-z\s]+?)(?=\n|Site)",
+            r"Customer:\s*\n([A-Za-z\s]+?)(?=\n)",  # Customer on next line
+            r"Site\s+Contact:\s*\n([A-Za-z\s]+?)(?:\s*-|$)",  # Site Contact on next line
+            r"Customer[:\s]+\n?([A-Za-z\s]+?)(?=\n|Site)",
+            r"Customer[:\s]+([A-Za-z\s]+)",  # Simplified pattern
             r"Client[:\s]+([A-Za-z\s]+?)(?=\n)",
             r"Owner[:\s]+([A-Za-z\s]+?)(?=\n)",
         ],
         "description_patterns": [
-            r"Scope\s+of\s+Work[:\s]*(.+?)(?=Totals|Page|$)",
-            r"CCC\d+-\d+\s*(.+?)(?=Totals|Page|$)",
+            r"Scope\s+of\s+Work[:\s]*\n([\s\S]+?)(?=Totals|Page|Subtotal|$)",
+            r"CCC\d+-\d+[\s\S]+?Description[:\s]*\n([\s\S]+?)(?=Totals|Page|Subtotal|$)",
             r"Description\s+of\s+Works[:\s]*(.+?)(?=Totals|Page|$)",
         ],
         "supervisor_section_pattern": r"CONTRACTOR'S\s+REPRESENTATIVE|Supervisor",
         "dollar_patterns": [
+            r"Subtotal\s*\n\s*\$?([\d,]+\.?\d*)",  # Subtotal with newline
+            r"Subtotal\s+\$\s*([\d,]+\.?\d*)",  # Based on key info: "Subtotal  $700.00"
             r"Total\s*\$?\s*([\d,]+\.?\d*)",
-            r"Subtotal\s*\$?\s*([\d,]+\.?\d*)",
             r"\$\s*([\d,]+\.?\d*)",
         ],
     },
     "rizon": {
         "name": "Rizon Group",
         "po_patterns": [
-            r"PURCHASE\s+ORDER\s+NO[:\s]*(P\d+)",  # P367117
-            r"P\d{6}",  # Direct pattern match
+            r"PURCHASE\s+ORDER\s+NO[:\s]*\n?(P?\d+)",  # P367117 or similar
+            r"(P\d{6})",  # Direct pattern match - added capture group
             r"ORDER\s+NUMBER[:\s]*(\d+/\d+/\d+)",  # Alternative format
+            r"(\d{6}/\d{3}/\d{2})",  # Format like 187165/240/01
             r"PO[:\s#]+(P?\d+)",
         ],
         "customer_patterns": [
-            r"Client\s*/\s*Site\s+Details[:\s]*([A-Za-z\s]+?)(?=\n|\()",
+            r"Client\s*/\s*Site\s+Details.*?\n(?:[^\n]+\n){3,6}([A-Z][A-Za-z\s]+?)(?=\n)",  # Skip lines to get to actual name
+            r"Client\s*/\s*Site\s+Details[:\s]*\n?([A-Za-z\s]+?)(?=\n\d+|\n[A-Za-z]+\s+[A-Za-z]+,)",  # Name is first line in grid box
+            r"Client\s*/\s*Site\s+Details[:\s]*\n?([A-Za-z\s]+?)(?=\n|\()",
             r"Customer[:\s]+([A-Za-z\s]+?)(?=\n)",
-            r"Site\s+Details[:\s]*([A-Za-z\s]+?)(?=\n)",
+            r"Site\s+Details[:\s]*\n?([A-Za-z\s]+?)(?=\n)",
         ],
         "description_patterns": [
-            r"SCOPE\s+OF\s+WORKS[:\s]*(.+?)(?=Net Order|PURCHASE\s+ORDER\s+CONDITIONS|$)",
-            r"Scope\s+of\s+Works[:\s]*(.+?)(?=Net Order|Total|$)",
+            r"SCOPE\s+OF\s+WORKS[:\s]*\n([\s\S]+?)(?=Net Order|PURCHASE\s+ORDER\s+CONDITIONS|Total|$)",
+            r"Scope\s+of\s+Works[:\s]*\n([\s\S]+?)(?=Net Order|Total|$)",
         ],
         "supervisor_section_pattern": r"Supervisor[:\s]",
         "dollar_patterns": [
@@ -113,48 +121,57 @@ TEMPLATE_CONFIGS = {
     "australian_restoration": {
         "name": "Australian Restoration Company",
         "po_patterns": [
-            r"Order\s+Number[:\s]*(PO\d+-[A-Z0-9]+-\d+)",  # PO96799-BU01-003
+            r"Order\s+Number[:\s]*\n?(PO\d+-[A-Z0-9]+-\d+)",  # PO96799-BU01-003
             r"PO\d+-[A-Z0-9]+-\d+",  # Direct pattern match
             r"Purchase\s+Order[:\s#]+(PO\d+-[A-Z0-9]+-\d+)",
         ],
         "customer_patterns": [
-            r"Customer\s+Details[:\s]*([A-Za-z\s]+?)(?=\n|Site)",
+            r"Customer\s+Details[:\s]*\n?([A-Za-z\s]+?)(?=\n|Site)",
+            r"Customer\s+Details[:\s]*([A-Za-z\s]+)",  # Without lookahead
             r"Customer[:\s]+([A-Za-z\s]+?)(?=\n)",
             r"Client[:\s]+([A-Za-z\s]+?)(?=\n)",
         ],
         "description_patterns": [
-            r"Flooring\s+Contractor\s+Material(.+?)(?=All amounts|Preliminaries|Total|$)",
-            r"Scope\s+of\s+Works[:\s]*(.+?)(?=All amounts|Total|$)",
+            r"Flooring\s+Contractor\s+Material\n([\s\S]+?)(?=All amounts|Preliminaries|Total|$)",
+            r"<highlighter Header>\s*=?\s*([\s\S]+?)(?=All amounts shown|Total|$)",  # Based on key info
+            r"Scope\s+of\s+Works[:\s]*\n([\s\S]+?)(?=All amounts|Total|$)",
         ],
         "supervisor_section_pattern": r"Project\s+Manager[:\s]|Case\s+Manager[:\s]",
         "dollar_patterns": [
+            r"Sub\s+Total\s+\$\s*([\d,]+\.?\d*)",  # Based on key info: "Sub Total     $3,588.00"
             r"Total\s+AUD\s*\$?\s*([\d,]+\.?\d*)",
-            r"Sub\s+Total\s*\$?\s*([\d,]+\.?\d*)",
             r"\$\s*([\d,]+\.?\d*)",
         ],
     },
     "townsend": {
         "name": "Townsend Building Services",
         "po_patterns": [
+            r"Order\s+Number\s*\n\s*([A-Z0-9]+)",  # Matches "Order Number\nPO23218"
             r"Purchase\s+Order[:\s#]+(TBS-\d+)",
             r"TBS-\d+",
-            r"Order\s+Number[:\s]*(TBS-\d+)",
+            r"Order\s+Number[:\s]*(TBS-\d+|PO\d+)",
             r"WO[:\s#]+(\d+)",
             r"Work\s+Order[:\s#]+(\d+)",
         ],
         "customer_patterns": [
+            r"Site\s+Contact\s+Name\s*\n([A-Za-z\s\(\)]+?)(?=\n)",  # Based on actual text
+            r"Site\s+Contact\s+name\s*=?\s*([A-Za-z\s]+?)(?=\n|Subtotal)",  # Based on key info
+            r"Contact\s+Name\s*\n\s*([A-Za-z\s]+?)(?=\n)",  # Matches "Contact Name\nJOHN SURNAME"
             r"Attention[:\s]+([A-Za-z\s]+?)(?=\n|Email)",
             r"Customer[:\s]+([A-Za-z\s]+?)(?=\n)",
             r"Client[:\s]+([A-Za-z\s]+?)(?=\n)",
-            r"Contact[:\s]+([A-Za-z\s]+?)(?=\n)",
         ],
         "description_patterns": [
-            r"Scope\s+of\s+Works[:\s]*(.+?)(?=Total|ABN|Page|$)",
-            r"Work\s+Description[:\s]*(.+?)(?=Total|ABN|Page|$)",
-            r"Description[:\s]*(.+?)(?=Total|ABN|Page|$)",
+            r"(?:Flooring|Floor\s+Preperation)[^<]*?([\s\S]+?)(?=Total|$)",  # Based on key info
+            r"Additional\s+Notes/Instructions[:\s]*\n([\s\S]+?)(?=Flooring|Floor|Start|$)",  # Work Order notes
+            r"Scope\s+of\s+Works[:\s]*\n([\s\S]+?)(?=Total|ABN|Page|$)",
+            r"Work\s+Description[:\s]*\n([\s\S]+?)(?=Total|ABN|Page|$)",
+            r"Description[:\s]*\n([\s\S]+?)(?=Total|ABN|Page|$)",
         ],
         "supervisor_section_pattern": r"Project\s+Manager[:\s]|Supervisor[:\s]|Manager[:\s]",
         "dollar_patterns": [
+            r"Subtotal\s*\n\s*\$?([\d,]+\.?\d*)",  # Based on actual text: "Subtotal\n$14,430.00"
+            r"Subtotal\s*=?\s*\$?\s*([\d,]+\.?\d*)",  # Based on key info: "Subtotal = Dollar value"
             r"Total\s+Inc\.?\s+GST[:\s]*\$?\s*([\d,]+\.?\d*)",
             r"Total[:\s]+\$?\s*([\d,]+\.?\d*)",
             r"\$\s*([\d,]+\.?\d*)",
@@ -345,39 +362,49 @@ def extract_data_from_pdf(file_path):
 
     except Exception as e:
         logger.error(f"Error extracting data from PDF: {str(e)}")
+        logger.error(f"Traceback: ", exc_info=True)
         extracted_data["error"] = str(e)
+        # Don't try to clean data if there was an error
         return extracted_data
 
 
 def clean_extracted_data(extracted_data):
     """Clean and format the extracted data."""
     # Split name into first and last name if not already done
-    if extracted_data["customer_name"] and not (
-        extracted_data["first_name"] and extracted_data["last_name"]
+    if extracted_data.get("customer_name") and not (
+        extracted_data.get("first_name") and extracted_data.get("last_name")
     ):
         # Clean up customer name first by removing any newlines and extra text
-        cleaned_name = re.sub(r"\n.*$", "", extracted_data["customer_name"])
-        names = cleaned_name.split(maxsplit=1)
-        if len(names) > 0:
-            extracted_data["first_name"] = names[0]
-        if len(names) > 1:
-            extracted_data["last_name"] = names[1]
+        customer_name = extracted_data.get("customer_name", "")
+        if isinstance(customer_name, str) and customer_name.strip():  # Check if not empty
+            cleaned_name = re.sub(r"\n.*$", "", customer_name)
+            names = cleaned_name.split(maxsplit=1)
+            if len(names) > 0:
+                extracted_data["first_name"] = names[0]
+            if len(names) > 1:
+                extracted_data["last_name"] = names[1]
+            else:
+                # If only one name, use it as last name
+                extracted_data["last_name"] = ""
 
     # Clean up supervisor name
-    if extracted_data["supervisor_name"]:
+    supervisor_name = extracted_data.get("supervisor_name")
+    if supervisor_name and isinstance(supervisor_name, str):
         extracted_data["supervisor_name"] = re.sub(
-            r"\n.*$", "", extracted_data["supervisor_name"]
+            r"\n.*$", "", supervisor_name
         )
 
     # Clean up customer name
-    if extracted_data["customer_name"]:
+    customer_name = extracted_data.get("customer_name")
+    if customer_name and isinstance(customer_name, str):
         extracted_data["customer_name"] = re.sub(
-            r"\n.*$", "", extracted_data["customer_name"]
+            r"\n.*$", "", customer_name
         )
 
     # Clean up address
-    if extracted_data["address"]:
-        extracted_data["address"] = re.sub(r"\n.*$", "", extracted_data["address"])
+    address = extracted_data.get("address")
+    if address and isinstance(address, str):
+        extracted_data["address"] = re.sub(r"\n.*$", "", address)
 
     # Per requirements, we ignore business information (A TO Z FLOORING)
     extracted_data["business_name"] = ""
@@ -394,13 +421,15 @@ def clean_extracted_data(extracted_data):
     #         extracted_data['business_name'] = extracted_data['business_name'].strip()
 
     # Improve city parsing
-    if extracted_data["city"] and "Warriewood Street" in extracted_data["city"]:
+    city = extracted_data.get("city")
+    if city and isinstance(city, str) and "Warriewood Street" in city:
         # Fix specifically for the known address format in the example
         extracted_data["city"] = "Chandler"
 
     # Format description of works to be more readable
-    if extracted_data["description_of_works"]:
-        description = extracted_data["description_of_works"]
+    desc_of_works = extracted_data.get("description_of_works")
+    if desc_of_works and isinstance(desc_of_works, str):
+        description = desc_of_works
         # Remove "Quantity Unit" header if present
         description = re.sub(r"^Quantity\s+Unit\s+", "", description)
         # Reformat and clean up
@@ -409,16 +438,16 @@ def clean_extracted_data(extracted_data):
         extracted_data["description_of_works"] = description
 
     # Set job_number to supervisor name + mobile as per requirements
-    if extracted_data["supervisor_name"] and extracted_data["supervisor_mobile"]:
+    if extracted_data.get("supervisor_name") and extracted_data.get("supervisor_mobile"):
         # Store the actual job number separately
-        extracted_data["actual_job_number"] = extracted_data["job_number"]
+        extracted_data["actual_job_number"] = extracted_data.get("job_number", "")
         # Set job_number to supervisor name + mobile
         extracted_data["job_number"] = (
             f"{extracted_data['supervisor_name']} {extracted_data['supervisor_mobile']}"
         )
 
     # Filter extra_phones to only include customer-related numbers
-    if extracted_data["extra_phones"]:
+    if extracted_data.get("extra_phones"):
         # Numbers to exclude
         exclude_numbers = [
             extracted_data.get("actual_job_number", ""),  # PO/job number
@@ -432,42 +461,44 @@ def clean_extracted_data(extracted_data):
         # Create cleaned versions of excluded numbers (digits only)
         clean_exclude_numbers = []
         for number in exclude_numbers:
-            if number:
+            if number and isinstance(number, str):
                 clean_exclude_numbers.append("".join(c for c in number if c.isdigit()))
 
         # Filter the extra_phones list
         filtered_phones = []
         for phone in extracted_data["extra_phones"]:
-            # Clean the phone
-            clean_phone = "".join(c for c in phone if c.isdigit())
+            if isinstance(phone, str):
+                # Clean the phone
+                clean_phone = "".join(c for c in phone if c.isdigit())
 
-            # Skip if in excluded list or already in customer's main numbers
-            if clean_phone not in clean_exclude_numbers and clean_phone not in [
-                "".join(c for c in extracted_data.get("phone", "") if c.isdigit()),
-                "".join(c for c in extracted_data.get("mobile", "") if c.isdigit()),
-                "".join(c for c in extracted_data.get("home_phone", "") if c.isdigit()),
-                "".join(c for c in extracted_data.get("work_phone", "") if c.isdigit()),
-            ]:
-                filtered_phones.append(phone)
+                # Skip if in excluded list or already in customer's main numbers
+                if clean_phone not in clean_exclude_numbers and clean_phone not in [
+                    "".join(c for c in str(extracted_data.get("phone", "") or "") if c.isdigit()),
+                    "".join(c for c in str(extracted_data.get("mobile", "") or "") if c.isdigit()),
+                    "".join(c for c in str(extracted_data.get("home_phone", "") or "") if c.isdigit()),
+                    "".join(c for c in str(extracted_data.get("work_phone", "") or "") if c.isdigit()),
+                ]:
+                    filtered_phones.append(phone)
 
         extracted_data["extra_phones"] = filtered_phones
 
     # Clean up alternate_contacts: remove entries with invalid names or no phone/email, and strip newlines
     cleaned_contacts = []
     for contact in extracted_data.get("alternate_contacts", []):
-        name = contact.get("name", "").replace("\n", " ").strip()
-        phone = contact.get("phone", "").strip()
-        email = contact.get("email", "").strip()
-        # Only keep if name is not empty, not 'Email', and has at least a phone or email
-        if name and name.lower() != "email" and (phone or email):
-            cleaned_contacts.append(
-                {
-                    "type": contact.get("type", ""),
-                    "name": name,
-                    "phone": phone,
-                    "email": email,
-                }
-            )
+        if isinstance(contact, dict):
+            name = str(contact.get("name", "")).replace("\n", " ").strip()
+            phone = str(contact.get("phone", "")).strip()
+            email = str(contact.get("email", "")).strip()
+            # Only keep if name is not empty, not 'Email', and has at least a phone or email
+            if name and name.lower() != "email" and (phone or email):
+                cleaned_contacts.append(
+                    {
+                        "type": contact.get("type", ""),
+                        "name": name,
+                        "phone": phone,
+                        "email": email,
+                    }
+                )
     extracted_data["alternate_contacts"] = cleaned_contacts
 
 
@@ -526,6 +557,11 @@ def parse_extracted_text(text, extracted_data, template):
         extracted_data (dict): Dictionary to update with parsed information
         template (dict): The template configuration to use
     """
+    # Handle None or empty text
+    if not text:
+        logger.warning("parse_extracted_text: text is None or empty")
+        return
+    
     # Extract PO number
     for pattern in template["po_patterns"]:
         match = re.search(pattern, text, re.IGNORECASE)
@@ -543,7 +579,7 @@ def parse_extracted_text(text, extracted_data, template):
             r"CONTRACT\s+NO[.:]?\s*([A-Za-z0-9-]+)",
             r"Contract\s+Number[.:]?\s*([A-Za-z0-9-]+)",
         ]
-        
+
         for pattern in generic_po_patterns:
             match = re.search(pattern, text, re.IGNORECASE)
             if match:
@@ -598,19 +634,47 @@ def parse_extracted_text(text, extracted_data, template):
 
     # Extract Site Address (can be used for shipping address)
     address_patterns = [
-        r"Site\s+Address:?\s*([A-Za-z0-9\s\.,#-]+?)(?=\n)",
+        r"Site\s+Address[:\s]*\n?([A-Za-z0-9\s\.,#-]+?)(?=\n)",
+        r"Site\s+Address[:\s]*([^,\n]+,\s*[^,\n]+,?\s*[A-Z]{2,3}\s*\d{4})",  # Full address pattern
+        r"SITE\s+LOCATION[:\s]*([A-Za-z0-9\s\.,#-]+?)(?=\n)",
+        r"Property\s+Address[:\s]*\n?([A-Za-z0-9\s\.,#-]+?)(?=\n)",
+        r"Location[:\s]*([A-Za-z0-9\s\.,#-]+?)(?=\n)",
         r"Address[:\s]+([A-Za-z0-9\s\.,#-]+?)(?=\n)",
-        r"Location[:\s]+([A-Za-z0-9\s\.,#-]+?)(?=\n)",
-        r"Property[:\s]+([A-Za-z0-9\s\.,#-]+?)(?=\n)",
     ]
 
     for pattern in address_patterns:
         match = re.search(pattern, text, re.IGNORECASE)
         if match:
-            extracted_data["address"] = match.group(1).strip()
-            # Try to parse address into components
-            parse_address(extracted_data["address"], extracted_data)
-            break
+            address_candidate = match.group(1).strip()
+            # Skip if it's the "included on tax invoice" message
+            if "tax invoice" not in address_candidate.lower():
+                extracted_data["address"] = address_candidate
+                # Try to parse address into components
+                try:
+                    if address_candidate:  # Only parse if address is not empty
+                        parse_address(address_candidate, extracted_data)
+                except Exception as e:
+                    logger.warning(f"Failed to parse address: {e}")
+                break
+
+    # For Rizon Group, try to extract address from Client / Site Details grid box
+    if not extracted_data["address"] and "rizon" in template["name"].lower():
+        client_site_section = re.search(
+            r"Client\s*/\s*Site\s+Details[:\s]*\n[A-Za-z\s]+?\n([\s\S]+?)(?=\n\n|$)",
+            text,
+            re.IGNORECASE
+        )
+        if client_site_section:
+            address_lines = client_site_section.group(1).strip().split('\n')
+            if address_lines:
+                # Combine address lines
+                full_address = ' '.join(address_lines[:3])  # Take up to 3 lines
+                extracted_data["address"] = full_address
+                try:
+                    if full_address:  # Only parse if address is not empty
+                        parse_address(full_address, extracted_data)
+                except Exception as e:
+                    logger.warning(f"Failed to parse Rizon address: {e}")
 
     # Extract Description of Works for custom private notes
     # Use template-specific patterns
@@ -661,7 +725,7 @@ def parse_extracted_text(text, extracted_data, template):
             r"Contract\s+Value[:\s]+\$?\s*([\d,]+\.\d{2})",
             r"Contract\s+Sum[:\s]+\$?\s*([\d,]+\.\d{2})",
         ]
-        
+
         for pattern in generic_dollar_patterns:
             match = re.search(pattern, text, re.IGNORECASE)
             if match:
@@ -773,6 +837,138 @@ def parse_extracted_text(text, extracted_data, template):
                     }
                 )
 
+    # Extract Campbell-specific Site Contact if this is Campbell template
+    if "campbell" in template["name"].lower():
+        # Site Contact: firstname surname - "relationship to customer"
+        site_contact_match = re.search(
+            r"Site\s+Contact:\s*\n([A-Za-z\s]+?)(?:\s*-\s*[^,\n]+)?(?=\n|Phone:|Contact)",
+            text,
+            re.IGNORECASE
+        )
+        if site_contact_match and not extracted_data.get("customer_name"):
+            extracted_data["customer_name"] = site_contact_match.group(1).strip()
+            logger.info(f"[CAMPBELL] Found customer name: {extracted_data['customer_name']}")
+        
+        # Contact No. Phone1, Phone2 etc..
+        contact_no_match = re.search(
+            r"Contact\s+No[.:]?\s*\n([0-9\s\-\(\)]+)",  # Phone is on next line
+            text,
+            re.IGNORECASE
+        )
+        if contact_no_match and not extracted_data.get("phone"):
+            extracted_data["phone"] = contact_no_match.group(1).strip()
+            logger.info(f"[CAMPBELL] Found phone: {extracted_data['phone']}")
+        
+        # Site Address for Campbell
+        site_address_match = re.search(
+            r"Site\s+Address:\s*\n([^\n]+)",
+            text,
+            re.IGNORECASE
+        )
+        if site_address_match and not extracted_data.get("address"):
+            extracted_data["address"] = site_address_match.group(1).strip()
+            logger.info(f"[CAMPBELL] Found address: {extracted_data['address']}")
+            try:
+                if extracted_data["address"]:  # Only parse if address is not empty
+                    parse_address(extracted_data["address"], extracted_data)
+            except Exception as e:
+                logger.warning(f"Failed to parse Campbell address: {e}")
+        
+        # Try to extract dollar value from Subtotal
+        subtotal_match = re.search(
+            r"Subtotal\s*\n\s*\$?([\d,]+\.?\d*)",
+            text,
+            re.IGNORECASE
+        )
+        if subtotal_match and extracted_data.get("dollar_value", 0) == 0:
+            value_str = subtotal_match.group(1).replace(",", "")
+            try:
+                extracted_data["dollar_value"] = float(value_str)
+                logger.info(f"[CAMPBELL] Found dollar value: ${extracted_data['dollar_value']}")
+            except ValueError:
+                pass
+
+    # Extract Townsend-specific fields if this is Townsend template
+    if "townsend" in template["name"].lower():
+        # Extract customer from Site Contact Name (only first line)
+        site_contact_match = re.search(
+            r"Site\s+Contact\s+Name\s*\n([A-Za-z\s\(\)]+?)(?=\n|Atf|atf|Mr|Ms|Mrs)",
+            text,
+            re.IGNORECASE
+        )
+        if site_contact_match and not extracted_data.get("customer_name"):
+            extracted_data["customer_name"] = site_contact_match.group(1).strip()
+            logger.info(f"[TOWNSEND] Found customer name: {extracted_data['customer_name']}")
+        
+        # Extract phone from Site Contact Phone
+        contact_phone_match = re.search(
+            r"Site\s+Contact\s+Phone\s*\n([0-9\s\-\(\)]+)",
+            text,
+            re.IGNORECASE
+        )
+        if contact_phone_match and not extracted_data.get("phone"):
+            extracted_data["phone"] = contact_phone_match.group(1).strip()
+            logger.info(f"[TOWNSEND] Found phone: {extracted_data['phone']}")
+        
+        # Extract email from Customer Email
+        customer_email_match = re.search(
+            r"Customer\s+Email\s*\n([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})",
+            text,
+            re.IGNORECASE
+        )
+        if customer_email_match and not extracted_data.get("email"):
+            extracted_data["email"] = customer_email_match.group(1).strip()
+            logger.info(f"[TOWNSEND] Found email: {extracted_data['email']}")
+        
+        # Extract address from Site Address
+        site_address_match = re.search(
+            r"Site\s+Address\s*\n([^\n]+)",
+            text,
+            re.IGNORECASE
+        )
+        if site_address_match and not extracted_data.get("address"):
+            extracted_data["address"] = site_address_match.group(1).strip()
+            logger.info(f"[TOWNSEND] Found address: {extracted_data['address']}")
+            try:
+                if extracted_data["address"]:  # Only parse if address is not empty
+                    parse_address(extracted_data["address"], extracted_data)
+            except Exception as e:
+                logger.warning(f"Failed to parse Townsend address: {e}")
+        
+        # Extract dollar value from Subtotal  
+        subtotal_match = re.search(
+            r"Subtotal\s*\n\s*\$?([\d,]+\.?\d*)",
+            text,
+            re.IGNORECASE
+        )
+        if subtotal_match and extracted_data.get("dollar_value", 0) == 0:
+            value_str = subtotal_match.group(1).replace(",", "")
+            try:
+                extracted_data["dollar_value"] = float(value_str)
+                logger.info(f"[TOWNSEND] Found dollar value: ${extracted_data['dollar_value']}")
+            except ValueError:
+                pass
+        
+        # Extract supervisor from Supervisor field
+        supervisor_match = re.search(
+            r"Supervisor\s*\n([A-Za-z\s]+?)(?=\n|Site)",
+            text,
+            re.IGNORECASE
+        )
+        if supervisor_match and not extracted_data.get("supervisor_name"):
+            extracted_data["supervisor_name"] = supervisor_match.group(1).strip()
+            logger.info(f"[TOWNSEND] Found supervisor: {extracted_data['supervisor_name']}")
+        
+        # Extract supervisor contact from Supervisor Contact
+        supervisor_contact_match = re.search(
+            r"Supervisor\s+Contact\s*\n([0-9\s\-\(\)]+)",
+            text,
+            re.IGNORECASE
+        )
+        if supervisor_contact_match and not extracted_data.get("supervisor_mobile"):
+            extracted_data["supervisor_mobile"] = supervisor_contact_match.group(1).strip()
+            logger.info(f"[TOWNSEND] Found supervisor mobile: {extracted_data['supervisor_mobile']}")
+
     # After extracting supervisor name/phone
     logger.info(f"[EXTRACT] Supervisor Name: {extracted_data['supervisor_name']}")
     logger.info(f"[EXTRACT] Supervisor Phone: {extracted_data['supervisor_mobile']}")
@@ -876,10 +1072,10 @@ def extract_contact_details(text, extracted_data):
 
         # Only add if it's not already one of our main numbers and looks like a valid phone
         if len(clean_phone) >= 8 and clean_phone not in [
-            "".join(c for c in extracted_data.get("phone", "") if c.isdigit()),
-            "".join(c for c in extracted_data.get("mobile", "") if c.isdigit()),
-            "".join(c for c in extracted_data.get("home_phone", "") if c.isdigit()),
-            "".join(c for c in extracted_data.get("work_phone", "") if c.isdigit()),
+            "".join(c for c in str(extracted_data.get("phone", "") or "") if c.isdigit()),
+            "".join(c for c in str(extracted_data.get("mobile", "") or "") if c.isdigit()),
+            "".join(c for c in str(extracted_data.get("home_phone", "") or "") if c.isdigit()),
+            "".join(c for c in str(extracted_data.get("work_phone", "") or "") if c.isdigit()),
         ]:
             if len(clean_phone) >= 8 and len(clean_phone) <= 12:
                 all_phone_numbers.append(phone)
@@ -978,6 +1174,11 @@ def extract_contact_details(text, extracted_data):
 
 def extract_job_and_supervisor_details(text, extracted_data, template):
     """Extract job number and supervisor details."""
+    # Handle None or empty text
+    if not text:
+        logger.warning("extract_job_and_supervisor_details: text is None or empty")
+        return
+    
     # Extract Job Number
     job_number_patterns = [
         r"Job\s+Number:?\s*([A-Za-z0-9-]+)",
@@ -993,6 +1194,46 @@ def extract_job_and_supervisor_details(text, extracted_data, template):
             extracted_data["job_number"] = match.group(1).strip()
             break
 
+    # Special handling for Australian Restoration Company
+    if "australian restoration" in template["name"].lower():
+        # Project Manager: = supervisor firstname and surname
+        pm_match = re.search(
+            r"Project\s+Manager[:\s]*([A-Za-z\s]+?)(?=\n|P:|$)",
+            text,
+            re.IGNORECASE
+        )
+        if pm_match:
+            extracted_data["supervisor_name"] = pm_match.group(1).strip()
+        
+        # P: = Supervisor Phone number/mobile number
+        phone_match = re.search(
+            r"P:\s*([0-9\s\-\(\)]+?)(?=\n|E:|$)",
+            text,
+            re.IGNORECASE
+        )
+        if phone_match:
+            extracted_data["supervisor_mobile"] = phone_match.group(1).strip()
+        
+        # E: name@ispprovider.com.au = Supervisors email address
+        email_match = re.search(
+            r"E:\s*([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})",
+            text,
+            re.IGNORECASE
+        )
+        if email_match:
+            extracted_data["supervisor_email"] = email_match.group(1).strip()
+        
+        # Customer Phone: = Customer Phone1
+        cust_phone_match = re.search(
+            r"Customer\s+Phone[:\s]*([0-9\s\-\(\)]+)",
+            text,
+            re.IGNORECASE
+        )
+        if cust_phone_match:
+            extracted_data["phone"] = cust_phone_match.group(1).strip()
+        
+        return  # Skip the rest for Australian Restoration
+
     # Extract Supervisor/Contractor Representative Details
     supervisor_section_pattern = template.get("supervisor_section_pattern", r"Supervisor\s+Details")
     supervisor_section = re.search(
@@ -1003,6 +1244,11 @@ def extract_job_and_supervisor_details(text, extracted_data, template):
 
     if supervisor_section:
         supervisor_text = supervisor_section.group(1)
+        
+        # Ensure supervisor_text is a string
+        if not isinstance(supervisor_text, str):
+            logger.warning(f"supervisor_text is not a string: {type(supervisor_text)}")
+            return
 
         # Extract Name
         name_match = re.search(
@@ -1031,8 +1277,9 @@ def extract_job_and_supervisor_details(text, extracted_data, template):
     else:
         # Try alternative patterns if no section found
         # Look for standalone patterns
+        contact_label = template.get('contact_label') or 'Supervisor'  # Handle None
         name_patterns = [
-            rf"{template.get('contact_label', 'Supervisor')}:?\s*([A-Za-z\s]+?)(?=\n|$)",
+            rf"{contact_label}:?\s*([A-Za-z\s]+?)(?=\n|$)",
             r"Contractor:?\s*([A-Za-z\s]+?)(?=\n|$)",
             r"Representative:?\s*([A-Za-z\s]+?)(?=\n|$)",
         ]
@@ -1049,6 +1296,14 @@ def parse_address(address_str, extracted_data):
     Parse a full address string into address1, city, state, and zip_code.
     Improved: address1 is only the street address, city is the suburb (even if multi-word), state/zip_code always filled if present.
     """
+    # Handle None or empty address strings
+    if not address_str or not isinstance(address_str, str):
+        extracted_data["address1"] = ""
+        extracted_data["city"] = ""
+        extracted_data["state"] = ""
+        extracted_data["zip_code"] = ""
+        return
+    
     street_suffixes = [
         "Street",
         "St",
