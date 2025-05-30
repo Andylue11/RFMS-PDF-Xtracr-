@@ -8,6 +8,145 @@ import fitz  # PyMuPDF
 logger = logging.getLogger(__name__)
 
 
+# Template configurations for different companies
+TEMPLATE_CONFIGS = {
+    "ambrose": {
+        "name": "Ambrose Construct Group",
+        "po_patterns": [
+            r"P\.O\.\s*No:?\s*(20\d{6}-\d{2})",  # Specific format: 20XXXXXX-XX
+            r"PO[:\s#]+(20\d{6}-\d{2})",
+            r"Purchase\s+Order[:\s#]+(20\d{6}-\d{2})",
+            r"Order\s+Number[:\s#]+(20\d{6}-\d{2})",
+        ],
+        "customer_patterns": [
+            r"Insured\s+Owner:?\s*([A-Za-z\s]+?)(?=\n|Authorised)",
+            r"Insured:?\s*([A-Za-z\s]+?)(?=\n)",
+            r"Customer[:\s]+([A-Za-z\s]+?)(?=\n)",
+            r"Name[:\s]+([A-Za-z\s]+?)(?=\n)",
+            r"Bill\s+To[:\s]+([A-Za-z\s]+?)(?=\n)",
+        ],
+        "description_patterns": [
+            r"Description\s+of\s+the\s+Works([\s\S]+?)(?=TOTAL\s+Purchase\s+Order\s+Price|Total\s+Purchase\s+Order)",
+            r"Description\s+of\s+Works([\s\S]+?)(?=TOTAL|Total\s+Purchase\s+Order)",
+        ],
+        "dollar_patterns": [
+            r"TOTAL\s+Purchase\s+Order\s+Price\s*\(ex\s+GST\)\s*\$?\s*([\d,]+\.\d{2})",
+            r"Total[:\s]+\$?\s*([\d,]+\.\d{2})",
+            r"Amount[:\s]+\$?\s*([\d,]+\.\d{2})",
+        ],
+        "supervisor_section": r"SUPERVISOR\s+DETAILS",
+        "contact_label": "Supervisor",
+    },
+    "profile_build": {
+        "name": "Profile Build Group",
+        "po_patterns": [
+            r"CONTRACT\s+NO[.:]?\s*(PBG-[A-Za-z0-9-]+)",
+            r"Contract\s+Number[.:]?\s*(PBG-[A-Za-z0-9-]+)",
+            r"PBG-[A-Za-z0-9-]+",  # Direct pattern match
+            r"WORK\s+ORDER[:\s]+.*?CONTRACT\s+NO[.:]?\s*(PBG-[A-Za-z0-9-]+)",
+            r"Work\s+Order[:\s]+.*?PBG-([A-Za-z0-9-]+)",
+        ],
+        "customer_patterns": [
+            r"Client[:\s]+([A-Za-z\s]+?)(?=\n)",
+            r"Customer[:\s]+([A-Za-z\s]+?)(?=\n)",
+            r"Owner[:\s]+([A-Za-z\s]+?)(?=\n)",
+            r"Insured[:\s]+([A-Za-z\s]+?)(?=\n)",
+        ],
+        "description_patterns": [
+            r"Scope\s+of\s+Works[:\s]+([\s\S]+?)(?=TOTAL|Total|Amount|Price|\$|\n\n)",
+            r"Scope\s+of\s+Work[:\s]+([\s\S]+?)(?=TOTAL|Total|Amount|Price|\$|\n\n)",
+            r"Work\s+Description[:\s]+([\s\S]+?)(?=TOTAL|Total|Amount|Price|\$|\n\n)",
+            r"Project\s+Scope[:\s]+([\s\S]+?)(?=TOTAL|Total|Amount|Price|\$|\n\n)",
+        ],
+        "dollar_patterns": [
+            r"Total\s+Contract\s+Value[:\s]+\$?\s*([\d,]+\.\d{2})",
+            r"Contract\s+Sum[:\s]+\$?\s*([\d,]+\.\d{2})",
+            r"Total[:\s]+\$?\s*([\d,]+\.\d{2})",
+            r"Amount[:\s]+\$?\s*([\d,]+\.\d{2})",
+        ],
+        "supervisor_section": r"CONTRACTORS?\s+REPRESENTATIVE",
+        "contact_label": "Contractors Representative",
+    },
+    "campbell": {
+        "name": "Campbell Construction",
+        "po_patterns": [
+            r"CONTRACT\s+NO[.:]?\s*(CCC[A-Za-z0-9-]+)",
+            r"Contract\s+Number[.:]?\s*(CCC[A-Za-z0-9-]+)",
+            r"CCC[A-Za-z0-9-]+",  # Direct pattern match
+            r"WORK\s+ORDER[:\s]+.*?CONTRACT\s+NO[.:]?\s*(CCC[A-Za-z0-9-]+)",
+            r"Work\s+Order[:\s]+.*?CCC([A-Za-z0-9-]+)",
+            r"PO[:\s#]+(CCC[A-Za-z0-9-]+)",
+        ],
+        "customer_patterns": [
+            r"Client[:\s]+([A-Za-z\s]+?)(?=\n)",
+            r"Customer[:\s]+([A-Za-z\s]+?)(?=\n)",
+            r"Owner[:\s]+([A-Za-z\s]+?)(?=\n)",
+            r"Insured[:\s]+([A-Za-z\s]+?)(?=\n)",
+        ],
+        "description_patterns": [
+            r"Scope\s+of\s+Works[:\s]+([\s\S]+?)(?=TOTAL|Total|Amount|Price|\$|\n\n)",
+            r"Scope\s+of\s+Work[:\s]+([\s\S]+?)(?=TOTAL|Total|Amount|Price|\$|\n\n)",
+            r"Work\s+Description[:\s]+([\s\S]+?)(?=TOTAL|Total|Amount|Price|\$|\n\n)",
+            r"Project\s+Scope[:\s]+([\s\S]+?)(?=TOTAL|Total|Amount|Price|\$|\n\n)",
+        ],
+        "dollar_patterns": [
+            r"Total\s+Contract\s+Value[:\s]+\$?\s*([\d,]+\.\d{2})",
+            r"Contract\s+Sum[:\s]+\$?\s*([\d,]+\.\d{2})",
+            r"Total[:\s]+\$?\s*([\d,]+\.\d{2})",
+            r"Amount[:\s]+\$?\s*([\d,]+\.\d{2})",
+        ],
+        "supervisor_section": r"CONTRACTORS?\s+REPRESENTATIVE",
+        "contact_label": "Contractors Representative",
+    },
+}
+
+
+def detect_template(text):
+    """
+    Detect which template to use based on content patterns.
+    
+    Args:
+        text (str): The extracted PDF text
+        
+    Returns:
+        dict: The template configuration to use
+    """
+    # Check for specific company indicators
+    # Profile Build Group detection
+    if re.search(r"PBG-", text, re.IGNORECASE) or re.search(r"Profile\s+Build\s+Group", text, re.IGNORECASE):
+        logger.info("Detected Profile Build Group template")
+        return TEMPLATE_CONFIGS["profile_build"]
+    
+    # Campbell Construction detection
+    elif (re.search(r"CCC\d{5}", text, re.IGNORECASE) or 
+          re.search(r"Campbell\s+Construction", text, re.IGNORECASE) or
+          re.search(r"Campbell\s+Constructions", text, re.IGNORECASE)):
+        logger.info("Detected Campbell Construction template")
+        return TEMPLATE_CONFIGS["campbell"]
+    
+    # Ambrose Construct Group detection
+    elif (re.search(r"Ambrose\s+Construct", text, re.IGNORECASE) or 
+          re.search(r"20\d{6}-\d{2}", text) or
+          re.search(r"ACG", text)):
+        logger.info("Detected Ambrose Construct Group template")
+        return TEMPLATE_CONFIGS["ambrose"]
+    
+    # Additional detection based on document structure
+    # Check for "Scope of Works" vs "Description of Works"
+    if re.search(r"Scope\s+of\s+Works", text, re.IGNORECASE):
+        # Check for specific patterns that might indicate PBG or Campbell
+        if re.search(r"CONTRACTORS?\s+REPRESENTATIVE", text, re.IGNORECASE):
+            # Could be either PBG or Campbell, check for more specific patterns
+            if re.search(r"Work\s+Order.*Contract\s+No", text, re.IGNORECASE):
+                logger.info("Detected alternative template format (likely Profile Build or Campbell)")
+                # Default to Profile Build if unclear
+                return TEMPLATE_CONFIGS["profile_build"]
+    
+    # Default to Ambrose template if no specific match
+    logger.info("Using default Ambrose template")
+    return TEMPLATE_CONFIGS["ambrose"]
+
+
 def extract_data_from_pdf(file_path):
     """
     Extract relevant data from PDF purchase orders.
@@ -74,21 +213,24 @@ def extract_data_from_pdf(file_path):
         text = extract_with_pymupdf(file_path)
         if text:
             extracted_data["raw_text"] = text
-            parse_extracted_text(text, extracted_data)
+            template = detect_template(text)
+            parse_extracted_text(text, extracted_data, template)
 
         # If we didn't get all needed data, try pdfplumber
         if not check_essential_fields(extracted_data):
             text = extract_with_pdfplumber(file_path)
             if text and text != extracted_data["raw_text"]:
                 extracted_data["raw_text"] = text
-                parse_extracted_text(text, extracted_data)
+                template = detect_template(text)
+                parse_extracted_text(text, extracted_data, template)
 
         # Last resort, try PyPDF2
         if not check_essential_fields(extracted_data):
             text = extract_with_pypdf2(file_path)
             if text and text != extracted_data["raw_text"]:
                 extracted_data["raw_text"] = text
-                parse_extracted_text(text, extracted_data)
+                template = detect_template(text)
+                parse_extracted_text(text, extracted_data, template)
 
         # Clean and format the extracted data
         clean_extracted_data(extracted_data)
@@ -270,27 +412,39 @@ def extract_with_pypdf2(file_path):
         return ""
 
 
-def parse_extracted_text(text, extracted_data):
+def parse_extracted_text(text, extracted_data, template):
     """
     Parse the extracted text to find relevant information.
 
     Args:
         text (str): The extracted text from the PDF
         extracted_data (dict): Dictionary to update with parsed information
+        template (dict): The template configuration to use
     """
     # Extract PO number
-    po_patterns = [
-        r"P\.O\.\s*No:?\s*([A-Za-z0-9-]+)",
-        r"PO[:\s#]+([A-Za-z0-9-]+)",
-        r"Purchase\s+Order[:\s#]+([A-Za-z0-9-]+)",
-        r"Order\s+Number[:\s#]+([A-Za-z0-9-]+)",
-    ]
-
-    for pattern in po_patterns:
+    for pattern in template["po_patterns"]:
         match = re.search(pattern, text, re.IGNORECASE)
         if match:
             extracted_data["po_number"] = match.group(1).strip()
             break
+    
+    # If no PO number found with template patterns, try generic fallback patterns
+    if not extracted_data["po_number"]:
+        generic_po_patterns = [
+            r"P\.O\.\s*No:?\s*([A-Za-z0-9-]+)",
+            r"PO[:\s#]+([A-Za-z0-9-]+)",
+            r"Purchase\s+Order[:\s#]+([A-Za-z0-9-]+)",
+            r"Order\s+Number[:\s#]+([A-Za-z0-9-]+)",
+            r"CONTRACT\s+NO[.:]?\s*([A-Za-z0-9-]+)",
+            r"Contract\s+Number[.:]?\s*([A-Za-z0-9-]+)",
+        ]
+        
+        for pattern in generic_po_patterns:
+            match = re.search(pattern, text, re.IGNORECASE)
+            if match:
+                extracted_data["po_number"] = match.group(1).strip()
+                break
+    
     logger.info(f"[EXTRACT] PO Number: {extracted_data['po_number']}")
 
     # Extract business name from SUBCONTRACTOR DETAILS section
@@ -325,15 +479,7 @@ def parse_extracted_text(text, extracted_data):
                 break
 
     # Extract Insured Customer (Customer Name)
-    customer_patterns = [
-        r"Insured\s+Owner:?\s*([A-Za-z\s]+?)(?=\n|Authorised)",
-        r"Insured:?\s*([A-Za-z\s]+?)(?=\n)",
-        r"Customer[:\s]+([A-Za-z\s]+?)(?=\n)",
-        r"Name[:\s]+([A-Za-z\s]+?)(?=\n)",
-        r"Bill\s+To[:\s]+([A-Za-z\s]+?)(?=\n)",
-    ]
-
-    for pattern in customer_patterns:
+    for pattern in template["customer_patterns"]:
         match = re.search(pattern, text, re.IGNORECASE)
         if match:
             extracted_data["customer_name"] = match.group(1).strip()
@@ -343,7 +489,7 @@ def parse_extracted_text(text, extracted_data):
     extract_contact_details(text, extracted_data)
 
     # Extract Job Number and Supervisor Details
-    extract_job_and_supervisor_details(text, extracted_data)
+    extract_job_and_supervisor_details(text, extracted_data, template)
 
     # Extract Site Address (can be used for shipping address)
     address_patterns = [
@@ -362,26 +508,25 @@ def parse_extracted_text(text, extracted_data):
             break
 
     # Extract Description of Works for custom private notes
-    # Improved to capture everything from Description to TOTAL
-    description_match = re.search(
-        r"Description\s+of\s+the\s+Works([\s\S]+?)(?=TOTAL\s+Purchase\s+Order\s+Price|Total\s+Purchase\s+Order)",
-        text,
-        re.IGNORECASE,
-    )
-    if description_match:
-        extracted_data["description_of_works"] = description_match.group(1).strip()
-        # Set this as scope of work too for compatibility
-        extracted_data["scope_of_work"] = extracted_data["description_of_works"]
-    else:
-        # Fallback to other patterns if the main pattern doesn't match
-        description_patterns = [
+    # Use template-specific patterns
+    for pattern in template.get("description_patterns", []):
+        match = re.search(pattern, text, re.IGNORECASE)
+        if match:
+            extracted_data["description_of_works"] = match.group(1).strip()
+            # Set this as scope of work too for compatibility
+            extracted_data["scope_of_work"] = extracted_data["description_of_works"]
+            break
+    
+    # If no match found with template patterns, try generic patterns
+    if not extracted_data["description_of_works"]:
+        generic_description_patterns = [
             r"Description\s+of\s+Works([\s\S]+?)(?=TOTAL|Total\s+Purchase\s+Order)",
             r"Scope\s+of\s+Work[:\s]+([\s\S]+?)(?=TOTAL|Total|Amount|Price|\$|\n\n)",
             r"Description[:\s]+([\s\S]+?)(?=TOTAL|Total|Amount|Price|\$|\n\n)",
             r"Services[:\s]+([\s\S]+?)(?=TOTAL|Total|Amount|Price|\$|\n\n)",
         ]
 
-        for pattern in description_patterns:
+        for pattern in generic_description_patterns:
             match = re.search(pattern, text, re.IGNORECASE)
             if match:
                 extracted_data["description_of_works"] = match.group(1).strip()
@@ -390,15 +535,7 @@ def parse_extracted_text(text, extracted_data):
                 break
 
     # Extract dollar value from TOTAL Purchase Order Price
-    dollar_patterns = [
-        r"TOTAL\s+Purchase\s+Order\s+Price\s*\(ex\s+GST\)\s*\$?\s*([\d,]+\.\d{2})",
-        r"Total[:\s]+\$?\s*([\d,]+\.\d{2})",
-        r"Amount[:\s]+\$?\s*([\d,]+\.\d{2})",
-        r"Price[:\s]+\$?\s*([\d,]+\.\d{2})",
-        r"Value[:\s]+\$?\s*([\d,]+\.\d{2})",
-    ]
-
-    for pattern in dollar_patterns:
+    for pattern in template.get("dollar_patterns", []):
         match = re.search(pattern, text, re.IGNORECASE)
         if match:
             value_str = match.group(1).replace(",", "")
@@ -407,6 +544,29 @@ def parse_extracted_text(text, extracted_data):
                 break
             except ValueError:
                 continue
+    
+    # If no dollar value found with template patterns, try generic patterns
+    if extracted_data["dollar_value"] == 0:
+        generic_dollar_patterns = [
+            r"TOTAL\s+Purchase\s+Order\s+Price\s*\(ex\s+GST\)\s*\$?\s*([\d,]+\.\d{2})",
+            r"Total[:\s]+\$?\s*([\d,]+\.\d{2})",
+            r"Amount[:\s]+\$?\s*([\d,]+\.\d{2})",
+            r"Price[:\s]+\$?\s*([\d,]+\.\d{2})",
+            r"Value[:\s]+\$?\s*([\d,]+\.\d{2})",
+            r"Contract\s+Value[:\s]+\$?\s*([\d,]+\.\d{2})",
+            r"Contract\s+Sum[:\s]+\$?\s*([\d,]+\.\d{2})",
+        ]
+        
+        for pattern in generic_dollar_patterns:
+            match = re.search(pattern, text, re.IGNORECASE)
+            if match:
+                value_str = match.group(1).replace(",", "")
+                try:
+                    extracted_data["dollar_value"] = float(value_str)
+                    break
+                except ValueError:
+                    continue
+    
     logger.info(f"[EXTRACT] Dollar Value: {extracted_data['dollar_value']}")
 
     # --- Extract all alternate contacts (Best, Real Estate, Site, Authorised) ---
@@ -711,13 +871,15 @@ def extract_contact_details(text, extracted_data):
             extracted_data["extra_phones"].append(clean_phone)
 
 
-def extract_job_and_supervisor_details(text, extracted_data):
+def extract_job_and_supervisor_details(text, extracted_data, template):
     """Extract job number and supervisor details."""
     # Extract Job Number
     job_number_patterns = [
         r"Job\s+Number:?\s*([A-Za-z0-9-]+)",
         r"Job\s+#:?\s*([A-Za-z0-9-]+)",
         r"Job\s+ID:?\s*([A-Za-z0-9-]+)",
+        r"WORK\s+ORDER[:\s]+([A-Za-z0-9-]+)",  # Added for alternative templates
+        r"JOB\s+NUMBER[:\s]+([A-Za-z0-9-]+)",  # Added for alternative templates
     ]
 
     for pattern in job_number_patterns:
@@ -726,9 +888,10 @@ def extract_job_and_supervisor_details(text, extracted_data):
             extracted_data["job_number"] = match.group(1).strip()
             break
 
-    # Extract Supervisor Details
+    # Extract Supervisor/Contractor Representative Details
+    supervisor_section_pattern = template.get("supervisor_section", r"SUPERVISOR\s+DETAILS")
     supervisor_section = re.search(
-        r"SUPERVISOR\s+DETAILS([\s\S]+?)(?=BEST\s+CONTACT|JOB\s+DETAILS|$)",
+        rf"{supervisor_section_pattern}([\s\S]+?)(?=BEST\s+CONTACT|JOB\s+DETAILS|$)",
         text,
         re.IGNORECASE,
     )
@@ -736,14 +899,14 @@ def extract_job_and_supervisor_details(text, extracted_data):
     if supervisor_section:
         supervisor_text = supervisor_section.group(1)
 
-        # Extract Supervisor Name
+        # Extract Name
         name_match = re.search(
             r"Name:?\s*([A-Za-z\s]+?)(?=\n)", supervisor_text, re.IGNORECASE
         )
         if name_match:
             extracted_data["supervisor_name"] = name_match.group(1).strip()
 
-        # Extract Supervisor Mobile
+        # Extract Mobile
         mobile_match = re.search(
             r"Mobile:?\s*(\(?\d{4}\)?[-.\s]?\d{3}[-.\s]?\d{3})",
             supervisor_text,
@@ -752,7 +915,7 @@ def extract_job_and_supervisor_details(text, extracted_data):
         if mobile_match:
             extracted_data["supervisor_mobile"] = mobile_match.group(1).strip()
 
-        # Extract Supervisor Email
+        # Extract Email
         email_match = re.search(
             r"Email:?\s*([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})",
             supervisor_text,
@@ -760,11 +923,20 @@ def extract_job_and_supervisor_details(text, extracted_data):
         )
         if email_match:
             extracted_data["supervisor_email"] = email_match.group(1).strip()
-        elif "jackson.peters@ambroseconstruct.com.au" in text:
-            # Hardcoded extraction for the example document that has the email in a different format
-            extracted_data["supervisor_email"] = (
-                "jackson.peters@ambroseconstruct.com.au"
-            )
+    else:
+        # Try alternative patterns if no section found
+        # Look for standalone patterns
+        name_patterns = [
+            rf"{template.get('contact_label', 'Supervisor')}:?\s*([A-Za-z\s]+?)(?=\n|$)",
+            r"Contractor:?\s*([A-Za-z\s]+?)(?=\n|$)",
+            r"Representative:?\s*([A-Za-z\s]+?)(?=\n|$)",
+        ]
+        
+        for pattern in name_patterns:
+            match = re.search(pattern, text, re.IGNORECASE)
+            if match:
+                extracted_data["supervisor_name"] = match.group(1).strip()
+                break
 
 
 def parse_address(address_str, extracted_data):
