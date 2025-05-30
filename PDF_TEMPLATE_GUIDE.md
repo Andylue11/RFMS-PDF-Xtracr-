@@ -15,82 +15,81 @@ The enhanced PDF extractor can now handle multiple Purchase Order/Work Order tem
   - Insured Owner/Customer
 
 ### 2. Profile Build Group
-- **PO Format**: `PBG-XXXXX` (e.g., `PBG-12345`)
+- **PO Format**: `PBG-XXXXX-XXXXX` (e.g., `PBG-18191-18039`)
 - **Key Terms**:
-  - Contract No. / Work Order
-  - Scope of Works
-  - Contractors Representative
+  - Work Order
+  - Scope of Works / Notes
+  - Supervisor
   - Client
 
 ### 3. Campbell Construction
-- **PO Format**: `CCCXXXXX` (e.g., `CCC55132`)
+- **PO Format**: `CCCXXXXX-XXXXX` (e.g., `CCC55132-88512`)
 - **Key Terms**:
-  - Contract No. / Work Order
+  - Contract No.
+  - Scope of Work
+  - Contractor's Representative
+  - Customer
+
+### 4. Rizon Group
+- **PO Format**: `PXXXXXX` (e.g., `P367117`)
+- **Key Terms**:
+  - Purchase Order No.
   - Scope of Works
-  - Contractors Representative
-  - Client
+  - Client / Site Details
+  - Supervisor
 
-## How It Works
+### 5. Australian Restoration Company
+- **PO Format**: `POXXXXX-XXXX-XXX` (e.g., `PO96799-BU01-003`)
+- **Key Terms**:
+  - Order Number
+  - Flooring Contractor Material
+  - Project Manager / Case Manager
+  - Customer Details
 
-### 1. Template Detection
-The system automatically detects which template to use by looking for:
-- Company-specific PO number formats (PBG-, CCC, 20XXXXXX-XX)
-- Company names in the document
-- Specific terminology patterns (e.g., "Scope of Works" vs "Description of Works")
+### 6. Townsend Building Services
+- **PO Format**: `TBS-XXXXX` or Work Order numbers
+- **Key Terms**:
+  - Purchase Order / Work Order
+  - Scope of Works
+  - Project Manager / Supervisor
+  - Attention (Contact)
 
-### 2. Flexible Field Mapping
-The extractor maps different terminology to standard fields:
+## Template Detection
 
-| Standard Field | Ambrose | Profile Build / Campbell |
-|----------------|---------|-------------------------|
-| Customer | Insured Owner | Client |
-| Work Description | Description of Works | Scope of Works |
-| Contact Person | Supervisor | Contractors Representative |
-| PO Number | Purchase Order | Contract No. |
+The PDF extractor automatically detects which template to use based on:
+1. **PO Number Format** - Specific patterns like PBG-, CCC, P367117, etc.
+2. **Company Names** - Text mentions of the builder names
+3. **Email Domains** - Company-specific email addresses
+4. **Document Structure** - Specific section headers and terminology
 
-### 3. Fallback Patterns
-If template-specific patterns don't find data, the system falls back to generic patterns that work across all templates.
+## Usage
+
+Simply upload any PDF from these 6 builders (or others), and the system will:
+1. Automatically detect the builder template
+2. Extract relevant data using builder-specific patterns
+3. Fall back to generic patterns if needed
+4. Map the data to the standard RFMS format
+
+## Data Mapping
+
+Regardless of the template, all extracted data is mapped to standard fields:
+- Customer Name/Client → Customer Name
+- Description/Scope of Works → Description of Works
+- Supervisor/Project Manager/Contractor's Representative → Supervisor Details
+- Contract No./Work Order/PO Number → Purchase Order Number
+- Total/Sub Total → Dollar Value
 
 ## Adding New Templates
 
-To add support for a new company's PDF format:
-
-1. Add a new template configuration in `TEMPLATE_CONFIGS` dictionary
-2. Define company-specific patterns for:
-   - PO number formats
-   - Customer field names
+To add support for a new builder:
+1. Add a new configuration in `TEMPLATE_CONFIGS` in `utils/pdf_extractor.py`
+2. Define specific patterns for:
+   - PO number format
+   - Customer name patterns
    - Description/scope patterns
    - Dollar value patterns
-   - Contact person sections
+3. Update the `detect_template()` function to identify the new builder
 
-3. Update the `detect_template()` function to recognize the new format
+## Testing
 
-## Example Template Configuration
-
-```python
-"new_company": {
-    "name": "New Company Name",
-    "po_patterns": [
-        r"Your\s+PO\s+Pattern[:\s]+([A-Za-z0-9-]+)",
-    ],
-    "customer_patterns": [
-        r"Client[:\s]+([A-Za-z\s]+?)(?=\n)",
-    ],
-    "description_patterns": [
-        r"Work\s+Details[:\s]+([\s\S]+?)(?=TOTAL|Total)",
-    ],
-    "dollar_patterns": [
-        r"Total[:\s]+\$?\s*([\d,]+\.\d{2})",
-    ],
-    "supervisor_section": r"CONTACT\s+PERSON",
-    "contact_label": "Contact Person",
-}
-```
-
-## Testing Different Templates
-
-You can test the PDF extractor with different formats by uploading PDFs through the web interface. The system will:
-1. Automatically detect the template type
-2. Extract data using appropriate patterns
-3. Log which template was detected
-4. Fall back to generic patterns if needed 
+Test PDFs are available in the `testing pdfs` folder with 2 examples per builder. 
