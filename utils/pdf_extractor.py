@@ -26,78 +26,169 @@ TEMPLATE_CONFIGS = {
             r"Bill\s+To[:\s]+([A-Za-z\s]+?)(?=\n)",
         ],
         "description_patterns": [
-            r"Description\s+of\s+the\s+Works([\s\S]+?)(?=TOTAL\s+Purchase\s+Order\s+Price|Total\s+Purchase\s+Order)",
-            r"Description\s+of\s+Works([\s\S]+?)(?=TOTAL|Total\s+Purchase\s+Order)",
+            r"Description\s+of\s+Works[:\s]*(.+?)(?=Supervisor|$)",
+            r"Works\s+Description[:\s]*(.+?)(?=Supervisor|$)",
+            r"Scope\s+of\s+Works[:\s]*(.+?)(?=Supervisor|$)",
         ],
+        "supervisor_section_pattern": r"Supervisor\s+Details",
         "dollar_patterns": [
-            r"TOTAL\s+Purchase\s+Order\s+Price\s*\(ex\s+GST\)\s*\$?\s*([\d,]+\.\d{2})",
-            r"Total[:\s]+\$?\s*([\d,]+\.\d{2})",
-            r"Amount[:\s]+\$?\s*([\d,]+\.\d{2})",
+            r"\$\s*([\d,]+\.?\d*)",
+            r"Total[:\s]+\$?\s*([\d,]+\.?\d*)",
         ],
-        "supervisor_section": r"SUPERVISOR\s+DETAILS",
-        "contact_label": "Supervisor",
     },
     "profile_build": {
         "name": "Profile Build Group",
         "po_patterns": [
-            r"CONTRACT\s+NO[.:]?\s*(PBG-[A-Za-z0-9-]+)",
-            r"Contract\s+Number[.:]?\s*(PBG-[A-Za-z0-9-]+)",
-            r"PBG-[A-Za-z0-9-]+",  # Direct pattern match
-            r"WORK\s+ORDER[:\s]+.*?CONTRACT\s+NO[.:]?\s*(PBG-[A-Za-z0-9-]+)",
-            r"Work\s+Order[:\s]+.*?PBG-([A-Za-z0-9-]+)",
+            r"WORK\s+ORDER:?\s*(PBG-\d+-\d+)",  # PBG-18191-18039
+            r"PBG-\d+-\d+",  # Direct pattern match
+            r"Order\s+Number[:\s#]+(PBG-\d+-\d+)",
+            r"Contract\s+No[.:]?\s*(PBG-\d+-\d+)",
         ],
         "customer_patterns": [
-            r"Client[:\s]+([A-Za-z\s]+?)(?=\n)",
+            r"Client[:\s]+([A-Za-z\s&]+?)(?=\n|Job)",
             r"Customer[:\s]+([A-Za-z\s]+?)(?=\n)",
-            r"Owner[:\s]+([A-Za-z\s]+?)(?=\n)",
-            r"Insured[:\s]+([A-Za-z\s]+?)(?=\n)",
+            r"SITE\s+CONTACT[:\s]+([A-Za-z\s]+?)(?=\n)",
         ],
         "description_patterns": [
-            r"Scope\s+of\s+Works[:\s]+([\s\S]+?)(?=TOTAL|Total|Amount|Price|\$|\n\n)",
-            r"Scope\s+of\s+Work[:\s]+([\s\S]+?)(?=TOTAL|Total|Amount|Price|\$|\n\n)",
-            r"Work\s+Description[:\s]+([\s\S]+?)(?=TOTAL|Total|Amount|Price|\$|\n\n)",
-            r"Project\s+Scope[:\s]+([\s\S]+?)(?=TOTAL|Total|Amount|Price|\$|\n\n)",
+            r"NOTES[:\s]*(.+?)(?=All amounts|Total|$)",
+            r"Scope\s+of\s+Works[:\s]*(.+?)(?=All amounts|Total|$)",
+            r"PBG-\d+-\d+\s*(.+?)(?=All amounts|Total|$)",
         ],
+        "supervisor_section_pattern": r"Supervisor[:\s]",
         "dollar_patterns": [
-            r"Total\s+Contract\s+Value[:\s]+\$?\s*([\d,]+\.\d{2})",
-            r"Contract\s+Sum[:\s]+\$?\s*([\d,]+\.\d{2})",
-            r"Total[:\s]+\$?\s*([\d,]+\.\d{2})",
-            r"Amount[:\s]+\$?\s*([\d,]+\.\d{2})",
+            r"Total\s+AUD\s*\$?\s*([\d,]+\.?\d*)",
+            r"Total[:\s]+\$?\s*([\d,]+\.?\d*)",
+            r"\$\s*([\d,]+\.?\d*)",
         ],
-        "supervisor_section": r"CONTRACTORS?\s+REPRESENTATIVE",
-        "contact_label": "Contractors Representative",
     },
     "campbell": {
         "name": "Campbell Construction",
         "po_patterns": [
-            r"CONTRACT\s+NO[.:]?\s*(CCC[A-Za-z0-9-]+)",
-            r"Contract\s+Number[.:]?\s*(CCC[A-Za-z0-9-]+)",
-            r"CCC[A-Za-z0-9-]+",  # Direct pattern match
-            r"WORK\s+ORDER[:\s]+.*?CONTRACT\s+NO[.:]?\s*(CCC[A-Za-z0-9-]+)",
-            r"Work\s+Order[:\s]+.*?CCC([A-Za-z0-9-]+)",
-            r"PO[:\s#]+(CCC[A-Za-z0-9-]+)",
+            r"Contract\s+No[.:]?\s*(CCC\d+-\d+)",  # CCC55132-88512
+            r"CCC\d+-\d+",  # Direct pattern match
+            r"CONTRACT\s+NO[.:]?\s*(CCC\d+-\d+)",
+            r"Contract\s+Number[.:]?\s*(CCC\d+-\d+)",
         ],
         "customer_patterns": [
+            r"Customer[:\s]+([A-Za-z\s]+?)(?=\n|Site)",
             r"Client[:\s]+([A-Za-z\s]+?)(?=\n)",
-            r"Customer[:\s]+([A-Za-z\s]+?)(?=\n)",
             r"Owner[:\s]+([A-Za-z\s]+?)(?=\n)",
-            r"Insured[:\s]+([A-Za-z\s]+?)(?=\n)",
         ],
         "description_patterns": [
-            r"Scope\s+of\s+Works[:\s]+([\s\S]+?)(?=TOTAL|Total|Amount|Price|\$|\n\n)",
-            r"Scope\s+of\s+Work[:\s]+([\s\S]+?)(?=TOTAL|Total|Amount|Price|\$|\n\n)",
-            r"Work\s+Description[:\s]+([\s\S]+?)(?=TOTAL|Total|Amount|Price|\$|\n\n)",
-            r"Project\s+Scope[:\s]+([\s\S]+?)(?=TOTAL|Total|Amount|Price|\$|\n\n)",
+            r"Scope\s+of\s+Work[:\s]*(.+?)(?=Totals|Page|$)",
+            r"CCC\d+-\d+\s*(.+?)(?=Totals|Page|$)",
+            r"Description\s+of\s+Works[:\s]*(.+?)(?=Totals|Page|$)",
         ],
+        "supervisor_section_pattern": r"CONTRACTOR'S\s+REPRESENTATIVE|Supervisor",
         "dollar_patterns": [
-            r"Total\s+Contract\s+Value[:\s]+\$?\s*([\d,]+\.\d{2})",
-            r"Contract\s+Sum[:\s]+\$?\s*([\d,]+\.\d{2})",
-            r"Total[:\s]+\$?\s*([\d,]+\.\d{2})",
-            r"Amount[:\s]+\$?\s*([\d,]+\.\d{2})",
+            r"Total\s*\$?\s*([\d,]+\.?\d*)",
+            r"Subtotal\s*\$?\s*([\d,]+\.?\d*)",
+            r"\$\s*([\d,]+\.?\d*)",
         ],
-        "supervisor_section": r"CONTRACTORS?\s+REPRESENTATIVE",
-        "contact_label": "Contractors Representative",
     },
+    "rizon": {
+        "name": "Rizon Group",
+        "po_patterns": [
+            r"PURCHASE\s+ORDER\s+NO[:\s]*(P\d+)",  # P367117
+            r"P\d{6}",  # Direct pattern match
+            r"ORDER\s+NUMBER[:\s]*(\d+/\d+/\d+)",  # Alternative format
+            r"PO[:\s#]+(P?\d+)",
+        ],
+        "customer_patterns": [
+            r"Client\s*/\s*Site\s+Details[:\s]*([A-Za-z\s]+?)(?=\n|\()",
+            r"Customer[:\s]+([A-Za-z\s]+?)(?=\n)",
+            r"Site\s+Details[:\s]*([A-Za-z\s]+?)(?=\n)",
+        ],
+        "description_patterns": [
+            r"SCOPE\s+OF\s+WORKS[:\s]*(.+?)(?=Net Order|PURCHASE\s+ORDER\s+CONDITIONS|$)",
+            r"Scope\s+of\s+Works[:\s]*(.+?)(?=Net Order|Total|$)",
+        ],
+        "supervisor_section_pattern": r"Supervisor[:\s]",
+        "dollar_patterns": [
+            r"Total\s+Order[:\s]*\$?\s*([\d,]+\.?\d*)",
+            r"Net\s+Order[:\s]*\$?\s*([\d,]+\.?\d*)",
+            r"\$\s*([\d,]+\.?\d*)",
+        ],
+    },
+    "australian_restoration": {
+        "name": "Australian Restoration Company",
+        "po_patterns": [
+            r"Order\s+Number[:\s]*(PO\d+-[A-Z0-9]+-\d+)",  # PO96799-BU01-003
+            r"PO\d+-[A-Z0-9]+-\d+",  # Direct pattern match
+            r"Purchase\s+Order[:\s#]+(PO\d+-[A-Z0-9]+-\d+)",
+        ],
+        "customer_patterns": [
+            r"Customer\s+Details[:\s]*([A-Za-z\s]+?)(?=\n|Site)",
+            r"Customer[:\s]+([A-Za-z\s]+?)(?=\n)",
+            r"Client[:\s]+([A-Za-z\s]+?)(?=\n)",
+        ],
+        "description_patterns": [
+            r"Flooring\s+Contractor\s+Material(.+?)(?=All amounts|Preliminaries|Total|$)",
+            r"Scope\s+of\s+Works[:\s]*(.+?)(?=All amounts|Total|$)",
+        ],
+        "supervisor_section_pattern": r"Project\s+Manager[:\s]|Case\s+Manager[:\s]",
+        "dollar_patterns": [
+            r"Total\s+AUD\s*\$?\s*([\d,]+\.?\d*)",
+            r"Sub\s+Total\s*\$?\s*([\d,]+\.?\d*)",
+            r"\$\s*([\d,]+\.?\d*)",
+        ],
+    },
+    "townsend": {
+        "name": "Townsend Building Services",
+        "po_patterns": [
+            r"Purchase\s+Order[:\s#]+(TBS-\d+)",
+            r"TBS-\d+",
+            r"Order\s+Number[:\s]*(TBS-\d+)",
+            r"WO[:\s#]+(\d+)",
+            r"Work\s+Order[:\s#]+(\d+)",
+        ],
+        "customer_patterns": [
+            r"Attention[:\s]+([A-Za-z\s]+?)(?=\n|Email)",
+            r"Customer[:\s]+([A-Za-z\s]+?)(?=\n)",
+            r"Client[:\s]+([A-Za-z\s]+?)(?=\n)",
+            r"Contact[:\s]+([A-Za-z\s]+?)(?=\n)",
+        ],
+        "description_patterns": [
+            r"Scope\s+of\s+Works[:\s]*(.+?)(?=Total|ABN|Page|$)",
+            r"Work\s+Description[:\s]*(.+?)(?=Total|ABN|Page|$)",
+            r"Description[:\s]*(.+?)(?=Total|ABN|Page|$)",
+        ],
+        "supervisor_section_pattern": r"Project\s+Manager[:\s]|Supervisor[:\s]|Manager[:\s]",
+        "dollar_patterns": [
+            r"Total\s+Inc\.?\s+GST[:\s]*\$?\s*([\d,]+\.?\d*)",
+            r"Total[:\s]+\$?\s*([\d,]+\.?\d*)",
+            r"\$\s*([\d,]+\.?\d*)",
+        ],
+    },
+    "generic": {
+        "name": "Generic Template",
+        "po_patterns": [
+            r"P\.O\.\s*No:?\s*([A-Za-z0-9-]+)",
+            r"PO[:\s#]+([A-Za-z0-9-]+)",
+            r"Purchase\s+Order[:\s#]+([A-Za-z0-9-]+)",
+            r"Order\s+Number[:\s#]+([A-Za-z0-9-]+)",
+            r"CONTRACT\s+NO[.:]?\s*([A-Za-z0-9-]+)",
+            r"Contract\s+Number[.:]?\s*([A-Za-z0-9-]+)",
+            r"WORK\s+ORDER[:\s]+([A-Za-z0-9-]+)",
+            r"JOB\s+NUMBER[:\s]+([A-Za-z0-9-]+)",
+        ],
+        "customer_patterns": [
+            r"Customer[:\s]+([A-Za-z\s]+?)(?=\n)",
+            r"Client[:\s]+([A-Za-z\s]+?)(?=\n)",
+            r"Name[:\s]+([A-Za-z\s]+?)(?=\n)",
+            r"Bill\s+To[:\s]+([A-Za-z\s]+?)(?=\n)",
+        ],
+        "description_patterns": [
+            r"Description\s+of\s+Works[:\s]*(.+?)(?=Supervisor|Total|$)",
+            r"Scope\s+of\s+Works[:\s]*(.+?)(?=Supervisor|Total|$)",
+            r"Works\s+Description[:\s]*(.+?)(?=Supervisor|Total|$)",
+        ],
+        "supervisor_section_pattern": r"Supervisor|Contractor[\s']*s?\s+Representative",
+        "dollar_patterns": [
+            r"\$\s*([\d,]+\.?\d*)",
+            r"Total[:\s]+\$?\s*([\d,]+\.?\d*)",
+        ],
+    }
 }
 
 
@@ -113,38 +204,52 @@ def detect_template(text):
     """
     # Check for specific company indicators
     # Profile Build Group detection
-    if re.search(r"PBG-", text, re.IGNORECASE) or re.search(r"Profile\s+Build\s+Group", text, re.IGNORECASE):
+    if re.search(r"PBG-\d+-\d+", text, re.IGNORECASE) or re.search(r"Profile\s+Build\s+Group", text, re.IGNORECASE):
         logger.info("Detected Profile Build Group template")
         return TEMPLATE_CONFIGS["profile_build"]
     
     # Campbell Construction detection
-    elif (re.search(r"CCC\d{5}", text, re.IGNORECASE) or 
+    elif (re.search(r"CCC\d+-\d+", text, re.IGNORECASE) or 
           re.search(r"Campbell\s+Construction", text, re.IGNORECASE) or
-          re.search(r"Campbell\s+Constructions", text, re.IGNORECASE)):
+          re.search(r"Campbell\s+Construct", text, re.IGNORECASE)):
         logger.info("Detected Campbell Construction template")
         return TEMPLATE_CONFIGS["campbell"]
     
-    # Ambrose Construct Group detection
-    elif (re.search(r"Ambrose\s+Construct", text, re.IGNORECASE) or 
-          re.search(r"20\d{6}-\d{2}", text) or
-          re.search(r"ACG", text)):
-        logger.info("Detected Ambrose Construct Group template")
+    # Rizon Group detection
+    elif (re.search(r"P\d{6}", text) or  # P367117 format
+          re.search(r"Rizon\s+Group", text, re.IGNORECASE) or
+          re.search(r"Rizon\s+Pty", text, re.IGNORECASE)):
+        logger.info("Detected Rizon Group template")
+        return TEMPLATE_CONFIGS["rizon"]
+    
+    # Australian Restoration Company detection
+    elif (re.search(r"PO\d+-[A-Z0-9]+-\d+", text) or  # PO96799-BU01-003 format
+          re.search(r"Australian\s+Restoration", text, re.IGNORECASE) or
+          re.search(r"ARC\s+Projects", text, re.IGNORECASE)):
+        logger.info("Detected Australian Restoration Company template")
+        return TEMPLATE_CONFIGS["australian_restoration"]
+    
+    # Townsend Building Services detection
+    elif (re.search(r"TBS-\d+", text) or
+          re.search(r"Townsend\s+Building\s+Services", text, re.IGNORECASE) or
+          re.search(r"tbs\.admin@tbs\.com\.au", text, re.IGNORECASE)):
+        logger.info("Detected Townsend Building Services template")
+        return TEMPLATE_CONFIGS["townsend"]
+    
+    # Ambrose Construct Group detection (default pattern: 20XXXXXX-XX)
+    elif re.search(r"20\d{6}-\d{2}", text):
+        logger.info("Detected Ambrose Construct Group template (based on PO number pattern)")
         return TEMPLATE_CONFIGS["ambrose"]
     
-    # Additional detection based on document structure
-    # Check for "Scope of Works" vs "Description of Works"
-    if re.search(r"Scope\s+of\s+Works", text, re.IGNORECASE):
-        # Check for specific patterns that might indicate PBG or Campbell
-        if re.search(r"CONTRACTORS?\s+REPRESENTATIVE", text, re.IGNORECASE):
-            # Could be either PBG or Campbell, check for more specific patterns
-            if re.search(r"Work\s+Order.*Contract\s+No", text, re.IGNORECASE):
-                logger.info("Detected alternative template format (likely Profile Build or Campbell)")
-                # Default to Profile Build if unclear
-                return TEMPLATE_CONFIGS["profile_build"]
+    # Check for generic work order/contract indicators
+    elif re.search(r"WORK\s+ORDER|CONTRACT\s+NO|Scope\s+of\s+Works", text, re.IGNORECASE):
+        logger.info("Detected generic construction template")
+        return TEMPLATE_CONFIGS["generic"]
     
-    # Default to Ambrose template if no specific match
-    logger.info("Using default Ambrose template")
-    return TEMPLATE_CONFIGS["ambrose"]
+    # Default to generic template
+    else:
+        logger.info("Using generic template (no specific pattern detected)")
+        return TEMPLATE_CONFIGS["generic"]
 
 
 def extract_data_from_pdf(file_path):
@@ -889,7 +994,7 @@ def extract_job_and_supervisor_details(text, extracted_data, template):
             break
 
     # Extract Supervisor/Contractor Representative Details
-    supervisor_section_pattern = template.get("supervisor_section", r"SUPERVISOR\s+DETAILS")
+    supervisor_section_pattern = template.get("supervisor_section_pattern", r"Supervisor\s+Details")
     supervisor_section = re.search(
         rf"{supervisor_section_pattern}([\s\S]+?)(?=BEST\s+CONTACT|JOB\s+DETAILS|$)",
         text,
