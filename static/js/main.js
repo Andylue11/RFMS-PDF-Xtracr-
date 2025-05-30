@@ -429,8 +429,12 @@ function setupPdfUpload() {
         const file = event.target.files[0];
         if (!file) return;
 
+        // Get the selected builder name from the sold-to fields
+        const builderName = document.getElementById('sold-to-name')?.value || '';
+        
         const formData = new FormData();
         formData.append('pdf_file', file);
+        formData.append('builder_name', builderName);
         
         try {
             uploadBtn.disabled = true;
@@ -448,8 +452,28 @@ function setupPdfUpload() {
             const extractedData = await response.json();
             console.log('Extracted data:', extractedData);
             
-            // Populate the ship-to fields with extracted data
-                populateShipTo(extractedData);
+            // Extract data into form fields
+            if (extractedData) {
+                // Check for builder mismatch warning
+                if (extractedData.builder_mismatch_warning) {
+                    const continueWithMismatch = confirm(
+                        extractedData.builder_mismatch_warning + 
+                        "\n\nDo you want to continue with the extraction anyway?"
+                    );
+                    if (!continueWithMismatch) {
+                        showNotification('PDF upload cancelled. Please select the correct builder.', 'warning');
+                        return;
+                    }
+                }
+                
+                // Populate ship-to fields
+                setValue('ship-to-name', extractedData.customer_name || '');
+                setValue('ship-to-address1', extractedData.address || extractedData.address1 || '');
+                setValue('ship-to-address2', extractedData.address2 || '');
+                setValue('ship-to-city', extractedData.city || '');
+                setValue('ship-to-zip', extractedData.zip_code || '');
+                setValue('ship-to-email', extractedData.email || '');
+            }
             
             showNotification('PDF uploaded and data extracted successfully!', 'success');
             

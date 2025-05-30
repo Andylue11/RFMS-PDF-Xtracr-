@@ -93,7 +93,7 @@ if missing_credentials:
     rfms_api = None
 else:
     # Initialize RFMS API client with validated credentials
-rfms_api = RfmsApi(
+    rfms_api = RfmsApi(
         base_url=rfms_base_url,
         store_code=rfms_store_code,
         username=rfms_username,
@@ -164,6 +164,11 @@ def upload_pdf_api():
 
     if file and allowed_file(file.filename):
         filename = secure_filename(file.filename)
+        
+        # Get the builder name from the form data
+        builder_name = request.form.get('builder_name', '')
+        logger.info(f"Processing PDF for builder: {builder_name}")
+        
         # Create a temporary file path or use BytesIO directly if extractor supports it
         # Since the extractor takes a file path, saving to a temporary file is necessary
 
@@ -173,8 +178,8 @@ def upload_pdf_api():
             temp_path = tmp_file.name
 
         try:
-            # Extract data from PDF using the utility function
-            extracted_data = extract_data_from_pdf(temp_path)
+            # Extract data from PDF using the utility function, passing builder name
+            extracted_data = extract_data_from_pdf(temp_path, builder_name=builder_name)
             logger.info(f"Successfully extracted data for {filename}")
 
             # Clean up the temporary file
@@ -373,15 +378,15 @@ def create_customer():
         "customerType": "INSURANCE",
         "entryType": "Customer",
         "customerAddress": {
-        "firstName": customer.get("first_name") or ship_to.get("first_name", ""),
-        "lastName": customer.get("last_name") or ship_to.get("last_name", ""),
+            "firstName": customer.get("first_name") or ship_to.get("first_name", ""),
+            "lastName": customer.get("last_name") or ship_to.get("last_name", ""),
             "businessName": customer.get("customer_name") or customer.get("business_name") or ship_to.get("name") or "",
-        "address1": customer.get("address1") or ship_to.get("address1", ""),
-        "address2": customer.get("address2") or ship_to.get("address2", ""),
-        "city": customer.get("city") or ship_to.get("city", ""),
-        "state": customer.get("state") or ship_to.get("state", ""),
-        "postalCode": customer.get("zip_code") or ship_to.get("zip_code", ""),
-        "country": customer.get("country") or ship_to.get("country", "Australia"),
+            "address1": customer.get("address1") or ship_to.get("address1", ""),
+            "address2": customer.get("address2") or ship_to.get("address2", ""),
+            "city": customer.get("city") or ship_to.get("city", ""),
+            "state": customer.get("state") or ship_to.get("state", ""),
+            "postalCode": customer.get("zip_code") or ship_to.get("zip_code", ""),
+            "country": customer.get("country") or ship_to.get("country", "Australia"),
         },
         "shipToAddress": {
             "firstName": ship_to.get("first_name") or customer.get("first_name", ""),

@@ -5,6 +5,9 @@ import pdfplumber
 import PyPDF2
 import fitz  # PyMuPDF
 import traceback
+from typing import Dict, Any, List
+from datetime import datetime
+from difflib import SequenceMatcher
 
 logger = logging.getLogger(__name__)
 
@@ -209,67 +212,289 @@ TEMPLATE_CONFIGS = {
 }
 
 
-def detect_template(text):
+def detect_template(text: str, builder_name: str = "") -> Dict[str, Any]:
     """
-    Detect which template to use based on content patterns.
+    Detect which builder template the PDF belongs to based on content patterns and builder name.
     
     Args:
-        text (str): The extracted PDF text
+        text: The extracted text from the PDF
+        builder_name: The builder name from the RFMS database (optional)
         
     Returns:
-        dict: The template configuration to use
+        dict: Template information including name and confidence score
     """
+    # First, try to match based on the builder name if provided
+    if builder_name:
+        template_name = match_builder_to_template(builder_name)
+        if template_name and template_name in TEMPLATE_CONFIGS:
+            logger.info(f"Template detected from builder name: {template_name}")
+            return TEMPLATE_CONFIGS[template_name]
+    
+    # Fall back to content-based detection
     # Check for specific company indicators
     # Profile Build Group detection
-    if re.search(r"PBG-\d+-\d+", text, re.IGNORECASE) or re.search(r"Profile\s+Build\s+Group", text, re.IGNORECASE):
+    if re.search(r"profile\s+build\s+group", text, re.IGNORECASE):
         logger.info("Detected Profile Build Group template")
         return TEMPLATE_CONFIGS["profile_build"]
     
+    # Ambrose Construct Group detection  
+    if (
+        re.search(r"ambrose\s+construct", text, re.IGNORECASE)
+        or re.search(r"20\d{6}-\d{2}", text)
+    ):
+        logger.info("Detected Ambrose Construct Group template")
+        return TEMPLATE_CONFIGS["ambrose"]
+    
     # Campbell Construction detection
-    elif (re.search(r"CCC\d+-\d+", text, re.IGNORECASE) or 
-          re.search(r"Campbell\s+Construction", text, re.IGNORECASE) or
-          re.search(r"Campbell\s+Construct", text, re.IGNORECASE)):
+    if re.search(r"CCC\d+-\d+", text) or re.search(r"campbell\s+construction", text, re.IGNORECASE):
         logger.info("Detected Campbell Construction template")
         return TEMPLATE_CONFIGS["campbell"]
     
     # Rizon Group detection
-    elif (re.search(r"P\d{6}", text) or  # P367117 format
-          re.search(r"Rizon\s+Group", text, re.IGNORECASE) or
-          re.search(r"Rizon\s+Pty", text, re.IGNORECASE)):
+    if re.search(r"rizon\s+group", text, re.IGNORECASE) or re.search(r"Client\s*/\s*Site\s+Details", text):
         logger.info("Detected Rizon Group template")
         return TEMPLATE_CONFIGS["rizon"]
     
     # Australian Restoration Company detection
-    elif (re.search(r"PO\d+-[A-Z0-9]+-\d+", text) or  # PO96799-BU01-003 format
-          re.search(r"Australian\s+Restoration", text, re.IGNORECASE) or
-          re.search(r"ARC\s+Projects", text, re.IGNORECASE)):
+    # Define builder-specific patterns
+    builder_patterns = {
+        "ambrose": {
+            "name": "Ambrose Construct Group",
+            "po_patterns": [
+                r"P\.O\.\s*No:?\s*(20\d{6}-\d{2})",  # Specific format: 20XXXXXX-XX
+                r"PO[:\s#]+(20\d{6}-\d{2})",
+                r"Purchase\s+Order[:\s#]+(20\d{6}-\d{2})",
+                r"Order\s+Number[:\s#]+(20\d{6}-\d{2})",
+            ],
+            "customer_patterns": [
+                r"Insured\s+Owner:?\s*([A-Za-z\s]+?)(?=\n|Authorised)",
+                r"Insured:?\s*([A-Za-z\s]+?)(?=\n)",
+                r"Customer[:\s]+([A-Za-z\s]+?)(?=\n)",
+                r"Name[:\s]+([A-Za-z\s]+?)(?=\n)",
+                r"Bill\s+To[:\s]+([A-Za-z\s]+?)(?=\n)",
+            ],
+            "description_patterns": [
+                r"Description\s+of\s+Works[:\s]*(.+?)(?=Supervisor|$)",
+                r"Works\s+Description[:\s]*(.+?)(?=Supervisor|$)",
+                r"Scope\s+of\s+Works[:\s]*(.+?)(?=Supervisor|$)",
+            ],
+            "supervisor_section_pattern": r"Supervisor\s+Details",
+            "dollar_patterns": [
+                r"\$\s*([\d,]+\.?\d*)",
+                r"Total[:\s]+\$?\s*([\d,]+\.?\d*)",
+            ],
+        },
+        "profile_build": {
+            "name": "Profile Build Group",
+            "po_patterns": [
+                r"WORK\s+ORDER:?\s*(PBG-\d+-\d+)",  # PBG-18191-18039
+                r"PBG-\d+-\d+",  # Direct pattern match
+                r"Order\s+Number[:\s#]+(PBG-\d+-\d+)",
+                r"Contract\s+No[.:]?\s*(PBG-\d+-\d+)",
+            ],
+            "customer_patterns": [
+                r"Client[:\s]+\n?([A-Za-z\s&]+?)(?=\n|Job)",
+                r"Customer[:\s]+([A-Za-z\s]+?)(?=\n)",
+                r"SITE\s+CONTACT[:\s]+([A-Za-z\s]+?)(?=\n)",
+            ],
+            "description_patterns": [
+                r"NOTES[:\s]*\n([\s\S]+?)(?=All amounts|Total|$)",
+                r"Scope\s+of\s+Works[:\s]*(.+?)(?=All amounts|Total|$)",
+                r"PBG-\d+-\d+\s*\n([\s\S]+?)(?=All amounts|Total|$)",
+            ],
+            "supervisor_section_pattern": r"Supervisor[:\s]",
+            "dollar_patterns": [
+                r"Total\s+AUD\s*\$?\s*([\d,]+\.?\d*)",
+                r"Total[:\s]+\$?\s*([\d,]+\.?\d*)",
+                r"\$\s*([\d,]+\.?\d*)",
+            ],
+        },
+        "campbell": {
+            "name": "Campbell Construction",
+            "po_patterns": [
+                r"Contract\s+No[.:]?\s*(CCC\d+-\d+)",  # CCC55132-88512
+                r"CCC\d+-\d+",  # Direct pattern match
+                r"CONTRACT\s+NO[.:]?\s*(CCC\d+-\d+)",
+                r"Contract\s+Number[.:]?\s*(CCC\d+-\d+)",
+            ],
+            "customer_patterns": [
+                r"Customer:\s*\n([A-Za-z\s]+?)(?=\n)",  # Customer on next line
+                r"Site\s+Contact:\s*\n([A-Za-z\s]+?)(?:\s*-|$)",  # Site Contact on next line
+                r"Customer[:\s]+\n?([A-Za-z\s]+?)(?=\n|Site)",
+                r"Customer[:\s]+([A-Za-z\s]+)",  # Simplified pattern
+                r"Client[:\s]+([A-Za-z\s]+?)(?=\n)",
+                r"Owner[:\s]+([A-Za-z\s]+?)(?=\n)",
+            ],
+            "description_patterns": [
+                r"Scope\s+of\s+Work[:\s]*\n([\s\S]+?)(?=Totals|Page|Subtotal|$)",
+                r"CCC\d+-\d+[\s\S]+?Description[:\s]*\n([\s\S]+?)(?=Totals|Page|Subtotal|$)",
+                r"Description\s+of\s+Works[:\s]*(.+?)(?=Totals|Page|$)",
+            ],
+            "supervisor_section_pattern": r"CONTRACTOR'S\s+REPRESENTATIVE|Supervisor",
+            "dollar_patterns": [
+                r"Subtotal\s*\n\s*\$?([\d,]+\.?\d*)",  # Subtotal with newline
+                r"Subtotal\s+\$\s*([\d,]+\.?\d*)",  # Based on key info: "Subtotal  $700.00"
+                r"Total\s*\$?\s*([\d,]+\.?\d*)",
+                r"\$\s*([\d,]+\.?\d*)",
+            ],
+        },
+        "rizon": {
+            "name": "Rizon Group",
+            "po_patterns": [
+                r"PURCHASE\s+ORDER\s+NO[:\s]*\n?(P?\d+)",  # P367117 or similar
+                r"(P\d{6})",  # Direct pattern match - added capture group
+                r"ORDER\s+NUMBER[:\s]*(\d+/\d+/\d+)",  # Alternative format
+                r"(\d{6}/\d{3}/\d{2})",  # Format like 187165/240/01
+                r"PO[:\s#]+(P?\d+)",
+            ],
+            "customer_patterns": [
+                r"Client\s*/\s*Site\s+Details.*?\n(?:[^\n]+\n){3,6}([A-Z][A-Za-z\s]+?)(?=\n)",  # Skip lines to get to actual name
+                r"Client\s*/\s*Site\s+Details[:\s]*\n?([A-Za-z\s]+?)(?=\n\d+|\n[A-Za-z]+\s+[A-Za-z]+,)",  # Name is first line in grid box
+                r"Client\s*/\s*Site\s+Details[:\s]*\n?([A-Za-z\s]+?)(?=\n|\()",
+                r"Customer[:\s]+([A-Za-z\s]+?)(?=\n)",
+                r"Site\s+Details[:\s]*\n?([A-Za-z\s]+?)(?=\n)",
+            ],
+            "description_patterns": [
+                r"SCOPE\s+OF\s+WORKS[:\s]*\n([\s\S]+?)(?=Net Order|PURCHASE\s+ORDER\s+CONDITIONS|Total|$)",
+                r"Scope\s+of\s+Works[:\s]*\n([\s\S]+?)(?=Net Order|Total|$)",
+            ],
+            "supervisor_section_pattern": r"Supervisor[:\s]",
+            "dollar_patterns": [
+                r"Total\s+Order[:\s]*\$?\s*([\d,]+\.?\d*)",
+                r"Net\s+Order[:\s]*\$?\s*([\d,]+\.?\d*)",
+                r"\$\s*([\d,]+\.?\d*)",
+            ],
+        },
+        "australian_restoration": {
+            "name": "Australian Restoration Company",
+            "po_patterns": [
+                r"Order\s+Number[:\s]*\n?(PO\d+-[A-Z0-9]+-\d+)",  # PO96799-BU01-003
+                r"PO\d+-[A-Z0-9]+-\d+",  # Direct pattern match
+                r"Purchase\s+Order[:\s#]+(PO\d+-[A-Z0-9]+-\d+)",
+            ],
+            "customer_patterns": [
+                r"Customer\s+Details[:\s]*\n?([A-Za-z\s]+?)(?=\n|Site)",
+                r"Customer\s+Details[:\s]*([A-Za-z\s]+)",  # Without lookahead
+                r"Customer[:\s]+([A-Za-z\s]+?)(?=\n)",
+                r"Client[:\s]+([A-Za-z\s]+?)(?=\n)",
+            ],
+            "description_patterns": [
+                r"Flooring\s+Contractor\s+Material\n([\s\S]+?)(?=All amounts|Preliminaries|Total|$)",
+                r"<highlighter Header>\s*=?\s*([\s\S]+?)(?=All amounts shown|Total|$)",  # Based on key info
+                r"Scope\s+of\s+Works[:\s]*\n([\s\S]+?)(?=All amounts|Total|$)",
+            ],
+            "supervisor_section_pattern": r"Project\s+Manager[:\s]|Case\s+Manager[:\s]",
+            "dollar_patterns": [
+                r"Sub\s+Total\s+\$\s*([\d,]+\.?\d*)",  # Based on key info: "Sub Total     $3,588.00"
+                r"Total\s+AUD\s*\$?\s*([\d,]+\.?\d*)",
+                r"\$\s*([\d,]+\.?\d*)",
+            ],
+        },
+        "townsend": {
+            "name": "Townsend Building Services",
+            "po_patterns": [
+                r"Order\s+Number\s*\n\s*([A-Z0-9]+)",  # Matches "Order Number\nPO23218"
+                r"Purchase\s+Order[:\s#]+(TBS-\d+)",
+                r"TBS-\d+",
+                r"Order\s+Number[:\s]*(TBS-\d+|PO\d+)",
+                r"WO[:\s#]+(\d+)",
+                r"Work\s+Order[:\s#]+(\d+)",
+            ],
+            "customer_patterns": [
+                r"Site\s+Contact\s+Name\s*\n([A-Za-z\s\(\)]+?)(?=\n)",  # Based on actual text
+                r"Site\s+Contact\s+name\s*=?\s*([A-Za-z\s]+?)(?=\n|Subtotal)",  # Based on key info
+                r"Contact\s+Name\s*\n\s*([A-Za-z\s]+?)(?=\n)",  # Matches "Contact Name\nJOHN SURNAME"
+                r"Attention[:\s]+([A-Za-z\s]+?)(?=\n|Email)",
+                r"Customer[:\s]+([A-Za-z\s]+?)(?=\n)",
+                r"Client[:\s]+([A-Za-z\s]+?)(?=\n)",
+            ],
+            "description_patterns": [
+                r"(?:Flooring|Floor\s+Preperation)[^<]*?([\s\S]+?)(?=Total|$)",  # Based on key info
+                r"Additional\s+Notes/Instructions[:\s]*\n([\s\S]+?)(?=Flooring|Floor|Start|$)",  # Work Order notes
+                r"Scope\s+of\s+Works[:\s]*\n([\s\S]+?)(?=Total|ABN|Page|$)",
+                r"Work\s+Description[:\s]*\n([\s\S]+?)(?=Total|ABN|Page|$)",
+                r"Description[:\s]*\n([\s\S]+?)(?=Total|ABN|Page|$)",
+            ],
+            "supervisor_section_pattern": r"Project\s+Manager[:\s]|Supervisor[:\s]|Manager[:\s]",
+            "dollar_patterns": [
+                r"Subtotal\s*\n\s*\$?([\d,]+\.?\d*)",  # Based on actual text: "Subtotal\n$14,430.00"
+                r"Subtotal\s*=?\s*\$?\s*([\d,]+\.?\d*)",  # Based on key info: "Subtotal = Dollar value"
+                r"Total\s+Inc\.?\s+GST[:\s]*\$?\s*([\d,]+\.?\d*)",
+                r"Total[:\s]+\$?\s*([\d,]+\.?\d*)",
+                r"\$\s*([\d,]+\.?\d*)",
+            ],
+        },
+        "generic": {
+            "name": "Generic Template",
+            "po_patterns": [
+                r"P\.O\.\s*No:?\s*([A-Za-z0-9-]+)",
+                r"PO[:\s#]+([A-Za-z0-9-]+)",
+                r"Purchase\s+Order[:\s#]+([A-Za-z0-9-]+)",
+                r"Order\s+Number[:\s#]+([A-Za-z0-9-]+)",
+                r"CONTRACT\s+NO[.:]?\s*([A-Za-z0-9-]+)",
+                r"Contract\s+Number[.:]?\s*([A-Za-z0-9-]+)",
+                r"WORK\s+ORDER[:\s]+([A-Za-z0-9-]+)",
+                r"JOB\s+NUMBER[:\s]+([A-Za-z0-9-]+)",
+            ],
+            "customer_patterns": [
+                r"Customer[:\s]+([A-Za-z\s]+?)(?=\n)",
+                r"Client[:\s]+([A-Za-z\s]+?)(?=\n)",
+                r"Name[:\s]+([A-Za-z\s]+?)(?=\n)",
+                r"Bill\s+To[:\s]+([A-Za-z\s]+?)(?=\n)",
+            ],
+            "description_patterns": [
+                r"Description\s+of\s+Works[:\s]*(.+?)(?=Supervisor|Total|$)",
+                r"Scope\s+of\s+Works[:\s]*(.+?)(?=Supervisor|Total|$)",
+                r"Works\s+Description[:\s]*(.+?)(?=Supervisor|Total|$)",
+            ],
+            "supervisor_section_pattern": r"Supervisor|Contractor[\s']*s?\s+Representative",
+            "dollar_patterns": [
+                r"\$\s*([\d,]+\.?\d*)",
+                r"Total[:\s]+\$?\s*([\d,]+\.?\d*)",
+            ],
+        }
+    }
+
+    # Check for specific company indicators
+    # Profile Build Group detection
+    if re.search(r"profile\s+build\s+group", text, re.IGNORECASE):
+        logger.info("Detected Profile Build Group template")
+        return builder_patterns["profile_build"]
+    
+    # Ambrose Construct Group detection  
+    if (
+        re.search(r"ambrose\s+construct", text, re.IGNORECASE)
+        or re.search(r"20\d{6}-\d{2}", text)
+    ):
+        logger.info("Detected Ambrose Construct Group template")
+        return builder_patterns["ambrose"]
+    
+    # Campbell Construction detection
+    if re.search(r"CCC\d+-\d+", text) or re.search(r"campbell\s+construction", text, re.IGNORECASE):
+        logger.info("Detected Campbell Construction template")
+        return builder_patterns["campbell"]
+    
+    # Rizon Group detection
+    if re.search(r"rizon\s+group", text, re.IGNORECASE) or re.search(r"Client\s*/\s*Site\s+Details", text):
+        logger.info("Detected Rizon Group template")
+        return builder_patterns["rizon"]
+    
+    # Australian Restoration Company detection
+    if re.search(r"australian\s+restoration", text, re.IGNORECASE) or re.search(r"PO\d+-[A-Z0-9]+-\d+", text):
         logger.info("Detected Australian Restoration Company template")
-        return TEMPLATE_CONFIGS["australian_restoration"]
+        return builder_patterns["australian_restoration"]
     
     # Townsend Building Services detection
-    elif (re.search(r"TBS-\d+", text) or
-          re.search(r"Townsend\s+Building\s+Services", text, re.IGNORECASE) or
-          re.search(r"tbs\.admin@tbs\.com\.au", text, re.IGNORECASE)):
+    if re.search(r"townsend\s+building", text, re.IGNORECASE) or re.search(r"TBS-\d+", text):
         logger.info("Detected Townsend Building Services template")
-        return TEMPLATE_CONFIGS["townsend"]
-    
-    # Ambrose Construct Group detection (default pattern: 20XXXXXX-XX)
-    elif re.search(r"20\d{6}-\d{2}", text):
-        logger.info("Detected Ambrose Construct Group template (based on PO number pattern)")
-        return TEMPLATE_CONFIGS["ambrose"]
-    
-    # Check for generic work order/contract indicators
-    elif re.search(r"WORK\s+ORDER|CONTRACT\s+NO|Scope\s+of\s+Works", text, re.IGNORECASE):
-        logger.info("Detected generic construction template")
-        return TEMPLATE_CONFIGS["generic"]
+        return builder_patterns["townsend"]
     
     # Default to generic template
-    else:
-        logger.info("Using generic template (no specific pattern detected)")
-        return TEMPLATE_CONFIGS["generic"]
+    logger.info("Using generic template")
+    return builder_patterns["generic"]
 
 
-def extract_data_from_pdf(file_path):
+def extract_data_from_pdf(pdf_path: str, builder_name: str = "") -> Dict[str, Any]:
     """
     Extract relevant data from PDF purchase orders.
 
@@ -277,12 +502,13 @@ def extract_data_from_pdf(file_path):
     It looks for patterns like customer information, PO numbers, scope of work and dollar values.
 
     Args:
-        file_path (str): Path to the PDF file
+        pdf_path (str): Path to the PDF file
+        builder_name (str): The builder name from the RFMS database
 
     Returns:
         dict: Extracted data including customer details, PO information, and more
     """
-    logger.info(f"Extracting data from PDF: {file_path}")
+    logger.info(f"Extracting data from PDF: {pdf_path}")
 
     # Initialize extracted data dictionary with all required fields
     extracted_data = {
@@ -327,37 +553,53 @@ def extract_data_from_pdf(file_path):
         "alternate_contact_email": "",
         # --- New: list of all alternate contacts ---
         "alternate_contacts": [],  # Each: {type, name, phone, email}
+        # --- Date fields ---
+        "commencement_date": "",
+        "installation_date": "",
     }
 
     # Try different extraction methods in order of reliability
     try:
         # Try PyMuPDF (fitz) first - generally fastest and most reliable
-        text = extract_with_pymupdf(file_path)
+        text = extract_with_pymupdf(pdf_path)
         if text:
             extracted_data["raw_text"] = text
-            template = detect_template(text)
+            
+            # Detect builder from PDF content
+            detected_builder = detect_builder_from_pdf(text)
+            if detected_builder and builder_name:
+                # Normalize builder names for comparison
+                detected_normalized = detected_builder.lower().replace(' ', '')
+                provided_normalized = builder_name.lower().replace(' ', '')
+                
+                if detected_normalized not in provided_normalized and provided_normalized not in detected_normalized:
+                    logger.warning(f"[BUILDER_MISMATCH] PDF appears to be from '{detected_builder}' but selected builder is '{builder_name}'")
+                    extracted_data["builder_mismatch_warning"] = f"PDF appears to be from '{detected_builder}' but selected builder is '{builder_name}'. Please verify the correct builder is selected."
+                    extracted_data["detected_builder"] = detected_builder
+            
+            template = detect_template(text, builder_name)
             parse_extracted_text(text, extracted_data, template)
 
         # If we didn't get all needed data, try pdfplumber
         if not check_essential_fields(extracted_data):
-            text = extract_with_pdfplumber(file_path)
+            text = extract_with_pdfplumber(pdf_path)
             if text and text != extracted_data["raw_text"]:
                 extracted_data["raw_text"] = text
-                template = detect_template(text)
+                template = detect_template(text, builder_name)
                 parse_extracted_text(text, extracted_data, template)
 
         # Last resort, try PyPDF2
         if not check_essential_fields(extracted_data):
-            text = extract_with_pypdf2(file_path)
+            text = extract_with_pypdf2(pdf_path)
             if text and text != extracted_data["raw_text"]:
                 extracted_data["raw_text"] = text
-                template = detect_template(text)
+                template = detect_template(text, builder_name)
                 parse_extracted_text(text, extracted_data, template)
 
         # Clean and format the extracted data
         clean_extracted_data(extracted_data)
 
-        logger.info(f"Successfully extracted data from PDF: {file_path}")
+        logger.info(f"Successfully extracted data from PDF: {pdf_path}")
         return extracted_data
 
     except Exception as e:
@@ -714,28 +956,6 @@ def parse_extracted_text(text, extracted_data, template):
             except ValueError:
                 continue
     
-    # If no dollar value found with template patterns, try generic patterns
-    if extracted_data["dollar_value"] == 0:
-        generic_dollar_patterns = [
-            r"TOTAL\s+Purchase\s+Order\s+Price\s*\(ex\s+GST\)\s*\$?\s*([\d,]+\.\d{2})",
-            r"Total[:\s]+\$?\s*([\d,]+\.\d{2})",
-            r"Amount[:\s]+\$?\s*([\d,]+\.\d{2})",
-            r"Price[:\s]+\$?\s*([\d,]+\.\d{2})",
-            r"Value[:\s]+\$?\s*([\d,]+\.\d{2})",
-            r"Contract\s+Value[:\s]+\$?\s*([\d,]+\.\d{2})",
-            r"Contract\s+Sum[:\s]+\$?\s*([\d,]+\.\d{2})",
-        ]
-
-        for pattern in generic_dollar_patterns:
-            match = re.search(pattern, text, re.IGNORECASE)
-            if match:
-                value_str = match.group(1).replace(",", "")
-                try:
-                    extracted_data["dollar_value"] = float(value_str)
-                    break
-                except ValueError:
-                    continue
-    
     logger.info(f"[EXTRACT] Dollar Value: {extracted_data['dollar_value']}")
 
     # --- Extract all alternate contacts (Best, Real Estate, Site, Authorised) ---
@@ -968,6 +1188,113 @@ def parse_extracted_text(text, extracted_data, template):
         if supervisor_contact_match and not extracted_data.get("supervisor_mobile"):
             extracted_data["supervisor_mobile"] = supervisor_contact_match.group(1).strip()
             logger.info(f"[TOWNSEND] Found supervisor mobile: {extracted_data['supervisor_mobile']}")
+
+    # Extract Profile Build Group specific fields if this is Profile Build template
+    if "profile_build" in template["name"].lower():
+        # For Profile Build Group: SITE CONTACT is the customer, NOT Client (which is the insurance company)
+        
+        # Extract customer from SITE CONTACT field
+        site_contact_match = re.search(
+            r"SITE\s+CONTACT:\s*([A-Za-z\s]+?)(?=\nSITE\s+CONTACT\s+PHONE|$)",
+            text,
+            re.IGNORECASE
+        )
+        if site_contact_match:
+            customer_name = site_contact_match.group(1).strip()
+            # Clean up the name - remove any trailing text
+            customer_name = re.sub(r"SITE\s+CONTACT\s+PHONE.*", "", customer_name, flags=re.IGNORECASE).strip()
+            if customer_name and customer_name.lower() != "site contact phone":
+                extracted_data["customer_name"] = customer_name
+                logger.info(f"[PROFILE BUILD] Found customer name (SITE CONTACT): {extracted_data['customer_name']}")
+        
+        # Extract customer phone from SITE CONTACT PHONE field
+        site_phone_match = re.search(
+            r"SITE\s+CONTACT\s+PHONE:\s*([0-9\s\-\(\)]+)",
+            text,
+            re.IGNORECASE
+        )
+        if site_phone_match:
+            phone = site_phone_match.group(1).strip()
+            clean_phone = "".join(c for c in phone if c.isdigit())
+            if 8 <= len(clean_phone) <= 12:
+                extracted_data["phone"] = phone
+                logger.info(f"[PROFILE BUILD] Found customer phone (SITE CONTACT PHONE): {extracted_data['phone']}")
+        
+        # Extract attendance dates for commencement/installation dates
+        attendance_match = re.search(
+            r"ATTENDANCE\s+SCHEDULED\s+FOR:\s*(\d{1,2}/\d{1,2}/\d{4})\s*to\s*(\d{1,2}/\d{1,2}/\d{4})",
+            text,
+            re.IGNORECASE
+        )
+        if attendance_match:
+            extracted_data["commencement_date"] = attendance_match.group(1).strip()
+            extracted_data["installation_date"] = attendance_match.group(2).strip()
+            logger.info(f"[PROFILE BUILD] Found attendance dates: {extracted_data['commencement_date']} to {extracted_data['installation_date']}")
+        
+        # Extract supervisor name - more flexible pattern
+        supervisor_patterns = [
+            r"Supervisor:\s*\n([A-Za-z\s]+?)(?=\nABN|$)",  # Name before ABN
+            r"Supervisor:\s*\n([A-Za-z\s]+?)(?=\n)",  # Name on next line
+            r"Supervisor:\s*([A-Za-z\s]+?)(?=\n)",  # Name on same line
+        ]
+        for pattern in supervisor_patterns:
+            match = re.search(pattern, text, re.IGNORECASE)
+            if match and not extracted_data.get("supervisor_name"):
+                extracted_data["supervisor_name"] = match.group(1).strip()
+                logger.info(f"[PROFILE BUILD] Found supervisor: {extracted_data['supervisor_name']}")
+                break
+        
+        # Extract supervisor phone - more flexible pattern
+        supervisor_phone_patterns = [
+            # Pattern for: Supervisor:\nName\nABN: xxx\nPhone:\n0427 xxx xxx
+            r"Supervisor:[\s\S]*?Phone:\s*\n([0-9\s\-\(\)]+)",
+            # Pattern for Phone: followed by number
+            r"Phone:\s*\n([0-9\s\-\(\)]+)",
+            # Alternative pattern
+            r"Supervisor:[\s\S]{0,100}Phone:\s*([0-9\s\-\(\)]+)",
+        ]
+        for pattern in supervisor_phone_patterns:
+            match = re.search(pattern, text, re.IGNORECASE)
+            if match and not extracted_data.get("supervisor_mobile"):
+                phone = match.group(1).strip()
+                clean_phone = "".join(c for c in phone if c.isdigit())
+                if 8 <= len(clean_phone) <= 12:
+                    extracted_data["supervisor_mobile"] = phone
+                    logger.info(f"[PROFILE BUILD] Found supervisor phone: {extracted_data['supervisor_mobile']}")
+                    break
+        
+        # Extract email - Profile Build often uses their company email
+        if not extracted_data.get("email"):
+            # Try to find any @profilebuildgroup email
+            email_match = re.search(
+                r"([a-zA-Z0-9._%+-]+@profilebuildgroup\.com\.au)",
+                text,
+                re.IGNORECASE
+            )
+            if email_match:
+                extracted_data["email"] = email_match.group(1).strip()
+                logger.info(f"[PROFILE BUILD] Found email: {extracted_data['email']}")
+        
+        # Extract address - sometimes appears after "Job Address:" or just as address
+        if not extracted_data.get("address"):
+            address_patterns = [
+                r"SITE\s+LOCATION:\s*([^\n]+)",  # Profile Build uses SITE LOCATION
+                r"Job\s+Address:\s*([^\n]+)",
+                r"Address:\s*([^\n]+)",
+                r"Site\s+Address:\s*([^\n]+)",
+                r"Property\s+Address:\s*([^\n]+)",
+            ]
+            for pattern in address_patterns:
+                match = re.search(pattern, text, re.IGNORECASE)
+                if match:
+                    extracted_data["address"] = match.group(1).strip()
+                    logger.info(f"[PROFILE BUILD] Found address: {extracted_data['address']}")
+                    try:
+                        if extracted_data["address"]:
+                            parse_address(extracted_data["address"], extracted_data)
+                    except Exception as e:
+                        logger.warning(f"Failed to parse Profile Build address: {e}")
+                    break
 
     # After extracting supervisor name/phone
     logger.info(f"[EXTRACT] Supervisor Name: {extracted_data['supervisor_name']}")
@@ -1346,9 +1673,45 @@ def parse_address(address_str, extracted_data):
     ]
     state_pattern = r"(NSW|VIC|QLD|SA|WA|TAS|NT|ACT)"
     postcode_pattern = r"(\d{4})$"
+    
+    # First, handle addresses that are comma-separated
+    if ',' in address_str:
+        # Split by comma - common format is "123 Street Name, Suburb, State Postcode"
+        comma_parts = [p.strip() for p in address_str.split(',')]
+        if len(comma_parts) >= 2:
+            extracted_data["address1"] = comma_parts[0]
+            
+            # Process the rest after the first comma
+            rest = ', '.join(comma_parts[1:])
+            parts = rest.split()
+            
+            # Extract state and postcode from the end
+            state = ""
+            zip_code = ""
+            for i in range(len(parts) - 1, -1, -1):
+                if not zip_code and re.match(postcode_pattern, parts[i]):
+                    zip_code = parts[i]
+                    continue
+                if not state and re.match(state_pattern, parts[i], re.IGNORECASE):
+                    state = parts[i].upper()
+                    continue
+            
+            # What's left is the city
+            city_parts = [p for p in parts if p != state and p != zip_code]
+            extracted_data["city"] = " ".join(city_parts).strip().rstrip(',')  # Remove trailing comma
+            extracted_data["state"] = state
+            extracted_data["zip_code"] = zip_code
+            
+            logger.info(
+                f"[ADDRESS PARSE] Raw: '{address_str}' | address1: '{extracted_data['address1']}', city: '{extracted_data['city']}', state: '{extracted_data['state']}', zip: '{extracted_data['zip_code']}'"
+            )
+            return
+    
+    # If no comma, use the old logic but improved
     parts = address_str.strip().split()
     state = ""
     zip_code = ""
+    
     # Find state and postcode from the end
     for i in range(len(parts) - 1, -1, -1):
         if not zip_code and re.match(postcode_pattern, parts[i]):
@@ -1357,33 +1720,156 @@ def parse_address(address_str, extracted_data):
         if not state and re.match(state_pattern, parts[i], re.IGNORECASE):
             state = parts[i].upper()
             continue
+    
     # Remove state and postcode from parts
     main_parts = [p for p in parts if p != state and p != zip_code]
+    
     # Find the last street suffix in main_parts
     last_street_idx = -1
     for idx, word in enumerate(main_parts):
-        if word.capitalize() in street_suffixes:
+        # Check if word (without comma) matches a street suffix
+        word_clean = word.rstrip(',')
+        if word_clean.capitalize() in street_suffixes or word_clean.upper() in [s.upper() for s in street_suffixes]:
             last_street_idx = idx
+    
     logger.info(
         f"[ADDRESS PARSE DEBUG] main_parts: {main_parts}, last_street_idx: {last_street_idx}"
     )
+    
     if last_street_idx != -1:
+        # Include everything up to and including the street suffix in address1
         extracted_data["address1"] = " ".join(main_parts[: last_street_idx + 1])
-        extracted_data["city"] = " ".join(main_parts[last_street_idx + 1 :]).strip()
+        # Everything after the street suffix is the city
+        city_parts = main_parts[last_street_idx + 1 :]
+        extracted_data["city"] = " ".join(city_parts).strip(',').strip()
     else:
-        # If no street suffix, try to split before the last two words (city is often last two words)
-        if len(main_parts) > 2:
-            extracted_data["address1"] = " ".join(main_parts[:-2])
-            extracted_data["city"] = " ".join(main_parts[-2:])
-        elif len(main_parts) == 2:
-            extracted_data["address1"] = main_parts[0]
-            extracted_data["city"] = main_parts[1]
+        # If no street suffix found, assume it's a simple format
+        # Try to find a number at the start (house number)
+        if main_parts and main_parts[0][0].isdigit():
+            # If starts with number, take first 2-3 words as address
+            if len(main_parts) > 3:
+                extracted_data["address1"] = " ".join(main_parts[:3])
+                extracted_data["city"] = " ".join(main_parts[3:]).strip()
+            elif len(main_parts) == 3:
+                extracted_data["address1"] = " ".join(main_parts[:2])
+                extracted_data["city"] = main_parts[2]
+            else:
+                extracted_data["address1"] = " ".join(main_parts)
+                extracted_data["city"] = ""
         else:
-            extracted_data["address1"] = main_parts[0] if main_parts else ""
+            # No clear pattern, use the whole thing as address1
+            extracted_data["address1"] = " ".join(main_parts)
             extracted_data["city"] = ""
+    
     extracted_data["state"] = state
     extracted_data["zip_code"] = zip_code
+    
+    # Clean up any trailing commas
+    extracted_data["city"] = extracted_data["city"].strip(',').strip()
+    
     # Add debug logging
     logger.info(
         f"[ADDRESS PARSE] Raw: '{address_str}' | address1: '{extracted_data['address1']}', city: '{extracted_data['city']}', state: '{extracted_data['state']}', zip: '{extracted_data['zip_code']}'"
     )
+
+
+def match_builder_to_template(builder_name: str) -> str:
+    """
+    Match a builder name from the database to the appropriate extraction template.
+    Uses fuzzy matching to handle variations in builder names.
+    
+    Args:
+        builder_name: The builder name from the RFMS database
+        
+    Returns:
+        The template name to use for extraction
+    """
+    if not builder_name:
+        return ""
+    
+    # Normalize the builder name for comparison
+    normalized_name = builder_name.lower().strip()
+    
+    # Define builder name patterns and their corresponding templates
+    builder_patterns = {
+        "ambrose": ["ambrose", "ambrose construct", "ambrose construction"],
+        "profile_build": ["profile build", "profile build group", "pbg"],
+        "rizon": ["rizon", "rizon group"],
+        "campbell": ["campbell", "campbell construction", "campbell build"],
+        "australian_restoration": ["australian restoration", "arc", "restoration company"],
+        "townsend": ["townsend", "townsend building", "tbs", "townsend services"]
+    }
+    
+    # First try exact substring matches
+    for template, patterns in builder_patterns.items():
+        for pattern in patterns:
+            if pattern in normalized_name:
+                logger.info(f"[BUILDER_MATCH] Exact match: '{builder_name}' -> '{template}'")
+                return template
+    
+    # If no exact match, use fuzzy matching
+    best_match = None
+    best_score = 0.0
+    
+    for template, patterns in builder_patterns.items():
+        for pattern in patterns:
+            # Calculate similarity score
+            score = SequenceMatcher(None, normalized_name, pattern).ratio()
+            if score > best_score and score > 0.6:  # 60% similarity threshold
+                best_score = score
+                best_match = template
+    
+    if best_match:
+        logger.info(f"[BUILDER_MATCH] Fuzzy match: '{builder_name}' -> '{best_match}' (score: {best_score:.2f})")
+        return best_match
+    
+    logger.warning(f"[BUILDER_MATCH] No match found for builder: '{builder_name}'")
+    return ""
+
+
+def detect_builder_from_pdf(text: str) -> str:
+    """
+    Detect builder name from the first 5 lines of the PDF.
+    Looks for builder names in headers, logos, addressed to sections, etc.
+    
+    Args:
+        text: The extracted text from the PDF
+        
+    Returns:
+        The detected builder name or empty string if not found
+    """
+    # Get first 5 lines or first 500 characters, whichever is less
+    lines = text.split('\n')[:5]
+    first_section = '\n'.join(lines)[:500].lower()
+    
+    logger.info(f"[BUILDER_DETECT] Analyzing first section: {first_section[:200]}...")
+    
+    # Check for known builder patterns
+    builder_patterns = {
+        'profile build group': ['profile build', 'profile building group', 'profilebuildgroup'],
+        'ambrose construct group': ['ambrose construct', 'ambrose construction', 'ambrose group'],
+        'campbell construction': ['campbell construction', 'campbell', 'ccc'],
+        'australian restoration company': ['australian restoration', 'arc', 'aust restoration'],
+        'townsend building services': ['townsend building', 'townsend', 'tbs'],
+        'rizon group': ['rizon', 'rizon group', 'rizon construction']
+    }
+    
+    for builder_name, patterns in builder_patterns.items():
+        for pattern in patterns:
+            if pattern in first_section:
+                logger.info(f"[BUILDER_DETECT] Found builder: {builder_name}")
+                return builder_name
+                
+    # Check for "To:" or "Attention:" patterns
+    to_match = re.search(r'(?:to|attention|attn):\s*([a-z\s&]+?)(?:\n|$)', first_section, re.IGNORECASE)
+    if to_match:
+        potential_builder = to_match.group(1).strip()
+        logger.info(f"[BUILDER_DETECT] Found in To/Attention field: {potential_builder}")
+        # Match against known builders
+        for builder_name, patterns in builder_patterns.items():
+            for pattern in patterns:
+                if pattern in potential_builder.lower():
+                    return builder_name
+    
+    logger.info("[BUILDER_DETECT] No builder detected in first section")
+    return ""
