@@ -556,6 +556,8 @@ def extract_data_from_pdf(pdf_path: str, builder_name: str = "") -> Dict[str, An
         # --- Date fields ---
         "commencement_date": "",
         "installation_date": "",
+        "ship_to_name": "",
+        "ship_to_address": "",
     }
 
     # Try different extraction methods in order of reliability
@@ -1193,7 +1195,7 @@ def parse_extracted_text(text, extracted_data, template):
     if "profile_build" in template["name"].lower():
         # For Profile Build Group: SITE CONTACT is the customer, NOT Client (which is the insurance company)
         
-        # Extract customer from SITE CONTACT field - fixed pattern to stop at newline
+        # Extract customer from SITE CONTACT field - OVERRIDE any previous extraction
         site_contact_match = re.search(
             r"SITE\s+CONTACT:\s*([A-Za-z\s]+?)(?=\n)",  # Stop at newline
             text,
@@ -1202,12 +1204,21 @@ def parse_extracted_text(text, extracted_data, template):
         if site_contact_match:
             customer_name = site_contact_match.group(1).strip()
             if customer_name:
-                extracted_data["customer_name"] = customer_name
+                extracted_data["customer_name"] = customer_name  # Override the insurance company name
                 logger.info(f"[PROFILE BUILD] Found customer name (SITE CONTACT): {extracted_data['customer_name']}")
+                
+                # Split the name into first/last for the customer fields
+                name_parts = customer_name.split()
+                if len(name_parts) >= 2:
+                    extracted_data["first_name"] = name_parts[0]
+                    extracted_data["last_name"] = " ".join(name_parts[1:])
+                else:
+                    extracted_data["first_name"] = ""
+                    extracted_data["last_name"] = customer_name
         
         # Extract customer phone from SITE CONTACT PHONE field
         site_phone_match = re.search(
-            r"SITE\s+CONTACT\s+PHONE:\s*([0-9\s\-\(\)]+)",
+            r"SITE\s+CONTACT\s+PHONE:\s*([0-9\s\-\(\)]+?)(?=\n)",  # Stop at newline
             text,
             re.IGNORECASE
         )
@@ -1238,7 +1249,7 @@ def parse_extracted_text(text, extracted_data, template):
             text,
             re.IGNORECASE | re.MULTILINE
         )
-        if supervisor_match and not extracted_data.get("supervisor_name"):
+        if supervisor_match:
             supervisor_name = supervisor_match.group(1).strip()
             if supervisor_name:
                 extracted_data["supervisor_name"] = supervisor_name
@@ -1248,11 +1259,11 @@ def parse_extracted_text(text, extracted_data, template):
         # Phone:
         # 0427 970 055
         supervisor_phone_match = re.search(
-            r"(?:Supervisor:[\s\S]*?)Phone:\s*\n([0-9\s\-\(\)]+?)(?:\n|$)",
+            r"(?:Supervisor:[\s\S]*?ABN:[\s\S]*?)Phone:\s*\n([0-9\s\-\(\)]+?)(?:\n|$)",
             text,
             re.IGNORECASE | re.MULTILINE
         )
-        if supervisor_phone_match and not extracted_data.get("supervisor_mobile"):
+        if supervisor_phone_match:
             phone = supervisor_phone_match.group(1).strip()
             clean_phone = "".join(c for c in phone if c.isdigit())
             if 8 <= len(clean_phone) <= 12:
@@ -1272,25 +1283,58 @@ def parse_extracted_text(text, extracted_data, template):
                 logger.info(f"[PROFILE BUILD] Found email: {extracted_data['email']}")
         
         # Extract address - sometimes appears after "Job Address:" or just as address
-        if not extracted_data.get("address"):
-            address_patterns = [
-                r"SITE\s+LOCATION:\s*([^\n]+)",  # Profile Build uses SITE LOCATION
-                r"Job\s+Address:\s*([^\n]+)",
-                r"Address:\s*([^\n]+)",
-                r"Site\s+Address:\s*([^\n]+)",
-                r"Property\s+Address:\s*([^\n]+)",
-            ]
-            for pattern in address_patterns:
-                match = re.search(pattern, text, re.IGNORECASE)
-                if match:
-                    extracted_data["address"] = match.group(1).strip()
-                    logger.info(f"[PROFILE BUILD] Found address: {extracted_data['address']}")
-                    try:
-                        if extracted_data["address"]:
-                            parse_address(extracted_data["address"], extracted_data)
-                    except Exception as e:
-                        logger.warning(f"Failed to parse Profile Build address: {e}")
-                    break
+        # For Profile Build, use SITE LOCATION
+        address_match = re.search(
+            r"SITE\s+LOCATION:\s*([^\n]+)",
+            text,
+            re.IGNORECASE
+        )
+        if address_match:
+            extracted_data["address"] = address_match.group(1).strip()
+            logger.info(f"[PROFILE BUILD] Found address: {extracted_data['address']}")
+            try:
+                if extracted_data["address"]:
+                    parse_address(extracted_data["address"], extracted_data)
+            except Exception as e:
+                logger.warning(f"Failed to parse Profile Build address: {e}")
+
+    # Extract site contact details first
+    site_contact_patterns = [
+        r"Site\s+Contact:?\s*([A-Za-z\s]+?)(?=\n|$)",
+        r"Site\s+Contact\s+Name:?\s*([A-Za-z\s]+?)(?=\n|$)",
+        r"Contact\s+Name:?\s*([A-Za-z\s]+?)(?=\n|$)"
+    ]
+    
+    for pattern in site_contact_patterns:
+        match = re.search(pattern, text, re.IGNORECASE)
+        if match:
+            site_contact = match.group(1).strip()
+            # Store site contact as ship to name
+            extracted_data["ship_to_name"] = site_contact
+            logger.info(f"Found site contact/ship to name: {site_contact}")
+            break
+    
+    # Extract site address with improved patterns
+    address_patterns = [
+        r"Site\s+Address:?\s*([A-Za-z0-9\s\.,#-]+?)(?=\n|$)",
+        r"Site\s+Location:?\s*([A-Za-z0-9\s\.,#-]+?)(?=\n|$)",
+        r"Property\s+Address:?\s*([A-Za-z0-9\s\.,#-]+?)(?=\n|$)",
+        r"Location:?\s*([A-Za-z0-9\s\.,#-]+?)(?=\n|$)"
+    ]
+    
+    for pattern in address_patterns:
+        match = re.search(pattern, text, re.IGNORECASE)
+        if match:
+            address = match.group(1).strip()
+            # Skip if it's the "included on tax invoice" message
+            if "tax invoice" not in address.lower():
+                extracted_data["address"] = address
+                # Parse address into components
+                parse_address(address, extracted_data)
+                # Also set as ship to address
+                extracted_data["ship_to_address"] = address
+                logger.info(f"Found site/ship to address: {address}")
+                break
 
     # After extracting supervisor name/phone
     logger.info(f"[EXTRACT] Supervisor Name: {extracted_data['supervisor_name']}")
@@ -1496,12 +1540,23 @@ def extract_contact_details(text, extracted_data):
 
 
 def extract_job_and_supervisor_details(text, extracted_data, template):
-    """Extract job number and supervisor details."""
-    # Handle None or empty text
-    if not text:
-        logger.warning("extract_job_and_supervisor_details: text is None or empty")
-        return
+    """Extract job number and supervisor details from the text."""
+    # Extract supervisor name with improved patterns
+    supervisor_patterns = [
+        r"Supervisor:?\s*([A-Za-z\s]+?)(?=\n|$)",
+        r"Project\s+Manager:?\s*([A-Za-z\s]+?)(?=\n|$)",
+        r"Site\s+Supervisor:?\s*([A-Za-z\s]+?)(?=\n|$)",
+        r"Job\s+Supervisor:?\s*([A-Za-z\s]+?)(?=\n|$)",
+        r"Supervisor\s+Name:?\s*([A-Za-z\s]+?)(?=\n|$)"
+    ]
     
+    for pattern in supervisor_patterns:
+        match = re.search(pattern, text, re.IGNORECASE)
+        if match:
+            extracted_data["supervisor_name"] = match.group(1).strip()
+            logger.info(f"Found supervisor name: {extracted_data['supervisor_name']}")
+            break
+
     # Extract Job Number
     job_number_patterns = [
         r"Job\s+Number:?\s*([A-Za-z0-9-]+)",
@@ -1615,158 +1670,55 @@ def extract_job_and_supervisor_details(text, extracted_data, template):
 
 
 def parse_address(address_str, extracted_data):
-    """
-    Parse a full address string into address1, city, state, and zip_code.
-    Improved: address1 is only the street address, city is the suburb (even if multi-word), state/zip_code always filled if present.
-    """
-    # Handle None or empty address strings
-    if not address_str or not isinstance(address_str, str):
-        extracted_data["address1"] = ""
-        extracted_data["city"] = ""
-        extracted_data["state"] = ""
-        extracted_data["zip_code"] = ""
+    """Parse address string into components."""
+    if not address_str:
         return
     
-    street_suffixes = [
-        "Street",
-        "St",
-        "Road",
-        "Rd",
-        "Avenue",
-        "Ave",
-        "Boulevard",
-        "Blvd",
-        "Court",
-        "Ct",
-        "Drive",
-        "Dr",
-        "Lane",
-        "Ln",
-        "Place",
-        "Pl",
-        "Terrace",
-        "Terr",
-        "Way",
-        "Highway",
-        "Hwy",
-        "Crescent",
-        "Cres",
-        "Parade",
-        "Pde",
-        "Close",
-        "Cl",
-        "Square",
-        "Sq",
-        "Walk",
-        "Track",
-        "Loop",
-        "Row",
-        "View",
-        "Rise",
-        "Gardens",
-        "Grove",
-        "Mews",
-    ]
-    state_pattern = r"(NSW|VIC|QLD|SA|WA|TAS|NT|ACT)"
-    postcode_pattern = r"(\d{4})$"
+    # Clean up the address string
+    address_str = address_str.strip()
     
-    # First, handle addresses that are comma-separated
-    if ',' in address_str:
-        # Split by comma - common format is "123 Street Name, Suburb, State Postcode"
-        comma_parts = [p.strip() for p in address_str.split(',')]
-        if len(comma_parts) >= 2:
-            extracted_data["address1"] = comma_parts[0]
-            
-            # Process the rest after the first comma
-            rest = ', '.join(comma_parts[1:])
-            parts = rest.split()
-            
-            # Extract state and postcode from the end
-            state = ""
-            zip_code = ""
-            for i in range(len(parts) - 1, -1, -1):
-                if not zip_code and re.match(postcode_pattern, parts[i]):
-                    zip_code = parts[i]
-                    continue
-                if not state and re.match(state_pattern, parts[i], re.IGNORECASE):
-                    state = parts[i].upper()
-                    continue
-            
-            # What's left is the city
-            city_parts = [p for p in parts if p != state and p != zip_code]
-            extracted_data["city"] = " ".join(city_parts).strip().rstrip(',')  # Remove trailing comma
-            extracted_data["state"] = state
-            extracted_data["zip_code"] = zip_code
-            
-            logger.info(
-                f"[ADDRESS PARSE] Raw: '{address_str}' | address1: '{extracted_data['address1']}', city: '{extracted_data['city']}', state: '{extracted_data['state']}', zip: '{extracted_data['zip_code']}'"
-            )
-            return
+    # Try to parse Australian address format: street, suburb STATE postcode
+    # Example: 151 Warriewood Street Chandler QLD 4155
+    match = re.search(r"(.*?)\s+([A-Za-z\s]+)\s+([A-Z]{2,3})\s+(\d{4})", address_str)
     
-    # If no comma, use the old logic but improved
-    parts = address_str.strip().split()
-    state = ""
-    zip_code = ""
-    
-    # Find state and postcode from the end
-    for i in range(len(parts) - 1, -1, -1):
-        if not zip_code and re.match(postcode_pattern, parts[i]):
-            zip_code = parts[i]
-            continue
-        if not state and re.match(state_pattern, parts[i], re.IGNORECASE):
-            state = parts[i].upper()
-            continue
-    
-    # Remove state and postcode from parts
-    main_parts = [p for p in parts if p != state and p != zip_code]
-    
-    # Find the last street suffix in main_parts
-    last_street_idx = -1
-    for idx, word in enumerate(main_parts):
-        # Check if word (without comma) matches a street suffix
-        word_clean = word.rstrip(',')
-        if word_clean.capitalize() in street_suffixes or word_clean.upper() in [s.upper() for s in street_suffixes]:
-            last_street_idx = idx
-    
-    logger.info(
-        f"[ADDRESS PARSE DEBUG] main_parts: {main_parts}, last_street_idx: {last_street_idx}"
-    )
-    
-    if last_street_idx != -1:
-        # Include everything up to and including the street suffix in address1
-        extracted_data["address1"] = " ".join(main_parts[: last_street_idx + 1])
-        # Everything after the street suffix is the city
-        city_parts = main_parts[last_street_idx + 1 :]
-        extracted_data["city"] = " ".join(city_parts).strip(',').strip()
+    if match:
+        # Get the entire street portion up to the suburb
+        street_part = match.group(1).strip()
+        city = match.group(2).strip()
+        state = match.group(3).strip()
+        zip_code = match.group(4).strip()
+        
+        # Remove any trailing spaces or commas
+        street_part = re.sub(r'[,\s]+$', '', street_part)
+        
+        # Split street into address1 and address2 if needed
+        address_parts = street_part.split(',', 1)
+        extracted_data['address1'] = address_parts[0].strip()
+        if len(address_parts) > 1:
+            extracted_data['address2'] = address_parts[1].strip()
+        
+        extracted_data['city'] = city
+        extracted_data['state'] = state
+        extracted_data['zip_code'] = zip_code
+        
+        # Set ship to address components if not already set
+        if not extracted_data.get('ship_to_address1'):
+            extracted_data['ship_to_address1'] = extracted_data['address1']
+        if not extracted_data.get('ship_to_address2'):
+            extracted_data['ship_to_address2'] = extracted_data.get('address2', '')
+        if not extracted_data.get('ship_to_city'):
+            extracted_data['ship_to_city'] = city
+        if not extracted_data.get('ship_to_state'):
+            extracted_data['ship_to_state'] = state
+        if not extracted_data.get('ship_to_zip'):
+            extracted_data['ship_to_zip'] = zip_code
     else:
-        # If no street suffix found, assume it's a simple format
-        # Try to find a number at the start (house number)
-        if main_parts and main_parts[0][0].isdigit():
-            # If starts with number, take first 2-3 words as address
-            if len(main_parts) > 3:
-                extracted_data["address1"] = " ".join(main_parts[:3])
-                extracted_data["city"] = " ".join(main_parts[3:]).strip()
-            elif len(main_parts) == 3:
-                extracted_data["address1"] = " ".join(main_parts[:2])
-                extracted_data["city"] = main_parts[2]
-            else:
-                extracted_data["address1"] = " ".join(main_parts)
-                extracted_data["city"] = ""
-        else:
-            # No clear pattern, use the whole thing as address1
-            extracted_data["address1"] = " ".join(main_parts)
-            extracted_data["city"] = ""
+        # If can't parse, just store the full address in address1
+        extracted_data['address1'] = address_str
+        if not extracted_data.get('ship_to_address1'):
+            extracted_data['ship_to_address1'] = address_str
     
-    extracted_data["state"] = state
-    extracted_data["zip_code"] = zip_code
-    
-    # Clean up any trailing commas
-    extracted_data["city"] = extracted_data["city"].strip(',').strip()
-    
-    # Add debug logging
-    logger.info(
-        f"[ADDRESS PARSE] Raw: '{address_str}' | address1: '{extracted_data['address1']}', city: '{extracted_data['city']}', state: '{extracted_data['state']}', zip: '{extracted_data['zip_code']}'"
-    )
+    logger.info(f"[ADDRESS PARSE] Raw: '{address_str}' | address1: '{extracted_data['address1']}', city: '{extracted_data['city']}', state: '{extracted_data['state']}', zip: '{extracted_data['zip_code']}'")
 
 
 def match_builder_to_template(builder_name: str) -> str:
