@@ -1193,17 +1193,15 @@ def parse_extracted_text(text, extracted_data, template):
     if "profile_build" in template["name"].lower():
         # For Profile Build Group: SITE CONTACT is the customer, NOT Client (which is the insurance company)
         
-        # Extract customer from SITE CONTACT field
+        # Extract customer from SITE CONTACT field - fixed pattern to stop at newline
         site_contact_match = re.search(
-            r"SITE\s+CONTACT:\s*([A-Za-z\s]+?)(?=\nSITE\s+CONTACT\s+PHONE|$)",
+            r"SITE\s+CONTACT:\s*([A-Za-z\s]+?)(?=\n)",  # Stop at newline
             text,
             re.IGNORECASE
         )
         if site_contact_match:
             customer_name = site_contact_match.group(1).strip()
-            # Clean up the name - remove any trailing text
-            customer_name = re.sub(r"SITE\s+CONTACT\s+PHONE.*", "", customer_name, flags=re.IGNORECASE).strip()
-            if customer_name and customer_name.lower() != "site contact phone":
+            if customer_name:
                 extracted_data["customer_name"] = customer_name
                 logger.info(f"[PROFILE BUILD] Found customer name (SITE CONTACT): {extracted_data['customer_name']}")
         
@@ -1231,37 +1229,35 @@ def parse_extracted_text(text, extracted_data, template):
             extracted_data["installation_date"] = attendance_match.group(2).strip()
             logger.info(f"[PROFILE BUILD] Found attendance dates: {extracted_data['commencement_date']} to {extracted_data['installation_date']}")
         
-        # Extract supervisor name - more flexible pattern
-        supervisor_patterns = [
-            r"Supervisor:\s*\n([A-Za-z\s]+?)(?=\nABN|$)",  # Name before ABN
-            r"Supervisor:\s*\n([A-Za-z\s]+?)(?=\n)",  # Name on next line
-            r"Supervisor:\s*([A-Za-z\s]+?)(?=\n)",  # Name on same line
-        ]
-        for pattern in supervisor_patterns:
-            match = re.search(pattern, text, re.IGNORECASE)
-            if match and not extracted_data.get("supervisor_name"):
-                extracted_data["supervisor_name"] = match.group(1).strip()
+        # Extract supervisor name - look for pattern like:
+        # Supervisor:
+        # Paul White
+        # ABN: 97 783 979 632
+        supervisor_match = re.search(
+            r"Supervisor:\s*\n([A-Za-z\s]+?)(?:\n|ABN:|$)",
+            text,
+            re.IGNORECASE | re.MULTILINE
+        )
+        if supervisor_match and not extracted_data.get("supervisor_name"):
+            supervisor_name = supervisor_match.group(1).strip()
+            if supervisor_name:
+                extracted_data["supervisor_name"] = supervisor_name
                 logger.info(f"[PROFILE BUILD] Found supervisor: {extracted_data['supervisor_name']}")
-                break
         
-        # Extract supervisor phone - more flexible pattern
-        supervisor_phone_patterns = [
-            # Pattern for: Supervisor:\nName\nABN: xxx\nPhone:\n0427 xxx xxx
-            r"Supervisor:[\s\S]*?Phone:\s*\n([0-9\s\-\(\)]+)",
-            # Pattern for Phone: followed by number
-            r"Phone:\s*\n([0-9\s\-\(\)]+)",
-            # Alternative pattern
-            r"Supervisor:[\s\S]{0,100}Phone:\s*([0-9\s\-\(\)]+)",
-        ]
-        for pattern in supervisor_phone_patterns:
-            match = re.search(pattern, text, re.IGNORECASE)
-            if match and not extracted_data.get("supervisor_mobile"):
-                phone = match.group(1).strip()
-                clean_phone = "".join(c for c in phone if c.isdigit())
-                if 8 <= len(clean_phone) <= 12:
-                    extracted_data["supervisor_mobile"] = phone
-                    logger.info(f"[PROFILE BUILD] Found supervisor phone: {extracted_data['supervisor_mobile']}")
-                    break
+        # Extract supervisor phone - look for pattern after ABN:
+        # Phone:
+        # 0427 970 055
+        supervisor_phone_match = re.search(
+            r"(?:Supervisor:[\s\S]*?)Phone:\s*\n([0-9\s\-\(\)]+?)(?:\n|$)",
+            text,
+            re.IGNORECASE | re.MULTILINE
+        )
+        if supervisor_phone_match and not extracted_data.get("supervisor_mobile"):
+            phone = supervisor_phone_match.group(1).strip()
+            clean_phone = "".join(c for c in phone if c.isdigit())
+            if 8 <= len(clean_phone) <= 12:
+                extracted_data["supervisor_mobile"] = phone
+                logger.info(f"[PROFILE BUILD] Found supervisor phone: {extracted_data['supervisor_mobile']}")
         
         # Extract email - Profile Build often uses their company email
         if not extracted_data.get("email"):

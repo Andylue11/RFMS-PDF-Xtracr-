@@ -328,6 +328,20 @@ function formatPhoneNumber(phoneNumberString) {
 }
 
 /**
+ * Helper function to safely set value to an element by ID
+ * @param {string} elementId - The ID of the element
+ * @param {string} value - The value to set
+ */
+function setValue(elementId, value) {
+    const element = document.getElementById(elementId);
+    if (element) {
+        element.value = value || '';
+    } else {
+        console.warn(`Element with id '${elementId}' not found`);
+    }
+}
+
+/**
  * Show a toast notification
  * @param {string} message - The message to display
  * @param {string} type - The type of notification (success, error, warning, info)
@@ -473,6 +487,42 @@ function setupPdfUpload() {
                 setValue('ship-to-city', extractedData.city || '');
                 setValue('ship-to-zip', extractedData.zip_code || '');
                 setValue('ship-to-email', extractedData.email || '');
+                
+                // Populate phone fields
+                setValue('ship-to-phone1', extractedData.phone || '');
+                setValue('ship-to-phone2', extractedData.mobile || extractedData.work_phone || '');
+                
+                // Populate work order fields
+                setValue('po-number', extractedData.po_number || '');
+                setValue('dollar-value', extractedData.dollar_value || '');
+                setValue('description-of-works', extractedData.scope_of_work || extractedData.description_of_works || '');
+                
+                // Populate supervisor/job number fields
+                setValue('job-number', extractedData.supervisor_name || '');
+                setValue('invoice-number', extractedData.invoice_number || '');
+                
+                // Populate dates if available
+                if (extractedData.commencement_date) {
+                    setValue('commencement-date', extractedData.commencement_date);
+                }
+                if (extractedData.installation_date || extractedData.completion_date) {
+                    setValue('completion-date', extractedData.installation_date || extractedData.completion_date);
+                }
+                
+                // Handle best contacts if available
+                if (extractedData.alternate_contacts && extractedData.alternate_contacts.length > 0) {
+                    const firstContact = extractedData.alternate_contacts[0];
+                    setValue('best-contact-name-1', firstContact.name || '');
+                    setValue('best-contact-phone-1', firstContact.phone || '');
+                    setValue('best-contact-email-1', firstContact.email || '');
+                    
+                    if (extractedData.alternate_contacts.length > 1) {
+                        const secondContact = extractedData.alternate_contacts[1];
+                        setValue('best-contact-name-2', secondContact.name || '');
+                        setValue('best-contact-phone-2', secondContact.phone || '');
+                        setValue('best-contact-email-2', secondContact.email || '');
+                    }
+                }
             }
             
             showNotification('PDF uploaded and data extracted successfully!', 'success');
