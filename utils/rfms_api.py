@@ -943,3 +943,28 @@ class RfmsApi:
         end_time = time.monotonic()
         logger.info(f"[TIMER] _format_customer_list duration: {end_time - start_time:.2f}s for {len(formatted_customers)} customers")
         return formatted_customers
+
+    def find_order_by_po_number(self, po_number):
+        """
+        Search for an order in RFMS by PO number.
+        Returns the order if found, or None if not found.
+        """
+        url = f"{self.base_url}/v2/order/find"
+        payload = {"poNumber": po_number}
+        headers = self._get_headers()
+        auth = self._get_auth()
+        try:
+            response = requests.post(url, headers=headers, auth=auth, json=payload, timeout=self.timeout)
+            if response.status_code == 200:
+                data = response.json()
+                if data.get("result"):
+                    logger.info(f"Order found for PO number {po_number}: {data['result']}")
+                    return data["result"]
+                logger.info(f"No order found for PO number {po_number}.")
+                return None
+            else:
+                logger.error(f"Order find failed: {response.status_code} {response.text}")
+                return None
+        except Exception as e:
+            logger.error(f"Error searching for order by PO number: {str(e)}")
+            return None

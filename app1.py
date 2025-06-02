@@ -159,32 +159,6 @@ def upload_pdf_api():
             extracted_data = extract_data_from_pdf(temp_path, builder_name=builder_name)
             logger.info(f"Successfully extracted data for {filename}")
             os.remove(temp_path)
-
-            # --- Check for duplicate PO number in RFMS ---
-            po_number = extracted_data.get("po_number", "")
-            po_status = "unknown"
-            po_message = ""
-            if po_number:
-                try:
-                    result = api_client.find_order_by_po_number(po_number)
-                    if result and isinstance(result, list) and len(result) > 0:
-                        po_status = "duplicate"
-                        po_message = "This purchase order already exists in RFMS. Please check before proceeding."
-                    else:
-                        po_status = "new"
-                        po_message = "New purchase order approved for processing."
-                except Exception as e:
-                    logger.error(f"Error checking PO number in RFMS: {str(e)}")
-                    po_status = "error"
-                    po_message = f"Error checking PO number in RFMS: {str(e)}"
-            else:
-                po_status = "missing"
-                po_message = "No purchase order number extracted from PDF."
-
-            # Add PO status info to response
-            extracted_data["po_status"] = po_status
-            extracted_data["po_status_message"] = po_message
-
             return jsonify(extracted_data), 200
         except Exception as e:
             logger.error(f"Error extracting data from PDF {filename}: {str(e)}")
@@ -219,31 +193,8 @@ def upload_file():
         try:
             extracted_data = extract_data_from_pdf(file_path) # Assuming builder_name is not needed here or handled differently
             
-            # --- Check for duplicate PO number in RFMS ---
-            api_client = ensure_rfms_api()
-            po_number = extracted_data.get("po_number", "")
-            po_status = "unknown"
-            po_message = ""
-            if po_number:
-                try:
-                    result = api_client.find_order_by_po_number(po_number)
-                    if result and isinstance(result, list) and len(result) > 0:
-                        po_status = "duplicate"
-                        po_message = "This purchase order already exists in RFMS. Please check before proceeding."
-                    else:
-                        po_status = "new"
-                        po_message = "New purchase order approved for processing."
-                except Exception as e:
-                    logger.error(f"Error checking PO number in RFMS: {str(e)}")
-                    po_status = "error"
-                    po_message = f"Error checking PO number in RFMS: {str(e)}"
-            else:
-                po_status = "missing"
-                po_message = "No purchase order number extracted from PDF."
-
-            # Add PO status info to response and DB
-            extracted_data["po_status"] = po_status
-            extracted_data["po_status_message"] = po_message
+            # Save extracted data to session for preview (optional, if still needed)
+            # session["extracted_data"] = extracted_data 
 
             pdf_data_entry = PdfData(
                 filename=filename,
@@ -395,16 +346,6 @@ def export_to_rfms_api():
         logger.warning("No data provided for RFMS export")
         return jsonify({"error": "No data provided for export"}), 400
     
-    # Validate Description of Works (publicNotes) 5-word minimum
-    description = ''
-    if 'job_details' in export_request_data:
-        description = export_request_data['job_details'].get('description_of_works', '')
-    elif 'publicNotes' in export_request_data:
-        description = export_request_data.get('publicNotes', '')
-    word_count = len(description.strip().split())
-    if word_count < 5:
-        return jsonify({'error': 'General Scope of Works required!  example: Restrectch carpet back in bedroom two or Floor preperation PO for adding to billing group'}), 400
-
     # Basic validation (can be expanded in payload_service)
     required_sections = ["sold_to", "ship_to", "job_details"]
     for section in required_sections:

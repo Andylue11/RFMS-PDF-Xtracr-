@@ -21,6 +21,7 @@ document.addEventListener('DOMContentLoaded', function() {
     setupBuilderSearch();
     setupAddCustomerAndCreateJob();
     setupClearSoldToButton();
+    enforceBuilderSelectionBeforeUpload();
 });
 
 /**
@@ -442,10 +443,11 @@ function setupPdfUpload() {
     fileInput.addEventListener('change', async (event) => {
         const file = event.target.files[0];
         if (!file) return;
+        console.log('[DEBUG] PDF upload started');
 
         // Get the selected builder name from the sold-to fields
         const builderName = document.getElementById('sold-to-name')?.value || '';
-        
+
         const formData = new FormData();
         formData.append('pdf_file', file);
         formData.append('builder_name', builderName);
@@ -453,18 +455,29 @@ function setupPdfUpload() {
         try {
             uploadBtn.disabled = true;
             uploadBtn.textContent = 'Uploading...';
-            
+
             const response = await fetch('/upload-pdf', {
                 method: 'POST',
                 body: formData
             });
             
             if (!response.ok) {
-                throw new Error(`Upload failed: ${response.statusText}`);
+                let errorMsg = `Upload failed: ${response.statusText}`;
+                try {
+                    const errJson = await response.json();
+                    if (errJson && errJson.error) errorMsg = errJson.error;
+                } catch (e) {}
+                showNotification(errorMsg, 'error', 6000);
+                console.error('[DEBUG] PDF upload error:', errorMsg);
+                return;
             }
 
             const extractedData = await response.json();
-            console.log('Extracted data:', extractedData);
+            if (extractedData.error) {
+                showNotification('Extraction error: ' + extractedData.error, 'error', 6000);
+                console.error('[DEBUG] Extraction error:', extractedData.error);
+                return;
+            }
             
             // Extract data into form fields
             if (extractedData) {
@@ -521,22 +534,23 @@ function setupPdfUpload() {
                         setValue('best-contact-name-2', secondContact.name || '');
                         setValue('best-contact-phone-2', secondContact.phone || '');
                         setValue('best-contact-email-2', secondContact.email || '');
-                    }
+            }
                 }
             }
             
             showNotification('PDF uploaded and data extracted successfully!', 'success');
             
         } catch (error) {
-            console.error('Upload error:', error);
-            showNotification(`Upload failed: ${error.message}`, 'error');
+            console.error('[DEBUG] Upload error:', error);
+            showNotification(`Upload failed: ${error.message}`, 'error', 6000);
         } finally {
             uploadBtn.disabled = false;
             uploadBtn.textContent = 'Upload PDF';
-            fileInput.value = ''; // Clear file input
+            fileInput.value = '';
+            console.log('[DEBUG] PDF upload finished');
         }
     });
-    
+            
     // Clear data button handler
     if (clearDataBtn) {
         clearDataBtn.addEventListener('click', () => {
@@ -589,8 +603,8 @@ function setupPdfUpload() {
                 
                 console.log('Data cleared (Sold To information preserved)');
                 showNotification('Data cleared successfully. Sold To information preserved.', 'success');
-            }
-        });
+        }
+    });
     }
 }
 
@@ -669,91 +683,85 @@ function populateShipTo(data) {
  * Setup logic for Builder Search functionality
  */
 function setupBuilderSearch() {
-    const searchInput = document.getElementById('sold-to-search');
-    const searchButton = document.getElementById('sold-to-search-btn');
+    const searchBtn = document.getElementById('sold-to-search-btn');
+    const searchField = document.getElementById('sold-to-search');
     const resultsDiv = document.getElementById('sold-to-results');
-
-    if (!searchInput || !searchButton) {
-        console.error('Builder search elements not found');
-        return;
+    // Add or get loading indicator
+    let loadingIndicator = document.getElementById('builder-search-loading');
+    if (!loadingIndicator) {
+        loadingIndicator = document.createElement('span');
+        loadingIndicator.id = 'builder-search-loading';
+        loadingIndicator.className = 'ml-2 text-atoz-yellow';
+        loadingIndicator.style.display = 'none';
+        loadingIndicator.innerHTML = '<svg class="animate-spin h-3 w-3 text-yellow-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path></svg>';
+        searchBtn.parentNode.appendChild(loadingIndicator);
     }
-
-    // Search button click handler
-    searchButton.addEventListener('click', async () => {
-        const searchTerm = searchInput.value.trim();
-        if (!searchTerm) {
-            alert('Please enter a search term');
-            return;
-        }
-
-        try {
-            const response = await fetchWithRetry('/api/customers/search', {
+    if (searchBtn) {
+        searchBtn.addEventListener('click', async function() {
+            const searchTerm = searchField.value;
+            loadingIndicator.style.display = '';
+            resultsDiv.innerHTML = '';
+            try {
+                const response = await fetchWithRetry('/api/customers/search', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ term: searchTerm })
+                    body: JSON.stringify({ search_term: searchTerm })
             });
-            
-            const customers = await response.json();
-            
-            if (customers.error) {
-                resultsDiv.innerHTML = `<p class="text-red-500">Error: ${customers.error}</p>`;
-                return;
+                const customers = await response.json();
+                if (customers.error) {
+                    resultsDiv.innerHTML = `<p class="text-red-500">Error: ${customers.error}</p>`;
+                    return;
             }
-            
-            if (!customers.length) {
-                resultsDiv.innerHTML = '<p class="text-gray-500">No customers found</p>';
-                return;
-            }
-            
-            // Display results
-            let html = '<div class="space-y-2">';
-            customers.forEach(customer => {
-                html += `
-                    <div class="border border-gray-600 rounded p-2 hover:bg-gray-700 cursor-pointer customer-result" 
-                         data-id="${customer.id || customer.customer_source_id}"
-                         data-customer='${JSON.stringify(customer).replace(/'/g, "&apos;")}'>
-                        <p class="font-medium">${customer.name || customer.business_name || customer.first_name + ' ' + customer.last_name}</p>
-                        <p class="text-sm text-gray-400">${customer.address1 || ''}, ${customer.city || ''}</p>
-                        <p class="text-sm text-gray-400">ID: ${customer.id || customer.customer_source_id}</p>
-                    </div>
-                `;
-            });
-            html += '</div>';
-            
-            resultsDiv.innerHTML = html;
-            
-            // Add click handlers to results
-            document.querySelectorAll('.customer-result').forEach(item => {
-                item.addEventListener('click', function() {
-                    const customerId = this.dataset.id;
-                    const customerData = JSON.parse(this.dataset.customer);
-                    
-                    // Populate sold-to fields
-                    document.getElementById('sold-to-rfms-id').value = customerId;
-                    document.getElementById('sold-to-name').value = customerData.name || 
-                        `${customerData.first_name || ''} ${customerData.last_name || ''}`.trim();
-                    document.getElementById('sold-to-business-name').value = customerData.business_name || '';
-                    document.getElementById('sold-to-address1').value = customerData.address1 || '';
-                    document.getElementById('sold-to-address2').value = customerData.address2 || '';
-                    document.getElementById('sold-to-city').value = customerData.city || '';
-                    document.getElementById('sold-to-state').value = customerData.state || '';
-                    document.getElementById('sold-to-zip').value = customerData.zip_code || '';
-                    document.getElementById('sold-to-phone1').value = customerData.phone || '';
-                    document.getElementById('sold-to-phone2').value = customerData.phone2 || '';
-                    
-                    const emailField = document.getElementById('sold-to-email');
-                    if (emailField) emailField.value = customerData.email || '';
-                    
-                    // Clear results
-                    resultsDiv.innerHTML = '<p class="text-green-500">Customer selected</p>';
-        });
-    });
-    
-        } catch (error) {
-            console.error('Search error:', error);
-            resultsDiv.innerHTML = `<p class="text-red-500">Search failed: ${error.message}</p>`;
+                if (!customers.length) {
+                    resultsDiv.innerHTML = '<p class="text-gray-500">No customers found</p>';
+                    return;
         }
+                // Display results
+                let html = '<div class="space-y-2">';
+                customers.forEach(customer => {
+                    html += `
+                        <div class="border border-gray-600 rounded p-2 hover:bg-gray-700 cursor-pointer customer-result" 
+                             data-id="${customer.id || customer.customer_source_id}"
+                             data-customer='${JSON.stringify(customer).replace(/'/g, "&apos;")}' >
+                            <p class="font-medium">${customer.name || customer.business_name || customer.first_name + ' ' + customer.last_name}</p>
+                            <p class="text-sm text-gray-400">${customer.address1 || ''}, ${customer.city || ''}</p>
+                            <p class="text-sm text-gray-400">ID: ${customer.id || customer.customer_source_id}</p>
+                        </div>
+                    `;
     });
+                html += '</div>';
+                resultsDiv.innerHTML = html;
+                // Add click handlers to results
+                document.querySelectorAll('.customer-result').forEach(item => {
+                    item.addEventListener('click', function() {
+                        const customerId = this.dataset.id;
+                        const customerData = JSON.parse(this.dataset.customer);
+                        // Populate sold-to fields
+                        document.getElementById('sold-to-rfms-id').value = customerId;
+                        document.getElementById('sold-to-name').value = customerData.name || 
+                            `${customerData.first_name || ''} ${customerData.last_name || ''}`.trim();
+                        document.getElementById('sold-to-business-name').value = customerData.business_name || '';
+                        document.getElementById('sold-to-address1').value = customerData.address1 || '';
+                        document.getElementById('sold-to-address2').value = customerData.address2 || '';
+                        document.getElementById('sold-to-city').value = customerData.city || '';
+                        document.getElementById('sold-to-state').value = customerData.state || '';
+                        document.getElementById('sold-to-zip').value = customerData.zip_code || '';
+                        document.getElementById('sold-to-phone1').value = customerData.phone || '';
+                        document.getElementById('sold-to-phone2').value = customerData.phone2 || '';
+                        const emailField = document.getElementById('sold-to-email');
+                        if (emailField) emailField.value = customerData.email || '';
+                        // Clear results
+                        resultsDiv.innerHTML = '<p class="text-green-500">Customer selected</p>';
+                    });
+                });
+            } catch (error) {
+                console.error('Search error:', error);
+                resultsDiv.innerHTML = '<div class="text-red-500">Search failed: ' + error.message + '</div>';
+            } finally {
+                loadingIndicator.style.display = 'none';
+            }
+        });
+    }
 }
 
 /**
@@ -955,4 +963,55 @@ function clearBestContacts() {
         const field = document.getElementById(id);
         if (field) field.value = '';
     });
+}
+
+// Find the create job button and description of works field
+const createJobButton = document.getElementById('create-job-button');
+const descriptionOfWorksField = document.getElementById('description-of-works');
+
+function validateDescriptionOfWorks() {
+    const value = descriptionOfWorksField.value.trim();
+    const wordCount = value.split(/\s+/).filter(Boolean).length;
+    if (wordCount < 5) {
+        createJobButton.disabled = true;
+        showNotification("General Scope of Works required!  example: Restrectch carpet back in bedroom two or Floor preperation PO for adding to billing group", 'error');
+        return false;
+    } else {
+        createJobButton.disabled = false;
+        return true;
+    }
+}
+
+// Add event listener to validate on input
+if (descriptionOfWorksField && createJobButton) {
+    descriptionOfWorksField.addEventListener('input', validateDescriptionOfWorks);
+}
+
+// Also validate when the Create Job button is clicked
+if (createJobButton) {
+    createJobButton.addEventListener('click', function(e) {
+        if (!validateDescriptionOfWorks()) {
+            e.preventDefault();
+            return false;
+        }
+    });
+}
+
+function enforceBuilderSelectionBeforeUpload() {
+    const uploadBtn = document.getElementById('upload-pdf-btn');
+    const builderNameField = document.getElementById('sold-to-name');
+    if (!uploadBtn || !builderNameField) return;
+
+    function checkBuilderSelected() {
+        const builderSelected = builderNameField.value && builderNameField.value.trim().length > 0;
+        uploadBtn.disabled = !builderSelected;
+    }
+
+    // Initial check
+    checkBuilderSelected();
+
+    // Listen for changes in the builder name field
+    builderNameField.addEventListener('input', checkBuilderSelected);
+    // If builder is selected via search, also check
+    builderNameField.addEventListener('change', checkBuilderSelected);
 } 
