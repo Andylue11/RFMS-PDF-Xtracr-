@@ -3,4 +3,10 @@
 # Managed by file watcher
 # === WATCHER HEADER END ===
 
+Flask
 Flask-SQLAlchemy
+python-dotenv
+requests  # For RFMS API calls (assuming)
+pdfplumber # Or your chosen PDF extraction library (e.g., PyMuPDF, PyPDF2)
+Werkzeug  # Flask dependency, good to list explicitly
+# Add any other direct dependencies your project has

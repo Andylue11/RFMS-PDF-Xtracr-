@@ -13,13 +13,122 @@ const API_CONFIG = {
 // Check API status on page load
 document.addEventListener('DOMContentLoaded', function() {
     checkApiStatus();
+    // loadSalespersonValues(); // Commented out - using hardcoded values in HTML
     
     // Set up other global event listeners
     setupFormValidation();
     setupPdfUpload();
     setupBuilderSearch();
     setupAddCustomerAndCreateJob();
+    setupClearSoldToButton();
+    enforceBuilderSelectionBeforeUpload();
 });
+
+/**
+ * Set up Clear SOLD To button functionality
+ */
+function setupClearSoldToButton() {
+    const clearSoldToBtn = document.getElementById('clear-sold-to-btn');
+    if (clearSoldToBtn) {
+        clearSoldToBtn.addEventListener('click', function() {
+            // Clear search field
+            const searchField = document.getElementById('sold-to-search');
+            if (searchField) searchField.value = '';
+            
+            // Clear search results
+            const resultsDiv = document.getElementById('sold-to-results');
+            if (resultsDiv) resultsDiv.innerHTML = '';
+            
+            // Clear visible fields
+            const visibleFields = [
+                'sold-to-rfms-id',
+                'sold-to-name',
+                'sold-to-address1',
+                'sold-to-address2',
+                'sold-to-city',
+                'sold-to-zip'
+            ];
+            
+            visibleFields.forEach(id => {
+                const field = document.getElementById(id);
+                if (field) field.value = '';
+            });
+            
+            // Clear hidden fields too
+            const hiddenFields = [
+                'sold-to-business-name',
+                'sold-to-state',
+                'sold-to-phone1',
+                'sold-to-phone2',
+                'sold-to-email'
+            ];
+            
+            hiddenFields.forEach(id => {
+                const field = document.getElementById(id);
+                if (field) field.value = '';
+            });
+            
+            // Reset salesperson dropdown to default (ZORAN VEKIC)
+            const salespersonDropdown = document.getElementById('sold-to-salesperson');
+            if (salespersonDropdown) {
+                // Find the ZORAN VEKIC option and select it
+                for (let i = 0; i < salespersonDropdown.options.length; i++) {
+                    if (salespersonDropdown.options[i].value === 'ZORAN VEKIC') {
+                        salespersonDropdown.selectedIndex = i;
+                        break;
+                    }
+                }
+            }
+            
+            console.log('Sold To fields cleared');
+        });
+    }
+}
+
+/**
+ * Load salesperson values for the dropdown
+ */
+async function loadSalespersonValues() {
+    const salespersonSelect = document.getElementById('sold-to-salesperson');
+    
+    if (!salespersonSelect) {
+        console.error('Salesperson dropdown not found.');
+        return;
+    }
+    
+    // Skip if we already have options (hardcoded in HTML)
+    if (salespersonSelect.options.length > 1) {
+        console.log('Salesperson values already loaded from HTML');
+        return;
+    }
+    
+    try {
+        const response = await fetchWithRetry('/api/salesperson_values');
+        const salespersonValues = await response.json();
+        
+        if (Array.isArray(salespersonValues)) {
+            // Clear existing options except the first placeholder
+            salespersonSelect.innerHTML = '<option value="">Select Salesperson</option>';
+            
+            // Add new options
+            salespersonValues.forEach(value => {
+                const option = document.createElement('option');
+                option.value = value;
+                option.textContent = value;
+                salespersonSelect.appendChild(option);
+            });
+            
+            console.log('Loaded salesperson values:', salespersonValues);
+        }
+    } catch (error) {
+        console.error('Error loading salesperson values:', error);
+        // Add default value as fallback
+        const option = document.createElement('option');
+        option.value = 'ZORAN VEKIC';
+        option.textContent = 'ZORAN VEKIC';
+        salespersonSelect.appendChild(option);
+    }
+}
 
 /**
  * Fetch with timeout and retry capability
@@ -220,6 +329,20 @@ function formatPhoneNumber(phoneNumberString) {
 }
 
 /**
+ * Helper function to safely set value to an element by ID
+ * @param {string} elementId - The ID of the element
+ * @param {string} value - The value to set
+ */
+function setValue(elementId, value) {
+    const element = document.getElementById(elementId);
+    if (element) {
+        element.value = value || '';
+    } else {
+        console.warn(`Element with id '${elementId}' not found`);
+    }
+}
+
+/**
  * Show a toast notification
  * @param {string} message - The message to display
  * @param {string} type - The type of notification (success, error, warning, info)
@@ -299,76 +422,190 @@ function clearFields() {
 }
 
 /**
- * Setup logic for PDF upload button and file input.
+ * Set up PDF upload functionality
  */
 function setupPdfUpload() {
-    const uploadButton = document.getElementById('upload-button');
-    const pdfInput = document.getElementById('pdf-upload');
+    const uploadBtn = document.getElementById('upload-pdf-btn');
+    const fileInput = document.getElementById('pdf-file-input');
+    const clearDataBtn = document.getElementById('clear-data-btn');
 
-    if (!uploadButton || !pdfInput) {
-        console.error('PDF upload button or input not found.');
+    if (!uploadBtn || !fileInput) {
+        console.error('PDF upload elements not found');
         return;
     }
 
-    uploadButton.addEventListener('click', async () => {
-        const file = pdfInput.files[0];
-        if (!file) {
-            showNotification('Please select a PDF file to upload.', 'warning');
-            return;
-        }
-        
-        // Validate file type
-        if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
-            showNotification('Please select a valid PDF file.', 'error');
-            return;
-        }
+    // Upload button click handler
+    uploadBtn.addEventListener('click', () => {
+        fileInput.click();
+    });
+    
+    // File input change handler
+    fileInput.addEventListener('change', async (event) => {
+        const file = event.target.files[0];
+        if (!file) return;
+        console.log('[DEBUG] PDF upload started');
 
-        // Clear all fields before uploading new PDF
-        clearFields();
+        // Get the selected builder name from the sold-to fields
+        const builderName = document.getElementById('sold-to-name')?.value || '';
 
         const formData = new FormData();
         formData.append('pdf_file', file);
-
-        // Show loading indicator/message
-        const loadingNotification = showNotification('Uploading and extracting data...', 'info', 0);
+        formData.append('builder_name', builderName);
         
-        // Disable button during upload
-        uploadButton.disabled = true;
-        uploadButton.textContent = 'Processing...';
-
         try {
-            const response = await fetchWithRetry('/upload-pdf', {
+            uploadBtn.disabled = true;
+            uploadBtn.textContent = 'Uploading...';
+
+            const response = await fetch('/upload-pdf', {
                 method: 'POST',
                 body: formData
             });
+            
+            if (!response.ok) {
+                let errorMsg = `Upload failed: ${response.statusText}`;
+                try {
+                    const errJson = await response.json();
+                    if (errJson && errJson.error) errorMsg = errJson.error;
+                } catch (e) {}
+                showNotification(errorMsg, 'error', 6000);
+                console.error('[DEBUG] PDF upload error:', errorMsg);
+                return;
+            }
 
             const extractedData = await response.json();
-            console.log('Extracted Data:', extractedData);
-            if (extractedData.data) {
-                populateShipTo(extractedData.data);
-            } else {
-                populateShipTo(extractedData);
+            if (extractedData.error) {
+                showNotification('Extraction error: ' + extractedData.error, 'error', 6000);
+                console.error('[DEBUG] Extraction error:', extractedData.error);
+                return;
             }
             
-            // Remove loading notification and show success
-            if (document.body.contains(loadingNotification)) {
-                document.body.removeChild(loadingNotification);
+            // Extract data into form fields
+            if (extractedData) {
+                // Check for builder mismatch warning
+                if (extractedData.builder_mismatch_warning) {
+                    const continueWithMismatch = confirm(
+                        extractedData.builder_mismatch_warning + 
+                        "\n\nDo you want to continue with the extraction anyway?"
+                    );
+                    if (!continueWithMismatch) {
+                        showNotification('PDF upload cancelled. Please select the correct builder.', 'warning');
+                        return;
+                    }
+                }
+                
+                // Populate ship-to fields
+                setValue('ship-to-name', extractedData.customer_name || '');
+                setValue('ship-to-address1', extractedData.address || extractedData.address1 || '');
+                setValue('ship-to-address2', extractedData.address2 || '');
+                setValue('ship-to-city', extractedData.city || '');
+                setValue('ship-to-zip', extractedData.zip_code || '');
+                setValue('ship-to-email', extractedData.email || '');
+                
+                // Populate phone fields
+                setValue('ship-to-phone1', extractedData.phone || '');
+                setValue('ship-to-phone2', extractedData.mobile || extractedData.work_phone || '');
+                
+                // Populate work order fields
+                setValue('po-number', extractedData.po_number || '');
+                setValue('dollar-value', extractedData.dollar_value || '');
+                setValue('description-of-works', extractedData.scope_of_work || extractedData.description_of_works || '');
+                
+                // Populate supervisor/job number fields
+                setValue('job-number', extractedData.supervisor_name || '');
+                setValue('invoice-number', extractedData.invoice_number || '');
+                
+                // Populate dates if available
+                if (extractedData.commencement_date) {
+                    setValue('commencement-date', extractedData.commencement_date);
+                }
+                if (extractedData.installation_date || extractedData.completion_date) {
+                    setValue('completion-date', extractedData.installation_date || extractedData.completion_date);
+                }
+                
+                // Handle best contacts if available
+                if (extractedData.alternate_contacts && extractedData.alternate_contacts.length > 0) {
+                    const firstContact = extractedData.alternate_contacts[0];
+                    setValue('best-contact-name-1', firstContact.name || '');
+                    setValue('best-contact-phone-1', firstContact.phone || '');
+                    setValue('best-contact-email-1', firstContact.email || '');
+                    
+                    if (extractedData.alternate_contacts.length > 1) {
+                        const secondContact = extractedData.alternate_contacts[1];
+                        setValue('best-contact-name-2', secondContact.name || '');
+                        setValue('best-contact-phone-2', secondContact.phone || '');
+                        setValue('best-contact-email-2', secondContact.email || '');
             }
-            showNotification('PDF extracted successfully!', 'success');
+                }
+            }
+            
+            showNotification('PDF uploaded and data extracted successfully!', 'success');
+            
         } catch (error) {
-            handleApiError(error, 'uploading PDF');
+            console.error('[DEBUG] Upload error:', error);
+            showNotification(`Upload failed: ${error.message}`, 'error', 6000);
         } finally {
-            // Reset button state
-            uploadButton.disabled = false;
-            uploadButton.textContent = 'Clear Data, Upload and Extract';
-            
-            // Remove loading notification if it still exists
-            const persistentNotification = document.getElementById('notification-loading');
-            if (persistentNotification) {
-                document.body.removeChild(persistentNotification);
-            }
+            uploadBtn.disabled = false;
+            uploadBtn.textContent = 'Upload PDF';
+            fileInput.value = '';
+            console.log('[DEBUG] PDF upload finished');
         }
     });
+            
+    // Clear data button handler
+    if (clearDataBtn) {
+        clearDataBtn.addEventListener('click', () => {
+            if (confirm('Are you sure you want to clear all data? This will not affect the Sold To (Builder) information.')) {
+                // Clear work order fields
+                const workOrderFields = [
+                    'po-number',
+                    'dollar-value',
+                    'description-of-works',
+                    'commencement-date',
+                    'completion-date',
+                    'supervisor-name',
+                    'supervisor-phone'
+                ];
+                
+                workOrderFields.forEach(id => {
+                    const field = document.getElementById(id);
+                    if (field) field.value = '';
+                });
+                
+                // Clear ship-to fields
+                const shipToFields = [
+                    'ship-to-first-name',
+                    'ship-to-last-name',
+                    'ship-to-name',
+                    'ship-to-address1',
+                    'ship-to-address2',
+                    'ship-to-city',
+                    'ship-to-state',
+                    'ship-to-zip',
+                    'ship-to-county',
+                    'ship-to-phone1',
+                    'ship-to-phone2',
+                    'ship-to-email',
+                    'pdf-phone1',
+                    'pdf-phone2'
+                ];
+                
+                shipToFields.forEach(id => {
+                    const field = document.getElementById(id);
+                    if (field) field.value = '';
+                });
+                
+                // Clear best contacts
+                clearBestContacts();
+                
+                // Clear alternate contacts
+                const altContactsDiv = document.getElementById('alternate-contacts');
+                if (altContactsDiv) altContactsDiv.innerHTML = '';
+                
+                console.log('Data cleared (Sold To information preserved)');
+                showNotification('Data cleared successfully. Sold To information preserved.', 'success');
+        }
+    });
+    }
 }
 
 /**
@@ -407,8 +644,14 @@ function populateShipTo(data) {
         });
     }
     phoneNumbers = [...new Set(phoneNumbers.filter(Boolean))];
-    document.getElementById('ship-to-phone1').value = phoneNumbers[0] || '';
-    document.getElementById('ship-to-phone2').value = phoneNumbers[1] || '';
+    
+    // Store original PDF phones in hidden fields for customer creation
+    document.getElementById('pdf-phone1').value = phoneNumbers[0] || '';
+    document.getElementById('pdf-phone2').value = phoneNumbers[1] || '';
+    
+    // Phone 3 and Phone 4 fields (initially empty, user can fill if needed)
+    document.getElementById('ship-to-phone1').value = '';  // Phone 3
+    document.getElementById('ship-to-phone2').value = '';  // Phone 4
 
     // Best Contact/Alternate Contact section - improved prioritization
     let bestContact = null;
@@ -440,319 +683,85 @@ function populateShipTo(data) {
  * Setup logic for Builder Search functionality
  */
 function setupBuilderSearch() {
-    const searchButton = document.getElementById('search-builder-button');
-    const searchInput = document.getElementById('builder-search-input');
-
-    if (!searchButton || !searchInput) {
-        console.error('Builder search button or input not found.');
-        return;
+    const searchBtn = document.getElementById('sold-to-search-btn');
+    const searchField = document.getElementById('sold-to-search');
+    const resultsDiv = document.getElementById('sold-to-results');
+    // Add or get loading indicator
+    let loadingIndicator = document.getElementById('builder-search-loading');
+    if (!loadingIndicator) {
+        loadingIndicator = document.createElement('span');
+        loadingIndicator.id = 'builder-search-loading';
+        loadingIndicator.className = 'ml-2 text-atoz-yellow';
+        loadingIndicator.style.display = 'none';
+        loadingIndicator.innerHTML = '<svg class="animate-spin h-3 w-3 text-yellow-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path></svg>';
+        searchBtn.parentNode.appendChild(loadingIndicator);
     }
-
-    searchButton.addEventListener('click', async () => {
-        const searchTerm = searchInput.value.trim();
-        if (!searchTerm) {
-            showNotification('Please enter a customer ID or builder name to search.', 'warning');
-            return;
-        }
-
-        // Show loading indicator
-        searchButton.disabled = true;
-        searchButton.textContent = 'Searching...';
-        const loadingNotification = showNotification('Searching for builders...', 'info', 0);
-
-        try {
-            console.log('Searching with term:', searchTerm);
-            const response = await fetchWithRetry(`/api/customers/search`, {
+    if (searchBtn) {
+        searchBtn.addEventListener('click', async function() {
+            const searchTerm = searchField.value;
+            loadingIndicator.style.display = '';
+            resultsDiv.innerHTML = '';
+            try {
+                const response = await fetchWithRetry('/api/customers/search', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ term: searchTerm })
+                    body: JSON.stringify({ search_term: searchTerm })
             });
-            const searchResults = await response.json();
-            
-            console.log('Search results:', searchResults);
-            
-            if (Array.isArray(searchResults) && searchResults.length > 0) {
-                // Display search results for selection if there are multiple matches
-                if (searchResults.length > 1) {
-                    displaySearchResults(searchResults);
-                    showNotification('Multiple builders found. Please select one.', 'success');
-                } else {
-                    // If only one result, auto-select it
-                    const result = searchResults[0];
-                    console.log('Auto-selecting single result:', result);
-                    populateSoldTo(result);
-                    showNotification('Builder found and details populated.', 'success');
-                }
-            } else {
-                // No results found
-                clearSoldToFields();
-                showNotification('No builders found matching your search term. Please try a different search term or contact RFMS support.', 'warning');
+                const customers = await response.json();
+                if (customers.error) {
+                    resultsDiv.innerHTML = `<p class="text-red-500">Error: ${customers.error}</p>`;
+                    return;
             }
-        } catch (error) {
-            clearSoldToFields();
-            handleApiError(error, 'searching for builders');
-        } finally {
-            // Reset button state
-            searchButton.disabled = false;
-            searchButton.textContent = 'Retrieve Builders Details';
-            
-            // Remove loading notification
-            const persistentNotification = document.getElementById('notification-loading');
-            if (persistentNotification) {
-                document.body.removeChild(persistentNotification);
+                if (!customers.length) {
+                    resultsDiv.innerHTML = '<p class="text-gray-500">No customers found</p>';
+                    return;
+        }
+                // Display results
+                let html = '<div class="space-y-2">';
+                customers.forEach(customer => {
+                    html += `
+                        <div class="border border-gray-600 rounded p-2 hover:bg-gray-700 cursor-pointer customer-result" 
+                             data-id="${customer.id || customer.customer_source_id}"
+                             data-customer='${JSON.stringify(customer).replace(/'/g, "&apos;")}' >
+                            <p class="font-medium">${customer.name || customer.business_name || customer.first_name + ' ' + customer.last_name}</p>
+                            <p class="text-sm text-gray-400">${customer.address1 || ''}, ${customer.city || ''}</p>
+                            <p class="text-sm text-gray-400">ID: ${customer.id || customer.customer_source_id}</p>
+                        </div>
+                    `;
+    });
+                html += '</div>';
+                resultsDiv.innerHTML = html;
+                // Add click handlers to results
+                document.querySelectorAll('.customer-result').forEach(item => {
+                    item.addEventListener('click', function() {
+                        const customerId = this.dataset.id;
+                        const customerData = JSON.parse(this.dataset.customer);
+                        // Populate sold-to fields
+                        document.getElementById('sold-to-rfms-id').value = customerId;
+                        document.getElementById('sold-to-name').value = customerData.name || 
+                            `${customerData.first_name || ''} ${customerData.last_name || ''}`.trim();
+                        document.getElementById('sold-to-business-name').value = customerData.business_name || '';
+                        document.getElementById('sold-to-address1').value = customerData.address1 || '';
+                        document.getElementById('sold-to-address2').value = customerData.address2 || '';
+                        document.getElementById('sold-to-city').value = customerData.city || '';
+                        document.getElementById('sold-to-state').value = customerData.state || '';
+                        document.getElementById('sold-to-zip').value = customerData.zip_code || '';
+                        document.getElementById('sold-to-phone1').value = customerData.phone || '';
+                        document.getElementById('sold-to-phone2').value = customerData.phone2 || '';
+                        const emailField = document.getElementById('sold-to-email');
+                        if (emailField) emailField.value = customerData.email || '';
+                        // Clear results
+                        resultsDiv.innerHTML = '<p class="text-green-500">Customer selected</p>';
+                    });
+                });
+            } catch (error) {
+                console.error('Search error:', error);
+                resultsDiv.innerHTML = '<div class="text-red-500">Search failed: ' + error.message + '</div>';
+            } finally {
+                loadingIndicator.style.display = 'none';
             }
-        }
-    });
-
-    // Add keyup event listener for Enter key
-    searchInput.addEventListener('keyup', function(event) {
-        if (event.key === 'Enter') {
-            searchButton.click();
-        }
-    });
-}
-
-/**
- * Display search results in a modal or dropdown for user selection
- * @param {Array} results - The search results from the API
- */
-function displaySearchResults(results) {
-    // Create or clear the results container
-    let resultsContainer = document.getElementById('search-results-container');
-    
-    if (!resultsContainer) {
-        // Create the container if it doesn't exist
-        resultsContainer = document.createElement('div');
-        resultsContainer.id = 'search-results-container';
-        resultsContainer.className = 'fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50';
-        document.body.appendChild(resultsContainer);
-    } else {
-        resultsContainer.innerHTML = '';
-    }
-
-    // Create the modal content
-    const modalContent = document.createElement('div');
-    modalContent.className = 'bg-white p-6 rounded-lg shadow-lg max-w-2xl w-full max-h-[80vh] overflow-auto';
-    
-    // Create the header
-    const header = document.createElement('div');
-    header.className = 'flex justify-between items-center mb-4';
-    
-    const title = document.createElement('h3');
-    title.className = 'text-lg font-bold text-black';
-    title.textContent = 'Search Results';
-    
-    const closeButton = document.createElement('button');
-    closeButton.className = 'text-gray-500 hover:text-gray-700';
-    closeButton.textContent = '✕';
-    closeButton.onclick = () => {
-        resultsContainer.remove();
-    };
-    
-    header.appendChild(title);
-    header.appendChild(closeButton);
-    
-    // Create the results list
-    const resultsList = document.createElement('div');
-    resultsList.className = 'space-y-2';
-    
-    // Create search info text
-    const searchCount = document.createElement('p');
-    searchCount.className = 'text-sm text-gray-600 mb-2';
-    searchCount.textContent = `Found ${results.length} result${results.length !== 1 ? 's' : ''}`;
-    
-    // Add a search input to filter results locally
-    const searchFilter = document.createElement('input');
-    searchFilter.type = 'text';
-    searchFilter.placeholder = 'Filter results...';
-    searchFilter.className = 'w-full p-2 border rounded mb-3';
-    searchFilter.addEventListener('input', (e) => {
-        const filterValue = e.target.value.toLowerCase();
-        
-        // Show/hide results based on filter
-        Array.from(resultsList.children).forEach(item => {
-            const itemText = item.textContent.toLowerCase();
-            item.style.display = itemText.includes(filterValue) ? 'block' : 'none';
         });
-    });
-    
-    results.forEach(result => {
-        const resultItem = document.createElement('div');
-        resultItem.className = 'p-3 border rounded hover:bg-gray-100 cursor-pointer text-black';
-        
-        // Format the display based on available properties in the result
-        let displayText = `${result.name || 'Unknown Name'}`;
-        if (result.id) {
-            displayText = `${result.id}: ${displayText}`;
-        }
-        if (result.address) {
-            displayText += ` - ${result.address}`;
-        }
-        
-        resultItem.textContent = displayText;
-        resultItem.onclick = () => {
-            populateSoldTo(result);
-            resultsContainer.remove();
-            showNotification('Builder selected and details populated.', 'success');
-        };
-        
-        resultsList.appendChild(resultItem);
-    });
-    
-    // Assemble the modal
-    modalContent.appendChild(header);
-    modalContent.appendChild(searchCount);
-    modalContent.appendChild(searchFilter);
-    modalContent.appendChild(resultsList);
-    resultsContainer.appendChild(modalContent);
-    
-    // Add keyboard support for closing modal with ESC
-    document.addEventListener('keydown', function escHandler(e) {
-        if (e.key === 'Escape') {
-            resultsContainer.remove();
-            document.removeEventListener('keydown', escHandler);
-        }
-    });
-}
-
-/**
- * Populate the Sold To fields with the selected builder data
- * @param {Object} builderData - The builder data object from the API
- */
-function populateSoldTo(builderData) {
-    console.log('Populating Sold To with data:', builderData);
-
-    // Helper to pick the first non-empty value from a list of possible fields
-    function pick(...fields) {
-        for (const f of fields) {
-            if (f && typeof f === 'string' && f.trim()) return f.trim();
-        }
-        return '';
     }
-
-    // Helper to find the first valid phone number in the object
-    function findPhone(obj) {
-        const phoneFields = [
-            'phone', 'customer_phone', 'customerPhone2', 'customerPhone3',
-            'mobile', 'work_phone', 'home_phone', 'extra_phones', 'phones', 'contact_phone', 'contactPhone', 'contactMobile'
-        ];
-        for (const key of phoneFields) {
-            if (Array.isArray(obj[key])) {
-                for (const p of obj[key]) {
-                    if (p && typeof p === 'string' && p.trim()) return p.trim();
-                }
-            } else if (obj[key] && typeof obj[key] === 'string' && obj[key].trim()) {
-                return obj[key].trim();
-            }
-        }
-        return '';
-    }
-
-    // Helper to find the first valid email in the object
-    function findEmail(obj) {
-        const emailFields = [
-            'email', 'customer_email', 'contact_email', 'contactEmail', 'emails'
-        ];
-        for (const key of emailFields) {
-            if (Array.isArray(obj[key])) {
-                for (const e of obj[key]) {
-                    if (e && typeof e === 'string' && e.trim()) return e.trim();
-                }
-            } else if (obj[key] && typeof obj[key] === 'string' && obj[key].trim()) {
-                return obj[key].trim();
-            }
-        }
-        return '';
-    }
-
-    // Name
-    document.getElementById('sold-to-name').value = pick(
-        builderData.name,
-        [builderData.first_name, builderData.last_name].filter(Boolean).join(' '),
-        builderData.business_name
-    );
-
-    // Address 1
-    document.getElementById('sold-to-address1').value = pick(
-        builderData.address1,
-        builderData.address,
-        builderData.address2
-    );
-
-    // Address 2
-    if (document.getElementById('sold-to-address2')) {
-        document.getElementById('sold-to-address2').value = pick(
-            builderData.address2
-        );
-    }
-
-    // City
-    document.getElementById('sold-to-city').value = pick(
-        builderData.city
-    );
-
-    // State
-    if (document.getElementById('sold-to-state')) {
-        document.getElementById('sold-to-state').value = pick(
-            builderData.state
-        );
-    }
-
-    // Zip/Postcode
-    document.getElementById('sold-to-zip').value = pick(
-        builderData.zip_code,
-        builderData.postcode
-    );
-
-    // Country
-    if (document.getElementById('sold-to-country')) {
-        document.getElementById('sold-to-country').value = pick(
-            builderData.country
-        );
-    }
-
-    // Phone (robust search)
-    document.getElementById('sold-to-phone').value = findPhone(builderData);
-
-    // Email (robust search)
-    document.getElementById('sold-to-email').value = findEmail(builderData);
-
-    // Salesperson
-    if (document.getElementById('sold-to-salesperson')) {
-        document.getElementById('sold-to-salesperson').value = pick(
-            builderData.preferred_salesperson1,
-            builderData.preferred_salesperson2
-        );
-    }
-
-    // Customer ID (RFMS Customer ID)
-    let builderIdField = document.getElementById('sold-to-customer-id');
-    if (!builderIdField) {
-        builderIdField = document.createElement('input');
-        builderIdField.type = 'text';
-        builderIdField.id = 'sold-to-customer-id';
-        builderIdField.className = 'input-dark rounded w-40';
-        builderIdField.readOnly = true;
-        document.getElementById('sold-to-fields').appendChild(builderIdField);
-    }
-    builderIdField.value = builderData.customer_source_id || '';
-
-    // Optionally: clear or set any other Sold To fields as needed
-    console.log('Sold To fields populated successfully');
-}
-
-/**
- * Clear all Sold To fields
- */
-function clearSoldToFields() {
-    document.getElementById('sold-to-name').value = '';
-    document.getElementById('sold-to-phone').value = '';
-    document.getElementById('sold-to-email').value = '';
-    document.getElementById('sold-to-address1').value = '';
-    document.getElementById('sold-to-city').value = '';
-    document.getElementById('sold-to-zip').value = '';
-    document.getElementById('sold-to-salesperson').value = '';
-    document.getElementById('sold-to-customer-id').value = '';
 }
 
 /**
@@ -794,8 +803,8 @@ function setupAddCustomerAndCreateJob() {
             state: document.getElementById('ship-to-state')?.value || '',
             zip_code: document.getElementById('ship-to-zip').value || '',
             county: document.getElementById('ship-to-county')?.value || '',
-            phone: document.getElementById('ship-to-phone1')?.value || '',
-            phone2: document.getElementById('ship-to-phone2')?.value || '',
+            phone: document.getElementById('pdf-phone1').value || '',  // Use PDF Phone 1
+            phone2: document.getElementById('pdf-phone2').value || '', // Use PDF Phone 2
             email: document.getElementById('ship-to-email').value || '',
             customer_type: 'INSURANCE',
             business_name: document.getElementById('ship-to-business-name')?.value || ''
@@ -839,8 +848,8 @@ function setupAddCustomerAndCreateJob() {
         }
         // Gather Sold To data
         const soldToName = document.getElementById('sold-to-name').value.trim();
-        const soldToCustomerId = document.getElementById('sold-to-customer-id') ? 
-            document.getElementById('sold-to-customer-id').value.trim() : '';
+        const soldToCustomerId = document.getElementById('sold-to-rfms-id') ? 
+            document.getElementById('sold-to-rfms-id').value.trim() : '';
         const shipToName = document.getElementById('ship-to-name').value.trim();
         const poNumber = document.getElementById('po-number').value.trim();
         const missingFields = [];
@@ -859,7 +868,7 @@ function setupAddCustomerAndCreateJob() {
             address2: document.getElementById('sold-to-address2').value,
             city: document.getElementById('sold-to-city').value,
             zip_code: document.getElementById('sold-to-zip').value,
-            country: document.getElementById('sold-to-country').value,
+            country: document.getElementById('sold-to-country')?.value || 'Australia',
             phone: document.getElementById('sold-to-phone').value,
             email: document.getElementById('sold-to-email').value
         };
@@ -869,8 +878,11 @@ function setupAddCustomerAndCreateJob() {
             address2: document.getElementById('ship-to-address2').value,
             city: document.getElementById('ship-to-city').value,
             zip_code: document.getElementById('ship-to-zip').value,
-            country: document.getElementById('ship-to-country').value,
-            phone: document.getElementById('ship-to-phone1').value + ' ' + document.getElementById('ship-to-phone2').value,
+            country: document.getElementById('ship-to-country')?.value || 'Australia',
+            phone3: document.getElementById('ship-to-phone1').value,  // Phone 3 from UI
+            phone4: document.getElementById('ship-to-phone2').value,  // Phone 4 from UI
+            pdf_phone1: document.getElementById('pdf-phone1').value,  // PDF Phone 1
+            pdf_phone2: document.getElementById('pdf-phone2').value,  // PDF Phone 2
             email: document.getElementById('ship-to-email').value,
             id: createdCustomerId
         };
@@ -934,4 +946,72 @@ function setupAddCustomerAndCreateJob() {
             }
         }
     });
+}
+
+/**
+ * Clear best contact fields
+ */
+function clearBestContacts() {
+    const bestContactFields = [
+        'alternate-contact-name',
+        'alternate-contact-phone',
+        'alternate-contact-phone2',
+        'alternate-contact-email'
+    ];
+    
+    bestContactFields.forEach(id => {
+        const field = document.getElementById(id);
+        if (field) field.value = '';
+    });
+}
+
+// Find the create job button and description of works field
+const createJobButton = document.getElementById('create-job-button');
+const descriptionOfWorksField = document.getElementById('description-of-works');
+
+function validateDescriptionOfWorks() {
+    const value = descriptionOfWorksField.value.trim();
+    const wordCount = value.split(/\s+/).filter(Boolean).length;
+    if (wordCount < 5) {
+        createJobButton.disabled = true;
+        showNotification("General Scope of Works required!  example: Restrectch carpet back in bedroom two or Floor preperation PO for adding to billing group", 'error');
+        return false;
+    } else {
+        createJobButton.disabled = false;
+        return true;
+    }
+}
+
+// Add event listener to validate on input
+if (descriptionOfWorksField && createJobButton) {
+    descriptionOfWorksField.addEventListener('input', validateDescriptionOfWorks);
+}
+
+// Also validate when the Create Job button is clicked
+if (createJobButton) {
+    createJobButton.addEventListener('click', function(e) {
+        if (!validateDescriptionOfWorks()) {
+            e.preventDefault();
+            return false;
+        }
+    });
+}
+
+function enforceBuilderSelectionBeforeUpload() {
+    const uploadBtn = document.getElementById('upload-pdf-btn');
+    const builderNameField = document.getElementById('sold-to-name');
+    if (!uploadBtn || !builderNameField) return;
+
+    function checkBuilderSelected() {
+        const builderSelected = builderNameField.value && builderNameField.value.trim().length > 0;
+        uploadBtn.disabled = !builderSelected;
+    }
+
+    // Initial check
+    checkBuilderSelected();
+
+    // Listen for changes in the builder name field
+    builderNameField.addEventListener('input', checkBuilderSelected);
+    // If builder is selected via search, also check
+    builderNameField.addEventListener('change', checkBuilderSelected);
 } 

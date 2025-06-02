@@ -1,0 +1,737 @@
+
+================= Profile Build Group TESTING PDF Example1.pdf =================
+[DEBUG] Supervisor regex matched: Paul White
+ABN
+{
+  "customer_name": "Auto & General Insurance Services Pty",
+  "business_name": "",
+  "first_name": "Auto",
+  "last_name": "& General Insurance Services Pty",
+  "address": "28 HILLVIEW AVENUE, Newtown, QLD 4350",
+  "address1": "",
+  "address2": "",
+  "city": "",
+  "state": "",
+  "zip_code": "",
+  "country": "Australia",
+  "phone": "0409251687",
+  "mobile": "",
+  "work_phone": "",
+  "home_phone": "",
+  "email": "accounts@profilebuildgroup.com.au",
+  "customer_type": "Builders",
+  "extra_phones": [],
+  "po_number": "PBG-18191-18039",
+  "scope_of_work": "",
+  "dollar_value": 3254.9,
+  "job_number": "",
+  "actual_job_number": "",
+  "supervisor_name": "Paul White",
+  "supervisor_mobile": "",
+  "supervisor_email": "",
+  "description_of_works": "Flooring\nMaterial\nSUNROOM -INTERNAL\nRemove & Replace Flooring - Laminate\n14/m2\nRemove & relace existing hardboard - existing hardboard has not be installed correctly\nExisting hardboard has not be installed correctly. New hardboard to be nailed & glued\n1/ea",
+  "material_breakdown": "",
+  "labor_breakdown": "",
+  "rooms": "",
+  "raw_text": "WORK ORDER: PBG-18191-18039\n \nTo:\nA to Z Flooring Solutions Pty Ltd \nProfile Build Group Pty Ltd\n \n74658650821\n23 Mayneview Street Milton, QLD, 4064\n \n2/133 REDLAND BAY RD Capalaba QLD 4157\nT:\n 07 3638 0304\n \n \nE:\naccounts@profilebuildgroup.com.au\noffice@profilebuildgroup.com.au\nSupervisor:\nPaul White\nABN: 97 783 979 632\nPhone:\n0427 970 055\nQBCC Lic: 15011120 | NSW Lic: 293448C\n \nIssue Date:\n29/05/2025\nClient:\nAuto & General Insurance Services Pty\nLtd\nJob Number: PBG-18191\n \nSITE LOCATION: 28 HILLVIEW AVENUE, Newtown, QLD 4350\nSITE CONTACT: HELEN KANE\nSITE CONTACT PHONE: 0409251687\nATTENDANCE SCHEDULED FOR: 28/04/2025 to 23/05/2025\nIF YOU CAN'T ATTEND AT THIS SCHEDULED TIME YOU NEED TO CONTACT PROFILE BUILD GROUP\nAT LEAST 2 HOURS PRIOR TO ATTENDANCE\nNOTES:\nPBG-18191-18039\nFlooring\nMaterial\nSUNROOM -INTERNAL\nRemove & Replace Flooring - Laminate\n14/m2\nRemove & relace existing hardboard - existing hardboard has not be installed correctly\nExisting hardboard has not be installed correctly. New hardboard to be nailed & glued\n1/ea\nTotals\nTotals\nSubtotal\n$2,959.00\nGST\n$295.90\nTotal\n$3,254.90\nFailure to comply with the below expectations and instructions may result in your invoice being\ndelayed or declined\nATTENDANCE EXPECTATIONS\n1) Please confirm your attendance via return email\n2) All relevant completion certificates must be supplied on invoice\n3) The amount of the purchase order is the agreed fixed price. Any variations will need to be submitted as a\nquotation and approval sought prior to proceeding\n4) Any additional works completed outside of the above scope of works will be declined. No PO = No\nPayment\n5) Before, during and after photos of works must be supplied\n6) All materials to be provided by the subcontractor as per instructions in the Work Order\n7) All works must be completed in accordance with Industry Standards and relevant construction codes.\nFailure to do so will result in a Defect Notice being issued and rectification works to be carried out by the\ntrade.\nInvoicing Instructions:\nAll invoices are to be emailed to accounts@profilebuildgroup.com.au\nPlease ensure photos have been supplied before or at the time of invoicing\nPlease ensure the work order number and full job address is included on the tax invoice\nOnly one purchase work number per tax invoice\n",
+  "alternate_contact_name": "HELEN KANE",
+  "alternate_contact_phone": "",
+  "alternate_contact_email": "",
+  "alternate_contacts": [],
+  "commencement_date": "",
+  "installation_date": "",
+  "ship_to_name": "",
+  "ship_to_address": "",
+  "extra_emails": [
+    "office@profilebuildgroup.com.au",
+    "accounts@profilebuildgroup.com.au"
+  ]
+}
+
+--- SUMMARY ---
+PO Number: PBG-18191-18039
+Customer Name: Auto & General Insurance Services Pty
+Email: accounts@profilebuildgroup.com.au
+Phone: 0409251687
+Mobile: 
+Work Phone: 
+Home Phone: 
+Address: 28 HILLVIEW AVENUE, Newtown, QLD 4350
+City: 
+Job Number: 
+Supervisor Name: Paul White
+Supervisor Mobile: 
+Description of Works: Flooring
+Material
+SUNROOM -INTERNAL
+Remove & Replace Flooring - Laminate
+14/m2
+Remove & relace exist
+Dollar Value: $3254.90
+Alternate Contacts: []
+Commencement Date: 
+Installation Date: 
+Extra Phones: []
+Extra Emails: ['office@profilebuildgroup.com.au', 'accounts@profilebuildgroup.com.au']
+
+================= Profile Build Group TESTING PDF Example2.pdf =================
+[DEBUG] Supervisor regex matched: Michael Pickett
+ABN
+{
+  "customer_name": "RACQ Insurance",
+  "business_name": "",
+  "first_name": "RACQ",
+  "last_name": "Insurance",
+  "address": "107 King Arthur Tce, Tennyson, QLD 4105",
+  "address1": "",
+  "address2": "",
+  "city": "",
+  "state": "",
+  "zip_code": "",
+  "country": "Australia",
+  "phone": "",
+  "mobile": "",
+  "work_phone": "",
+  "home_phone": "",
+  "email": "accounts@profilebuildgroup.com.au",
+  "customer_type": "Builders",
+  "extra_phones": [],
+  "po_number": "PBG-16538-18874-Prov",
+  "scope_of_work": "",
+  "dollar_value": 550.0,
+  "job_number": "",
+  "actual_job_number": "",
+  "supervisor_name": "Michael Pickett",
+  "supervisor_mobile": "",
+  "supervisor_email": "",
+  "description_of_works": "Flooring\nMaterial\nWALK IN ROBE\nFLOOR COVERINGS - Preparation - Supply and install floor preparation/levelling - in accordance with AS/NZS 2455 - Textile floor\ncoverings Installation practice - Provisional Sum $500\n- Additional floor prep required due to yellow tongue flooring removal during restoration repairs\n1/ea",
+  "material_breakdown": "",
+  "labor_breakdown": "",
+  "rooms": "",
+  "raw_text": "WORK ORDER: PBG-16538-18874\n \nTo:\nA to Z Flooring Solutions Pty Ltd \nProfile Build Group Pty Ltd\n \n74658650821\n23 Mayneview Street Milton, QLD, 4064\n \n2/133 REDLAND BAY RD Capalaba QLD 4157\nT:\n 07 3638 0304\n \n \nE:\naccounts@profilebuildgroup.com.au\noffice@profilebuildgroup.com.au\nSupervisor:\nMichael Pickett\nABN: 97 783 979 632\nPhone:\n0430 046 211\nQBCC Lic: 15011120 | NSW Lic: 293448C\n \nIssue Date:\n28/05/2025\nClient:\nRACQ Insurance\nJob Number: PBG-16538\n \nSITE LOCATION: 107 King Arthur Tce, Tennyson, QLD 4105\nSITE CONTACT: Rachel MEEHAN\nSITE CONTACT PHONE: 0438 700 509\nATTENDANCE SCHEDULED FOR:  to \nIF YOU CAN'T ATTEND AT THIS SCHEDULED TIME YOU NEED TO CONTACT PROFILE BUILD GROUP\nAT LEAST 2 HOURS PRIOR TO ATTENDANCE\nNOTES:\nPBG-16538-18874\nFlooring\nMaterial\nWALK IN ROBE\nFLOOR COVERINGS - Preparation - Supply and install floor preparation/levelling - in accordance with AS/NZS 2455 - Textile floor\ncoverings Installation practice - Provisional Sum $500\n- Additional floor prep required due to yellow tongue flooring removal during restoration repairs\n1/ea\nTotals\nTotals\nSubtotal\n$500.00\nGST\n$50.00\nTotal\n$550.00\nFailure to comply with the below expectations and instructions may result in your invoice being\ndelayed or declined\nATTENDANCE EXPECTATIONS\n1) Please confirm your attendance via return email\n2) All relevant completion certificates must be supplied on invoice\n3) The amount of the purchase order is the agreed fixed price. Any variations will need to be submitted as a\nquotation and approval sought prior to proceeding\n4) Any additional works completed outside of the above scope of works will be declined. No PO = No\nPayment\n5) Before, during and after photos of works must be supplied\n6) All materials to be provided by the subcontractor as per instructions in the Work Order\n7) All works must be completed in accordance with Industry Standards and relevant construction codes.\nFailure to do so will result in a Defect Notice being issued and rectification works to be carried out by the\ntrade.\nInvoicing Instructions:\nAll invoices are to be emailed to accounts@profilebuildgroup.com.au\nPlease ensure photos have been supplied before or at the time of invoicing\nPlease ensure the work order number and full job address is included on the tax invoice\nOnly one purchase work number per tax invoice\n",
+  "alternate_contact_name": "Rachel MEEHAN",
+  "alternate_contact_phone": "",
+  "alternate_contact_email": "",
+  "alternate_contacts": [],
+  "commencement_date": "",
+  "installation_date": "",
+  "ship_to_name": "",
+  "ship_to_address": "",
+  "extra_emails": [
+    "office@profilebuildgroup.com.au",
+    "accounts@profilebuildgroup.com.au"
+  ]
+}
+
+--- SUMMARY ---
+PO Number: PBG-16538-18874-Prov
+Customer Name: RACQ Insurance
+Email: accounts@profilebuildgroup.com.au
+Phone: 
+Mobile: 
+Work Phone: 
+Home Phone: 
+Address: 107 King Arthur Tce, Tennyson, QLD 4105
+City: 
+Job Number: 
+Supervisor Name: Michael Pickett
+Supervisor Mobile: 
+Description of Works: Flooring
+Material
+WALK IN ROBE
+FLOOR COVERINGS - Preparation - Supply and install floor preparation/
+Dollar Value: $550.00
+Alternate Contacts: []
+Commencement Date: 
+Installation Date: 
+Extra Phones: []
+Extra Emails: ['office@profilebuildgroup.com.au', 'accounts@profilebuildgroup.com.au']
+
+================= Australian Restoration Company TESTING PDF Example1.pdf =================
+[DEBUG] Supervisor regex matched but group(1) is None or regex did NOT match
+{
+  "customer_name": "Mishae Love",
+  "business_name": "",
+  "first_name": "Mishae",
+  "last_name": "Love",
+  "address": "Unit 12/6 Tibbing St, Nerang QLD 4211",
+  "address1": "",
+  "address2": "",
+  "city": "",
+  "state": "",
+  "zip_code": "",
+  "country": "Australia",
+  "phone": "0400 882 783",
+  "mobile": "",
+  "work_phone": "",
+  "home_phone": "",
+  "email": "trent.jenkins@arcprojects.com.au",
+  "customer_type": "Builders",
+  "extra_phones": [
+    "0427855287"
+  ],
+  "po_number": "PO96799-BU01-003",
+  "scope_of_work": "",
+  "dollar_value": 5700.0,
+  "job_number": "",
+  "actual_job_number": "",
+  "supervisor_name": "",
+  "supervisor_mobile": "27855287",
+  "supervisor_email": "",
+  "description_of_works": "Kitchen 2\nAllowance to uplift Hybrid flooring\n6 m2\nAllowance to supply Hybrid flooring , inc underlay\n6 m2\nAllowance to install Hybrid flooring\n6 m2\nAllowance to install flooring to kitchen kick panels ,re-use aluminum plinth and clips\n5 lm\nOpen Plan Area\nAllowance to uplift Hybrid flooring\n39 m2\nAllowance to supply Hybrid flooring , inc underlay\n39 m2\nAllowance to install Hybrid flooring\n39 m2\nPlease note No allowance has been allowed for any floor preparation, should this be required a variation will be\nprovided for further review and assessment.\n1 m2",
+  "material_breakdown": "",
+  "labor_breakdown": "",
+  "rooms": "",
+  "raw_text": "Work Order Details\nTo:\nA to Z Flooring Solutions\n\u00a0Start Date:\n\u00a0\n\u00a0\nOrder Number:\nPO96799-BU01-003\n\u00a0Finish Date:\n\u00a0\n\u00a0\nProject Manager:\nTrent Jenkins\nCase Manager:\nSamantha Porep\nPlease scan & complete\nsite risk assessment\nbefore proceeding with\nworks.\nP: 0427855287\nP: 1300728225\nE: trent.jenkins@arcprojects.com.au\nE: samantha.porep@arcprojects.com.au\nCustomer Details:\nMishae Love\nSite Address:\nUnit 12/6 Tibbing St, Nerang QLD 4211\nCustomer Phone:\n0400 882 783\nFlooring Contractor\nMaterial\nKitchen 2\nAllowance to uplift Hybrid flooring\n6 m2\nAllowance to supply Hybrid flooring , inc underlay\n6 m2\nAllowance to install Hybrid flooring\n6 m2\nAllowance to install flooring to kitchen kick panels ,re-use aluminum plinth and clips\n5 lm\nOpen Plan Area\nAllowance to uplift Hybrid flooring\n39 m2\nAllowance to supply Hybrid flooring , inc underlay\n39 m2\nAllowance to install Hybrid flooring\n39 m2\nPlease note No allowance has been allowed for any floor preparation, should this be required a variation will be\nprovided for further review and assessment.\n1 m2\nAll amounts shown are exclusive of GST.\n\u00a0\nPreliminaries\nMaterial\nPreliminaries\nAllowance for waste removal and skip bin\n1 item\nAllowance for builders clean\n1 item\nAll amounts shown are exclusive of GST.\n\u00a0\nTotal\n\u00a0\nSub Total\n$5,700.00\nGST\n$570.00\nTotal AUD\n$6,270.00\nBy undertaking the works in this Purchase/Work Order, you agree to the Australian Restoration & Construction Terms & Conditions available from\nHead Office or on our website. Invoices will not be accepted unless all relevant Forms (e.g. Forms 15 & 16), Warranties and SWMS have been\nsupplied.\u00a0\nPO96799-BU01-003\n25 May 2025\nQLD\u00a01281643\u00a0|\u00a0NSW\u00a0291154C\u00a0|\u00a0VIC\u00a0CDB-U48549\u00a0|\u00a0ACT\u00a02019930\u00a0|\u00a0SA\u00a0BLD296646\u00a0|\u00a0TAS\u00a0390296614\nACN\u00a0169 552 416\u00a0|\u00a0ABN\u00a042 169 552 416\nCOMMERCIAL\u00a0|\u00a0RESIDENTIAL\u00a0|\u00a0INSURANCE\nP\u00a01300 728 225\nE\u00a0office@arcprojects.com.au\npage 1 of 4\nAny PS/PC Items assigned within this Purchase order must be individually itemised on your\ninvoice with a price for it to be accepted. Failure to adhere to this may result in invoice processing\ndelays.\nPlease upload your invoice via the link on your work order email.\u00a0Please address the invoice\nto\u00a0Australian Restoration and Construction Pty Ltd\u00a0and include\u00a0PO96799-BU01-003 on the\ninvoice.\nPO96799-BU01-003\n25 May 2025\nQLD\u00a01281643\u00a0|\u00a0NSW\u00a0291154C\u00a0|\u00a0VIC\u00a0CDB-U48549\u00a0|\u00a0ACT\u00a02019930\u00a0|\u00a0SA\u00a0BLD296646\u00a0|\u00a0TAS\u00a0390296614\nACN\u00a0169 552 416\u00a0|\u00a0ABN\u00a042 169 552 416\nCOMMERCIAL\u00a0|\u00a0RESIDENTIAL\u00a0|\u00a0INSURANCE\nP\u00a01300 728 225\nE\u00a0office@arcprojects.com.au\npage 2 of 4\nSustainability\nBy completing this Purchase Order I agree to be proactively sustainable with my choices and use\nof materials as well as my actions onsite.\nIf you would like to learn how to be more sustainable in your operations, we can support you to do so. We are happy to offer free\nSustainability Training as part of our Build Clean Lead Green initiative. Please contact us at BCLG@arcprojects.com.au for more\ninformation.\n\u00a0\nPO96799-BU01-003\n25 May 2025\nQLD\u00a01281643\u00a0|\u00a0NSW\u00a0291154C\u00a0|\u00a0VIC\u00a0CDB-U48549\u00a0|\u00a0ACT\u00a02019930\u00a0|\u00a0SA\u00a0BLD296646\u00a0|\u00a0TAS\u00a0390296614\nACN\u00a0169 552 416\u00a0|\u00a0ABN\u00a042 169 552 416\nCOMMERCIAL\u00a0|\u00a0RESIDENTIAL\u00a0|\u00a0INSURANCE\nP\u00a01300 728 225\nE\u00a0office@arcprojects.com.au\npage 3 of 4\nTerms & Conditions\n1. SCOPE OF WORKS\nYou must:\n(a) supply the Goods and Services to our satisfaction\nand in accordance with this WO;\n(b) provide everything required to perform the Services\nand complete the scope by the Completion Date;\n(c) obtain and comply with all permits and approvals\nnecessary to supply the Goods, carry out and complete\nthe Services (unless this WO expressly says that we\nwill); and\n(d) exercise a high standard of skill, care and diligence\nin relation to the Goods and the Services. You are\nresponsible for the care of the Goods until we accept\nthem under clause 4(c) or, if the Goods are subject to\nServices, the date the Services are completed.\n2. PRICING\nAgreed fixed quotes are not subject to rise and fall. Any\nworks outside of the agreed scope of works would be\nconsidered variation works as agreed with ARC\nrepresentative. The above is not applicable for Do &\nCharge and unquoted works.\n3. DOCUMENTS\n(a) The information and documents (including\ncopyright) made available to you by us or on our behalf\nremain our property.\n(b) You have no claim on account of any alleged\nstatement, warranty, representation, information or\ndocuments made or provided to you by us or on our\nbehalf.\n(c) You grant us an irrevocable, transferrable and\nroyalty free licence to use all intellectual property\nprovided in connection with this WO.\n(d) You have provided our office a copy of your relevant\ninsurances and licenses which includes but is not\nlimited to; public liability, work cover, registered builder\npractitioner license number, signed statement of works\ncompensation, pay-roll tax and remuneration.\n4. DELIVERIES\n(a) Goods must be delivered during normal work hours\nunless you make alternative arrangements with our\nrepresentative.\n(b) The Goods are delivered when the Goods are in\naccordance with this WO and delivery is acknowledged\nin writing by our representative.\n(c) Goods that are not in accordance with the relevant\nWO are deemed to not have been delivered.\n5. SERVICES\n(a) In carrying out the Services you must:\n\u00a0(i) keep the work site clean and tidy and free of\nrubbish;\n\u00a0(ii) comply with any Site policies or requirements\nnotified to you;\n\u00a0(iii) not cause any harm or damage to the environment\nor the work of any other contractors;\n\u00a0(iv) prevent nuisance and unreasonable noise and\ndisturbance; and\n\u00a0(v) take all measures to protect people and property\n(including the Goods) from loss or damage.\n(b) If we need to carry out urgent works to protect\npersons or property which you should have done, we\ncan recover our costs as a debt due and owing from\nyou.\n(c) You must give us notice of when you consider that\nthe Services have been completed in accordance with\nthis WO and our representative will inspect the\nServices to determine whether or not they have been\ncompleted.\n(d) After inspection, we may\n\u00a0(i) advise you in writing that the Services are complete;\nor\n\u00a0(ii) advise you what further steps need to be taken\nbefore completion is achieved and\u00a0clauses 5(c) and\n5(d) will reapply.\n6. DEFECTS\n(a) If there is any defect in anything supplied by you\nunder this WO, we may make a written request that the\ndefect is rectified at your cost and you must comply\nwith the request within the time stated in that request\n(or if not time is stated within 10 days).\n(b) If you do not rectify the defect in accordance with\nour request the cost of the rectification is a liquidated\ndebt due and owing from you to us.\n7. INVOICES AND PAYMENT\n(a) You may make claims for payment:\n\u00a0(i) in respect of the Goods, after the Goods have been\ndelivered and accepted by us under clause 4(c); and\n\u00a0(ii) in respect of the Services, after the Services have\nbeen completed and accepted by us under clause 5(d)\n(i).\n(b) You must submit your payment claim:\n\u00a0(i) with a valid tax invoice, which must state the Work\nOrder No.;\n\u00a0(ii) based on the value of the Goods supplied or the\nServices completed at that time; and\n\u00a0(iii) to the company representative who issued the\nwork order.\n(c) If we dispute the amount you have claimed, we may\nissue you a payment schedule setting out the amount\nwe think is due and the reasons for the difference\nwithin 10 Business Days.\n(d) Subject to clause 7(c), we must pay to you the\nvalue of the Goods and/or Services determined by us,\nless any amounts we are entitled to retain or withhold\nand amounts previously paid.\n(e) Amounts payable under clause 7 are payable 30\ndays after receipt of invoice (except if payment is\ndisputed).\n(f) In consideration of us making the final payment to\nyou, you release us from all claims and actions and\nagree that you have no claim whatsoever arising out of\nor in connection with this WO.\n(g) A signed copy of this WO is to be attached as part\nof this invoice prior to receiving payment.\n(h) Payment of invoices will not be processed unless\nan up to date \u2018not expired\u2019 copy of your relevant\ninsurance, statements and license documents as\nindicated in (3d).\n8. CANCELLATION\nIf the Goods or the Services are:\n(a) not delivered or completed within forty-eight (48)\nhours after the Delivery Date or the Completion Date (as\napplicable) or any extended dates agreed to by us in\nwriting; or\n(b) determined by us not to comply with this WO, then we\nmay, at our discretion, regard this WO as repudiated by\nyou.\n9. WORK HEALTH AND SAFETY\nYou must:\n(a) maintain appropriate safety precautions and programs\nso as to prevent injury to persons or damage to property\non or near the Site;\n(b) comply with our work health and safety plans and\nrequirements, including any Site specified inductions and\nas per your signed SWMS, JSA\u2019s relevant to your works.\n(c) Promptly notify, provide information and cooperate\nwith us with respect to any reportable incident.\n(d) Complete a site Risk Assessment by scanning the QR\ncode on this WO.\n10. HIRE\n(a) You warrant that any hired equipment supplied to us is\nin good working order and shall be maintained in good\nworking order by you for the Hire Period.\n(b) If we are of the opinion that any of the hired\nequipment supplied by you is not in good working order,\nwe may notify you of the hired equipment's failure to be in\ngood working order.\n(c) You must rectify any hired equipment that is not in\ngood working order within one hour of receiving\nnotification (or such longer period as agreed between us\nand you) and you are liable for any costs occurred by us\nas result of any failure in the hired equipment.\n11. CONDITIONS AND WARRANTIES\nWarranties of all applicable services and goods are to\nalign with all Australian Standards.\n12. THE AGREEMENT\n(a) The law of the State or Territory in which the Site is\nlocated governs this WO.\n(b) This WO comprises the whole of the agreement\nbetween the parties and any prior representations and\nother terms are excluded.\n(c) You will be taken to have accepted the terms of this\nWO by commencing the supply of the Goods or carrying\nout the Services or by confirming (verbally or in writing)\nthat you will supply the Goods or carry out the Services.\n(d) You indemnify us against any liability to or claim by a\nthird party and all costs, charges, expenses, fines,\npenalties, losses and damages suffered or incurred by us\nin connection with any wilful or negligent act or omission\nor breach of this WO by you.\nPO96799-BU01-003\n25 May 2025\nQLD\u00a01281643\u00a0|\u00a0NSW\u00a0291154C\u00a0|\u00a0VIC\u00a0CDB-U48549\u00a0|\u00a0ACT\u00a02019930\u00a0|\u00a0SA\u00a0BLD296646\u00a0|\u00a0TAS\u00a0390296614\nACN\u00a0169 552 416\u00a0|\u00a0ABN\u00a042 169 552 416\nCOMMERCIAL\u00a0|\u00a0RESIDENTIAL\u00a0|\u00a0INSURANCE\nP\u00a01300 728 225\nE\u00a0office@arcprojects.com.au\npage 4 of 4\n",
+  "alternate_contact_name": "",
+  "alternate_contact_phone": "",
+  "alternate_contact_email": "",
+  "alternate_contacts": [],
+  "commencement_date": "",
+  "installation_date": "",
+  "ship_to_name": "",
+  "ship_to_address": "Unit 12/6 Tibbing St, Nerang QLD 4211",
+  "extra_emails": [
+    "samantha.porep@arcprojects.com.au",
+    "office@arcprojects.com.au",
+    "BCLG@arcprojects.com.au",
+    "trent.jenkins@arcprojects.com.au"
+  ]
+}
+
+--- SUMMARY ---
+PO Number: PO96799-BU01-003
+Customer Name: Mishae Love
+Email: trent.jenkins@arcprojects.com.au
+Phone: 0400 882 783
+Mobile: 
+Work Phone: 
+Home Phone: 
+Address: Unit 12/6 Tibbing St, Nerang QLD 4211
+City: 
+Job Number: 
+Supervisor Name: 
+Supervisor Mobile: 27855287
+Description of Works: Kitchen 2
+Allowance to uplift Hybrid flooring
+6 m2
+Allowance to supply Hybrid flooring , inc underla
+Dollar Value: $5700.00
+Alternate Contacts: []
+Commencement Date: 
+Installation Date: 
+Extra Phones: ['0427855287']
+Extra Emails: ['samantha.porep@arcprojects.com.au', 'office@arcprojects.com.au', 'BCLG@arcprojects.com.au', 'trent.jenkins@arcprojects.com.au']
+
+================= Australian Restoration Company TESTING PDF Example2.pdf =================
+[DEBUG] Supervisor regex matched but group(1) is None or regex did NOT match
+{
+  "customer_name": "MUHAMMAD S KHAN",
+  "business_name": "",
+  "first_name": "MUHAMMAD",
+  "last_name": "S KHAN",
+  "address": "64 Salvado Dr, Pacific Pines QLD 4211",
+  "address1": "",
+  "address2": "",
+  "city": "",
+  "state": "",
+  "zip_code": "",
+  "country": "Australia",
+  "phone": "0426 260 124",
+  "mobile": "",
+  "work_phone": "",
+  "home_phone": "",
+  "email": "trent.jenkins@arcprojects.com.au",
+  "customer_type": "Builders",
+  "extra_phones": [
+    "0427855287"
+  ],
+  "po_number": "PO104807-BU01-001",
+  "scope_of_work": "",
+  "dollar_value": 3558.0,
+  "job_number": "",
+  "actual_job_number": "",
+  "supervisor_name": "",
+  "supervisor_mobile": "27855287",
+  "supervisor_email": "",
+  "description_of_works": "",
+  "material_breakdown": "",
+  "labor_breakdown": "",
+  "rooms": "",
+  "raw_text": "Work Order Details\nTo:\nA to Z Flooring Solutions\n\u00a0Start Date:\n\u00a0\n\u00a0\nOrder Number:\nPO104807-BU01-001\n\u00a0Finish Date:\n\u00a0\n\u00a0\nProject Manager:\nTrent Jenkins\nCase Manager:\nSamantha Porep\nPlease scan & complete\nsite risk assessment\nbefore proceeding with\nworks.\nP: 0427855287\nP: 1300728225\nE: trent.jenkins@arcprojects.com.au\nE: samantha.porep@arcprojects.com.au\nCustomer Details:\nMUHAMMAD S KHAN\nSite Address:\n64 Salvado Dr, Pacific Pines QLD 4211\nCustomer Phone:\n0426 260 124\nCarpet Laying\nMaterial\nBedroom 4\nSupply and install carpet and underlay, to best match existing\n14.21 m2\nHall\nSupply and install carpet and underlay, to best match existing\n13.98 m2\nMedia Room\nRemove and replace carpet, high quality thick pile, to media room including underlay\n34.28 m2\nNOTE: Carpet quality to be determined by flooring specialist, variation may apply\n\u00a0\nAll amounts shown are exclusive of GST.\n\u00a0\nTotal\n\u00a0\nSub Total\n$3,558.00\nGST\n$355.80\nTotal AUD\n$3,913.80\nBy undertaking the works in this Purchase/Work Order, you agree to the Australian Restoration & Construction Terms & Conditions available from\nHead Office or on our website. Invoices will not be accepted unless all relevant Forms (e.g. Forms 15 & 16), Warranties and SWMS have been\nsupplied.\u00a0\nAny PS/PC Items assigned within this Purchase order must be individually itemised on your\ninvoice with a price for it to be accepted. Failure to adhere to this may result in invoice processing\ndelays.\nPlease upload your invoice via the link on your work order email.\u00a0Please address the invoice\nto\u00a0Australian Restoration and Construction Pty Ltd\u00a0and include\u00a0PO104807-BU01-001 on the\ninvoice.\nPO104807-BU01-001\n11 May 2025\nQLD\u00a01281643\u00a0|\u00a0NSW\u00a0291154C\u00a0|\u00a0VIC\u00a0CDB-U48549\u00a0|\u00a0ACT\u00a02019930\u00a0|\u00a0SA\u00a0BLD296646\u00a0|\u00a0TAS\u00a0390296614\nACN\u00a0169 552 416\u00a0|\u00a0ABN\u00a042 169 552 416\nCOMMERCIAL\u00a0|\u00a0RESIDENTIAL\u00a0|\u00a0INSURANCE\nP\u00a01300 728 225\nE\u00a0office@arcprojects.com.au\npage 1 of 3\nSustainability\nBy completing this Purchase Order I agree to be proactively sustainable with my choices and use\nof materials as well as my actions onsite.\nIf you would like to learn how to be more sustainable in your operations, we can support you to do so. We are happy to offer free\nSustainability Training as part of our Build Clean Lead Green initiative. Please contact us at BCLG@arcprojects.com.au for more\ninformation.\n\u00a0\nPO104807-BU01-001\n11 May 2025\nQLD\u00a01281643\u00a0|\u00a0NSW\u00a0291154C\u00a0|\u00a0VIC\u00a0CDB-U48549\u00a0|\u00a0ACT\u00a02019930\u00a0|\u00a0SA\u00a0BLD296646\u00a0|\u00a0TAS\u00a0390296614\nACN\u00a0169 552 416\u00a0|\u00a0ABN\u00a042 169 552 416\nCOMMERCIAL\u00a0|\u00a0RESIDENTIAL\u00a0|\u00a0INSURANCE\nP\u00a01300 728 225\nE\u00a0office@arcprojects.com.au\npage 2 of 3\nTerms & Conditions\n1. SCOPE OF WORKS\nYou must:\n(a) supply the Goods and Services to our satisfaction\nand in accordance with this WO;\n(b) provide everything required to perform the Services\nand complete the scope by the Completion Date;\n(c) obtain and comply with all permits and approvals\nnecessary to supply the Goods, carry out and complete\nthe Services (unless this WO expressly says that we\nwill); and\n(d) exercise a high standard of skill, care and diligence\nin relation to the Goods and the Services. You are\nresponsible for the care of the Goods until we accept\nthem under clause 4(c) or, if the Goods are subject to\nServices, the date the Services are completed.\n2. PRICING\nAgreed fixed quotes are not subject to rise and fall. Any\nworks outside of the agreed scope of works would be\nconsidered variation works as agreed with ARC\nrepresentative. The above is not applicable for Do &\nCharge and unquoted works.\n3. DOCUMENTS\n(a) The information and documents (including\ncopyright) made available to you by us or on our behalf\nremain our property.\n(b) You have no claim on account of any alleged\nstatement, warranty, representation, information or\ndocuments made or provided to you by us or on our\nbehalf.\n(c) You grant us an irrevocable, transferrable and\nroyalty free licence to use all intellectual property\nprovided in connection with this WO.\n(d) You have provided our office a copy of your relevant\ninsurances and licenses which includes but is not\nlimited to; public liability, work cover, registered builder\npractitioner license number, signed statement of works\ncompensation, pay-roll tax and remuneration.\n4. DELIVERIES\n(a) Goods must be delivered during normal work hours\nunless you make alternative arrangements with our\nrepresentative.\n(b) The Goods are delivered when the Goods are in\naccordance with this WO and delivery is acknowledged\nin writing by our representative.\n(c) Goods that are not in accordance with the relevant\nWO are deemed to not have been delivered.\n5. SERVICES\n(a) In carrying out the Services you must:\n\u00a0(i) keep the work site clean and tidy and free of\nrubbish;\n\u00a0(ii) comply with any Site policies or requirements\nnotified to you;\n\u00a0(iii) not cause any harm or damage to the environment\nor the work of any other contractors;\n\u00a0(iv) prevent nuisance and unreasonable noise and\ndisturbance; and\n\u00a0(v) take all measures to protect people and property\n(including the Goods) from loss or damage.\n(b) If we need to carry out urgent works to protect\npersons or property which you should have done, we\ncan recover our costs as a debt due and owing from\nyou.\n(c) You must give us notice of when you consider that\nthe Services have been completed in accordance with\nthis WO and our representative will inspect the\nServices to determine whether or not they have been\ncompleted.\n(d) After inspection, we may\n\u00a0(i) advise you in writing that the Services are complete;\nor\n\u00a0(ii) advise you what further steps need to be taken\nbefore completion is achieved and\u00a0clauses 5(c) and\n5(d) will reapply.\n6. DEFECTS\n(a) If there is any defect in anything supplied by you\nunder this WO, we may make a written request that the\ndefect is rectified at your cost and you must comply\nwith the request within the time stated in that request\n(or if not time is stated within 10 days).\n(b) If you do not rectify the defect in accordance with\nour request the cost of the rectification is a liquidated\ndebt due and owing from you to us.\n7. INVOICES AND PAYMENT\n(a) You may make claims for payment:\n\u00a0(i) in respect of the Goods, after the Goods have been\ndelivered and accepted by us under clause 4(c); and\n\u00a0(ii) in respect of the Services, after the Services have\nbeen completed and accepted by us under clause 5(d)\n(i).\n(b) You must submit your payment claim:\n\u00a0(i) with a valid tax invoice, which must state the Work\nOrder No.;\n\u00a0(ii) based on the value of the Goods supplied or the\nServices completed at that time; and\n\u00a0(iii) to the company representative who issued the\nwork order.\n(c) If we dispute the amount you have claimed, we may\nissue you a payment schedule setting out the amount\nwe think is due and the reasons for the difference\nwithin 10 Business Days.\n(d) Subject to clause 7(c), we must pay to you the\nvalue of the Goods and/or Services determined by us,\nless any amounts we are entitled to retain or withhold\nand amounts previously paid.\n(e) Amounts payable under clause 7 are payable 30\ndays after receipt of invoice (except if payment is\ndisputed).\n(f) In consideration of us making the final payment to\nyou, you release us from all claims and actions and\nagree that you have no claim whatsoever arising out of\nor in connection with this WO.\n(g) A signed copy of this WO is to be attached as part\nof this invoice prior to receiving payment.\n(h) Payment of invoices will not be processed unless\nan up to date \u2018not expired\u2019 copy of your relevant\ninsurance, statements and license documents as\nindicated in (3d).\n8. CANCELLATION\nIf the Goods or the Services are:\n(a) not delivered or completed within forty-eight (48)\nhours after the Delivery Date or the Completion Date (as\napplicable) or any extended dates agreed to by us in\nwriting; or\n(b) determined by us not to comply with this WO, then we\nmay, at our discretion, regard this WO as repudiated by\nyou.\n9. WORK HEALTH AND SAFETY\nYou must:\n(a) maintain appropriate safety precautions and programs\nso as to prevent injury to persons or damage to property\non or near the Site;\n(b) comply with our work health and safety plans and\nrequirements, including any Site specified inductions and\nas per your signed SWMS, JSA\u2019s relevant to your works.\n(c) Promptly notify, provide information and cooperate\nwith us with respect to any reportable incident.\n(d) Complete a site Risk Assessment by scanning the QR\ncode on this WO.\n10. HIRE\n(a) You warrant that any hired equipment supplied to us is\nin good working order and shall be maintained in good\nworking order by you for the Hire Period.\n(b) If we are of the opinion that any of the hired\nequipment supplied by you is not in good working order,\nwe may notify you of the hired equipment's failure to be in\ngood working order.\n(c) You must rectify any hired equipment that is not in\ngood working order within one hour of receiving\nnotification (or such longer period as agreed between us\nand you) and you are liable for any costs occurred by us\nas result of any failure in the hired equipment.\n11. CONDITIONS AND WARRANTIES\nWarranties of all applicable services and goods are to\nalign with all Australian Standards.\n12. THE AGREEMENT\n(a) The law of the State or Territory in which the Site is\nlocated governs this WO.\n(b) This WO comprises the whole of the agreement\nbetween the parties and any prior representations and\nother terms are excluded.\n(c) You will be taken to have accepted the terms of this\nWO by commencing the supply of the Goods or carrying\nout the Services or by confirming (verbally or in writing)\nthat you will supply the Goods or carry out the Services.\n(d) You indemnify us against any liability to or claim by a\nthird party and all costs, charges, expenses, fines,\npenalties, losses and damages suffered or incurred by us\nin connection with any wilful or negligent act or omission\nor breach of this WO by you.\nPO104807-BU01-001\n11 May 2025\nQLD\u00a01281643\u00a0|\u00a0NSW\u00a0291154C\u00a0|\u00a0VIC\u00a0CDB-U48549\u00a0|\u00a0ACT\u00a02019930\u00a0|\u00a0SA\u00a0BLD296646\u00a0|\u00a0TAS\u00a0390296614\nACN\u00a0169 552 416\u00a0|\u00a0ABN\u00a042 169 552 416\nCOMMERCIAL\u00a0|\u00a0RESIDENTIAL\u00a0|\u00a0INSURANCE\nP\u00a01300 728 225\nE\u00a0office@arcprojects.com.au\npage 3 of 3\n",
+  "alternate_contact_name": "",
+  "alternate_contact_phone": "",
+  "alternate_contact_email": "",
+  "alternate_contacts": [],
+  "commencement_date": "",
+  "installation_date": "",
+  "ship_to_name": "",
+  "ship_to_address": "64 Salvado Dr, Pacific Pines QLD 4211",
+  "extra_emails": [
+    "samantha.porep@arcprojects.com.au",
+    "office@arcprojects.com.au",
+    "BCLG@arcprojects.com.au",
+    "trent.jenkins@arcprojects.com.au"
+  ]
+}
+
+--- SUMMARY ---
+PO Number: PO104807-BU01-001
+Customer Name: MUHAMMAD S KHAN
+Email: trent.jenkins@arcprojects.com.au
+Phone: 0426 260 124
+Mobile: 
+Work Phone: 
+Home Phone: 
+Address: 64 Salvado Dr, Pacific Pines QLD 4211
+City: 
+Job Number: 
+Supervisor Name: 
+Supervisor Mobile: 27855287
+Description of Works: 
+Dollar Value: $3558.00
+Alternate Contacts: []
+Commencement Date: 
+Installation Date: 
+Extra Phones: ['0427855287']
+Extra Emails: ['samantha.porep@arcprojects.com.au', 'office@arcprojects.com.au', 'BCLG@arcprojects.com.au', 'trent.jenkins@arcprojects.com.au']
+
+================= Townsend Building Services TESTING PDF Example1.pdf =================
+[DEBUG] Supervisor regex matched but group(1) is None or regex did NOT match
+{
+  "customer_name": "Nda Realty One Pty Ltd",
+  "business_name": "",
+  "first_name": "Nda",
+  "last_name": "Realty One Pty Ltd",
+  "address": "68 Durham Cres, Bray Park, QLD 4500",
+  "address1": "",
+  "address2": "",
+  "city": "",
+  "state": "",
+  "zip_code": "",
+  "country": "Australia",
+  "phone": "0433340395",
+  "mobile": "",
+  "work_phone": "",
+  "home_phone": "",
+  "email": "narsonreddy@hotmail.com",
+  "customer_type": "Builders",
+  "extra_phones": [],
+  "po_number": "PO23218",
+  "scope_of_work": "",
+  "dollar_value": 14430.0,
+  "job_number": "",
+  "actual_job_number": "",
+  "supervisor_name": "",
+  "supervisor_mobile": "0419 731 743",
+  "supervisor_email": "",
+  "description_of_works": "ENTRY\nLabour for flooring of the following description\nLabour only to fit floating timber flooring and trims. Approximately 7.5 m2\nSpecialist flooring supply. Custom run flooring, parquetry, set up fees etc\nSupply only of 14mm pre-finished floating Merbau flooring and trims, 2mm foam underlay and 200 um moisture barrier.\nApproximately 7.5 m2\nHALL\nLabour for flooring of the following description\nLabour only to fit floating timber flooring and trims. Approximately 10 m2\nSpecialist flooring supply. Custom run flooring, parquetry, set up fees etc\nSupply only of 14mm pre-finished floating Merbau flooring and trims, 2mm foam underlay and 200 um moisture barrier.\nApproximately 10 m2\nT&T Corporation Pty Ltd t/a Townsend Building Services\nABN | 98 103 883 558\nA | Level 1/85 W Burleigh Rd\nBurleigh Heads QLD 4220\nE | tbs.admin@tbs.com.au\nP | 1300 827 835 OPEN PLAN AREA\nLabour for flooring of the following description\nLabour only to fit floating timber flooring and trims. Approximately 61 m2\nSpecialist flooring supply. Custom run flooring, parquetry, set up fees etc\nSupply only of 14mm pre-finished floating Merbau flooring and trims, 2mm foam underlay and 200 um moisture barrier.\nApproximately 61 m2",
+  "material_breakdown": "",
+  "labor_breakdown": "",
+  "rooms": "",
+  "raw_text": "PURCHASE ORDER\n \nAssigned To\nA TO Z FLOORING\nSOLUTIONS\nOrder Number\nPO23218\nOrder Date\n31/10/2024\nJob Number\nI04630\n \n \nPlease quote the above order number in all correspondence for this order\nClient Reference\n6140143126\nSupervisor\nToby Burns\nSite Contact Name\nNda Realty One Pty Ltd\nAtf Nda (Mr Narson\nKundur)\nSupervisor Contact\n0419 731 743\nSite Contact Phone\n0433340395\n Customer Email\nnarsonreddy@hotmail.com\nSite Address\n68 Durham Cres, Bray Park, QLD 4500\n \nStart / Required By\nDate\n31/10/2024\nCompletion Date\n29/11/2024\nAdditional\nNotes/Instructions:\nHi Zoran \nCould you please contact the customer and confirm which flooring he would like\nto use throughout the property so we can get the ball rolling. Any queries please\ngive me a call... \n(Mr Narson Kundur) 0433340395\nPO23218\nFlooring\nENTRY\nLabour for flooring of the following description\nLabour only to fit floating timber flooring and trims. Approximately 7.5 m2\nSpecialist flooring supply. Custom run flooring, parquetry, set up fees etc\nSupply only of 14mm pre-finished floating Merbau flooring and trims, 2mm foam underlay and 200 um moisture barrier.\nApproximately 7.5 m2\nHALL\nLabour for flooring of the following description\nLabour only to fit floating timber flooring and trims. Approximately 10 m2\nSpecialist flooring supply. Custom run flooring, parquetry, set up fees etc\nSupply only of 14mm pre-finished floating Merbau flooring and trims, 2mm foam underlay and 200 um moisture barrier.\nApproximately 10 m2\nT&T Corporation Pty Ltd t/a Townsend Building Services\nABN | 98 103 883 558\nA | Level 1/85 W Burleigh Rd\nBurleigh Heads QLD 4220\nE | tbs.admin@tbs.com.au\nP | 1300 827 835\n \nOPEN PLAN AREA\nLabour for flooring of the following description\nLabour only to fit floating timber flooring and trims. Approximately 61 m2\nSpecialist flooring supply. Custom run flooring, parquetry, set up fees etc\nSupply only of 14mm pre-finished floating Merbau flooring and trims, 2mm foam underlay and 200 um moisture barrier.\nApproximately 61 m2\nTotals\nTotals\nSubtotal\n$14,430.00\nGST\n$1,443.00\nTotal\n$15,873.00\n \n \n \n \n \nTownsend Building Services\nPage 2 of 2\nPlease ensure you submit your Invoice via the Invoice Link from the Purchase Order \nemail. If the Link has expired, please email central.accounts@tbs.com.au and we can \nreactivate for you. Please do not email your invoice to townsend.mailer@primeeco.tech \nas our Accounts team will not receive this. Invoice must be in PDF format and include \nour Purchase Order number clearly visible on the Invoice. Failure to do so may result in \ndelayed or non-payment \nPlease Note: The TBS Supervisor/Case Manager for this job must be notified in writing of \nany changes to costing and receive approval, PRIOR to works being completed and your \ninvoice being submitted. \nAll other documents relating to this Order (eg, reports, photos and certifications) should be \nuploaded using the ShareLink on the Purchase Order email or sent to tradedocs@tbs.com.au \nThe sub-contractor remains responsible to undertake site risk assessment as per normal WHS procedures, \nincluding minimising exposure to the COVID-19 virus. Please notify Townsend Building Services in the event \nof potential COVID-19 exposure. \nConditions of Purchase Order: \n\u2022 \nBy accepting to undertake works as outlined within this Purchase Order, you also acknowledge \nacceptance of Terms & Conditions presented within the Townsend Building Services Period \nSubcontract General Conditions which can be found at \nhttps://www.tbs.com.au/s/period_subcontract_terms_and_conditions.pdf. \n\u2022 \nContractors are required to contact the client the day prior to confirm entry. \n\u2022 \nQBCC licenced contractors are reminded of their obligations to only carry out works that is \nincluded within their licence class Scope of Work. You may not carry out, or engage others to \ncarry out, more than $3,300 of incidental work if not licenced to do so. If you consider that this \npurchase order has requested you to carry out works outside of your licencing obligations please \ndo not proceed. Contact your TBS representative for alternative instructions.  \n\u2022 \nWhere any worker suspects that a product to be handled on site contains asbestos or lead paint, \nstop work immediately and contact your TBS representative for further instructions.  \n\u2022 \nContractors are required to clean up on completion of the works; failure to do so may incur a back-\ncharge of associated costs. \n\u2022 \nAny material or colour selection made by our client must have a written agreement from the client, \nconfirmed by your TBS representative, prior to commencement of works. Failure to comply may incur \nrectifications at your cost. \n\u2022 \nAny variation to scope, or extra work requested by our client, including private arrangements between \nour client and you, must be approved in writing by us before work is undertaken. Failure to comply \nwith this condition may result in non-payment of your invoice. \n\u2022 \nAll products and materials must satisfy Australian Standards in quality, safety, performance and \nservice of a product, including product quality guarantees. \n \n",
+  "alternate_contact_name": "Nda Realty One Pty Ltd",
+  "alternate_contact_phone": "",
+  "alternate_contact_email": "",
+  "alternate_contacts": [],
+  "commencement_date": "",
+  "installation_date": "29/11/2024",
+  "ship_to_name": "Name",
+  "ship_to_address": "68 Durham Cres, Bray Park, QLD 4500",
+  "extra_emails": [
+    "tradedocs@tbs.com.au",
+    "townsend.mailer@primeeco.tech",
+    "tbs.admin@tbs.com.au",
+    "narsonreddy@hotmail.com",
+    "central.accounts@tbs.com.au"
+  ]
+}
+
+--- SUMMARY ---
+PO Number: PO23218
+Customer Name: Nda Realty One Pty Ltd
+Email: narsonreddy@hotmail.com
+Phone: 0433340395
+Mobile: 
+Work Phone: 
+Home Phone: 
+Address: 68 Durham Cres, Bray Park, QLD 4500
+City: 
+Job Number: 
+Supervisor Name: 
+Supervisor Mobile: 0419 731 743
+Description of Works: ENTRY
+Labour for flooring of the following description
+Labour only to fit floating timber flooring a
+Dollar Value: $14430.00
+Alternate Contacts: []
+Commencement Date: 
+Installation Date: 29/11/2024
+Extra Phones: []
+Extra Emails: ['tradedocs@tbs.com.au', 'townsend.mailer@primeeco.tech', 'tbs.admin@tbs.com.au', 'narsonreddy@hotmail.com', 'central.accounts@tbs.com.au']
+
+================= Townsend Building Services TESTING PDF Example2.pdf =================
+[DEBUG] Supervisor regex matched but group(1) is None or regex did NOT match
+{
+  "customer_name": "RONALD SULIMAN",
+  "business_name": "",
+  "first_name": "RONALD",
+  "last_name": "SULIMAN",
+  "address": "1 ROCKFORD DRIVE, Bellbird Park, QLD 4300",
+  "address1": "",
+  "address2": "",
+  "city": "",
+  "state": "",
+  "zip_code": "",
+  "country": "Australia",
+  "phone": "",
+  "mobile": "",
+  "work_phone": "",
+  "home_phone": "",
+  "email": "ronaldsuliman@gmail.com",
+  "customer_type": "Builders",
+  "extra_phones": [],
+  "po_number": "PO16946",
+  "scope_of_work": "",
+  "dollar_value": 2375.0,
+  "job_number": "",
+  "actual_job_number": "",
+  "supervisor_name": "",
+  "supervisor_mobile": "0429 583 496",
+  "supervisor_email": "",
+  "description_of_works": "INTERNAL\nSupply and install new carpet (Mid range) to bedroom 1 matching original as near as possible (including underlay).\nIncludes labour and materials - approximately 12 m2\nSupply and install new carpet (Mid range) to bedroom 3 matching original as near as possible (including underlay).\nIncludes labour and materials - approximately 13 m2",
+  "material_breakdown": "",
+  "labor_breakdown": "",
+  "rooms": "",
+  "raw_text": "PURCHASE ORDER\n \nAssigned To\nA TO Z FLOORING\nSOLUTIONS\nOrder Number\nPO16946\nOrder Date\n31/10/2024\nJob Number\nI02319\n \n \nPlease quote the above order number in all correspondence for this order\nClient Reference\n100010327697\nSupervisor\nMichael Stievano\nSite Contact Name\nRONALD SULIMAN\nSupervisor Contact\n0429 583 496\nSite Contact Phone\n Customer Email\nronaldsuliman@gmail.com\nSite Address\n1 ROCKFORD DRIVE, Bellbird Park, QLD 4300\n \nStart / Required By\nDate\n16/12/2024\nCompletion Date\n16/12/2024\nAdditional\nNotes/Instructions:\nSite lock box code is FREE left of garage\nCarpet colour to be selected\n#NOTE master bedroom and bedroom 2 c=ash settled due to ensuite and PWD\nrooms leaking not claim related\nPO16946\nFlooring\nINTERNAL\nSupply and install new carpet (Mid range) to bedroom 1 matching original as near as possible (including underlay).\nIncludes labour and materials - approximately 12 m2\nSupply and install new carpet (Mid range) to bedroom 3 matching original as near as possible (including underlay).\nIncludes labour and materials - approximately 13 m2\nTotals\nTotals\nSubtotal\n$2,375.00\nGST\n$237.50\nTotal\n$2,612.50\n \n \nT&T Corporation Pty Ltd t/a Townsend Building Services\nABN | 98 103 883 558\nA | Level 1/85 W Burleigh Rd\nBurleigh Heads QLD 4220\nE | tbs.admin@tbs.com.au\nP | 1300 827 835\n \n \n \n \nTownsend Building Services\nPage 2 of 2\nPlease ensure you submit your Invoice via the Invoice Link from the Purchase Order \nemail. If the Link has expired, please email central.accounts@tbs.com.au and we can \nreactivate for you. Please do not email your invoice to townsend.mailer@primeeco.tech \nas our Accounts team will not receive this. Invoice must be in PDF format and include \nour Purchase Order number clearly visible on the Invoice. Failure to do so may result in \ndelayed or non-payment \nPlease Note: The TBS Supervisor/Case Manager for this job must be notified in writing of \nany changes to costing and receive approval, PRIOR to works being completed and your \ninvoice being submitted. \nAll other documents relating to this Order (eg, reports, photos and certifications) should be \nuploaded using the ShareLink on the Purchase Order email or sent to tradedocs@tbs.com.au \nThe sub-contractor remains responsible to undertake site risk assessment as per normal WHS procedures, \nincluding minimising exposure to the COVID-19 virus. Please notify Townsend Building Services in the event \nof potential COVID-19 exposure. \nConditions of Purchase Order: \n\u2022 \nBy accepting to undertake works as outlined within this Purchase Order, you also acknowledge \nacceptance of Terms & Conditions presented within the Townsend Building Services Period \nSubcontract General Conditions which can be found at \nhttps://www.tbs.com.au/s/period_subcontract_terms_and_conditions.pdf. \n\u2022 \nContractors are required to contact the client the day prior to confirm entry. \n\u2022 \nQBCC licenced contractors are reminded of their obligations to only carry out works that is \nincluded within their licence class Scope of Work. You may not carry out, or engage others to \ncarry out, more than $3,300 of incidental work if not licenced to do so. If you consider that this \npurchase order has requested you to carry out works outside of your licencing obligations please \ndo not proceed. Contact your TBS representative for alternative instructions.  \n\u2022 \nWhere any worker suspects that a product to be handled on site contains asbestos or lead paint, \nstop work immediately and contact your TBS representative for further instructions.  \n\u2022 \nContractors are required to clean up on completion of the works; failure to do so may incur a back-\ncharge of associated costs. \n\u2022 \nAny material or colour selection made by our client must have a written agreement from the client, \nconfirmed by your TBS representative, prior to commencement of works. Failure to comply may incur \nrectifications at your cost. \n\u2022 \nAny variation to scope, or extra work requested by our client, including private arrangements between \nour client and you, must be approved in writing by us before work is undertaken. Failure to comply \nwith this condition may result in non-payment of your invoice. \n\u2022 \nAll products and materials must satisfy Australian Standards in quality, safety, performance and \nservice of a product, including product quality guarantees. \n \n",
+  "alternate_contact_name": "RONALD SULIMAN",
+  "alternate_contact_phone": "",
+  "alternate_contact_email": "",
+  "alternate_contacts": [],
+  "commencement_date": "",
+  "installation_date": "16/12/2024",
+  "ship_to_name": "Name",
+  "ship_to_address": "1 ROCKFORD DRIVE, Bellbird Park, QLD 4300",
+  "extra_emails": [
+    "tradedocs@tbs.com.au",
+    "townsend.mailer@primeeco.tech",
+    "tbs.admin@tbs.com.au",
+    "ronaldsuliman@gmail.com",
+    "central.accounts@tbs.com.au"
+  ]
+}
+
+--- SUMMARY ---
+PO Number: PO16946
+Customer Name: RONALD SULIMAN
+Email: ronaldsuliman@gmail.com
+Phone: 
+Mobile: 
+Work Phone: 
+Home Phone: 
+Address: 1 ROCKFORD DRIVE, Bellbird Park, QLD 4300
+City: 
+Job Number: 
+Supervisor Name: 
+Supervisor Mobile: 0429 583 496
+Description of Works: INTERNAL
+Supply and install new carpet (Mid range) to bedroom 1 matching original as near as possibl
+Dollar Value: $2375.00
+Alternate Contacts: []
+Commencement Date: 
+Installation Date: 16/12/2024
+Extra Phones: []
+Extra Emails: ['tradedocs@tbs.com.au', 'townsend.mailer@primeeco.tech', 'tbs.admin@tbs.com.au', 'ronaldsuliman@gmail.com', 'central.accounts@tbs.com.au']
+
+================= Rizon Group TESTING PDF Example1.pdf =================
+[DEBUG] Supervisor regex matched: Page 
+{
+  "customer_name": "Unit",
+  "business_name": "",
+  "first_name": "Unit",
+  "last_name": "",
+  "address": "",
+  "address1": "",
+  "address2": "",
+  "city": "",
+  "state": "",
+  "zip_code": "",
+  "country": "Australia",
+  "phone": "0732657381",
+  "mobile": "",
+  "work_phone": "",
+  "home_phone": "",
+  "email": "claims@rizon.com.au",
+  "customer_type": "Builders",
+  "extra_phones": [],
+  "po_number": "P367117",
+  "scope_of_work": "",
+  "dollar_value": 5808.0,
+  "job_number": "",
+  "actual_job_number": "",
+  "supervisor_name": "Page",
+  "supervisor_mobile": "",
+  "supervisor_email": "",
+  "description_of_works": "Please note that all final trade invoices must include clear photographs of all safety items supplied or used in the completion of the\nworks listed, including scaffolding, edge rails, safety platforms, harnesses, etc.\nFAILURE TO PROVIDE IMAGES MAY DELAY THE PAYMENT OF THE INVOICE\nUnit 137\nReplace carpet and underlay to match existing.\nM2\n110.00\n5,280.00\n48.00\n5,280.00\n528.00",
+  "material_breakdown": "",
+  "labor_breakdown": "",
+  "rooms": "",
+  "raw_text": "Supervisor:\nPage 1 of 1\nRizon Group Pty Ltd\nABN: 52-153-718-122\nHead Office Brisbane: Level 1/ 7 Baroona Road, Milton, QLD, 4064\nSydney: 39/11-21 Underwood Road, Homebush, NSW 2140\nclaims@rizon.com.au\nE:\nP: 1300 474 966\nPURCHASE ORDER NO:\nTo:\nClient / Site Details:\nA TO Z FLOORING SOLUTIONS PTY LTD\nP367117\nORDER DATE: 28/05/2025\nEXPECTED COMPLETION DATE: 13/06/2025\nItem Description\nQty\nUnit\nUnit Price\nExtd Price\nMobile:\nATOZFLOO\nChris Giles\nJOB NUMBER: J 610219\n0476 187 998\nAMANDA REIF(MNGER)\n274 ROGHAN ROAD,\nTAIGUM,\nQLD\n4018\nPhone: 0732657381\n2/133 REDLAND BAY ROAD\nCAPALABA QLD 4157\nPhone: 07 3110 0077\nEmail: builders@atozflooringsolutions.com.au\nMelbourne: 57 Roberts Avenue, Mulgrave, VIC 3170\nNewcastle: 4/27 Annie Street, Wickham, NSW 2293\nLicences: QBCC: 1214796 NSW: 283802C Vic: CDB-U52632\nGENERAL CONDITIONS: CLICK HERE\nSCOPE OF WORKS:\nPlease note that all final trade invoices must include clear photographs of all safety items supplied or used in the completion of the\nworks listed, including scaffolding, edge rails, safety platforms, harnesses, etc.\nFAILURE TO PROVIDE IMAGES MAY DELAY THE PAYMENT OF THE INVOICE\nUnit 137\nReplace carpet and underlay to match existing.\nM2\n110.00\n5,280.00\n48.00\n5,280.00\n528.00\nNet Order:\nGST:\nTotal Order:\n5,808.00\nPURCHASE ORDER CONDITIONS:\n1.\n This Purchase Order is to be read in conjunction with the General Conditions, which are available at  \nhttps://www.rizon.com.au/app/uploads/2021/01/PurchaseOrder-GeneralConditions.pdf  or click the link above. Please contact Rizon should \nyou require a hard copy of the General Conditions. Italicised words have the meanings defined in the General Conditions\n2.\nThe Price is the Total Order amount above.\n3.\nThe Works are all of the works listed in the Scope of Works above.\n4.\nThe anticipated Commencement Date is the date no later than 10 days from the date of this Purchase Order or as otherwise notified by \nRizon in accordance with clause 2.3 of the General Conditions.\n5.\nThe anticipated Completion Date is 30 days after the Commencement Date adjusted in accordance with the clause 2.4 of the General \nConditions.\n6.\nThe maximum Material Deposit that Rizon will pay is equal is 10% of the value of the material cost unless otherwise agreed.\n7.\nPayment terms are in accordance with clauses 4.2, 4.3 and 4.4 of the General Conditions. \n8.\nSpecial Conditions in accordance with clause 18 of the General Conditions are set out below: \na.\nThe Purchase Order number must be quoted on all correspondence and notices under the General Conditions including \nProgress Claims (invoices) and only one Purchase Order number is to be included on a Progress Claim (invoice).\nb.\nProgress Claims are to be emailed in PDF format to accounts@rizon.com.au\nc.\nThe Subcontractor must comply with the Site Safety Requirements.\n9.\nBy accepting this PO you confirm that you will conform with all modern slavery obligations under Modern Slavery Act 2018, including in \nyour own operations and through your supply chain. Any suspected incidents of modern slavery are to be reported immediately to Rizon \nand the AFP.\nPage 1 of 1\nPrinted 28/05/2025 4:18:12 PM\n",
+  "alternate_contact_name": "",
+  "alternate_contact_phone": "",
+  "alternate_contact_email": "",
+  "alternate_contacts": [],
+  "commencement_date": "",
+  "installation_date": "13/06/2025",
+  "ship_to_name": "",
+  "ship_to_address": "",
+  "extra_emails": [
+    "claims@rizon.com.au",
+    "builders@atozflooringsolutions.com.au",
+    "accounts@rizon.com.au"
+  ]
+}
+
+--- SUMMARY ---
+PO Number: P367117
+Customer Name: Unit
+Email: claims@rizon.com.au
+Phone: 0732657381
+Mobile: 
+Work Phone: 
+Home Phone: 
+Address: 
+City: 
+Job Number: 
+Supervisor Name: Page
+Supervisor Mobile: 
+Description of Works: Please note that all final trade invoices must include clear photographs of all safety items supplie
+Dollar Value: $5808.00
+Alternate Contacts: []
+Commencement Date: 
+Installation Date: 13/06/2025
+Extra Phones: []
+Extra Emails: ['claims@rizon.com.au', 'builders@atozflooringsolutions.com.au', 'accounts@rizon.com.au']
+
+================= Rizon Group TESTING PDF Example2.PDF =================
+[DEBUG] Supervisor regex matched: Danny Andrews
+builders
+{
+  "customer_name": "ATOZFLOO",
+  "business_name": "",
+  "first_name": "ATOZFLOO",
+  "last_name": "",
+  "address": "",
+  "address1": "",
+  "address2": "",
+  "city": "",
+  "state": "",
+  "zip_code": "",
+  "country": "Australia",
+  "phone": "0423398270",
+  "mobile": "",
+  "work_phone": "",
+  "home_phone": "",
+  "email": "claims@rizon.com.au",
+  "customer_type": "Builders",
+  "extra_phones": [],
+  "po_number": "187165/240/01",
+  "scope_of_work": "",
+  "dollar_value": 465.27,
+  "job_number": "",
+  "actual_job_number": "",
+  "supervisor_name": "Danny Andrews",
+  "supervisor_mobile": "",
+  "supervisor_email": "",
+  "description_of_works": "Item Description\nQuantity\nUnit\nUnit Price\nExtd Price\nLine\nPlease note that all final trade invoices must include clear photographs of all safety items supplied or used in the completion of the works listed, including scaffolding, edge rails, safety platforms, harnesses, etc.\nFAILURE TO PROVIDE IMAGES MAY DELAY THE PAYMENT OF THE INVOICE\nVinyl Flooring\nItem 1.000 4,652.73 4,652.73 1\nVinyl flooring replacement\n- Remove vinyl sheet flooring including coved skirting to facilitate wall sheeting replacement to hallway\n- Slab preparation and skim coat to prepare surface for new vinyl install\n- Supply and install of expansion joint to suit joint location in slab\n- Supply and install vinyl sheet flooring including coved skirting to hallway, Match existing Vinyl as close as possible 4,652.73",
+  "material_breakdown": "",
+  "labor_breakdown": "",
+  "rooms": "",
+  "raw_text": "Rizon Pty Ltd\nABN: 52-153-718-122  QBCC: 1214796\nLevel 1/7 Baroona Road\nMilton QLD 4064\n187165/240/01\nPURCHASE ORDER NO:\nSTATUS ON PRINT: NOT ISSUED\nE: claims@rizon.com.au\nP: 1300 474 966\nGENERAL CONDITIONS: Click Here\nJOB NO:\n187165\nORDER DATE:  17/02/2025\nTo:\nA TO Z FLOORING SOLUTIONS PTY\n2/133 REDLAND BAY ROAD\nCAPALABA        QLD 4157\nClient/Site Details:\nPage 1 of 2\n0423398270\nAttn:\nZORAN VEKIC\nATOZFLOO\nA/C:\nLot No . St No 2132\nLOGAN ROAD\nUPPER MOUNT GRAVATT QLD 4122\nJEREMY SAMIOS\nPhone:\n07 3110 0077\nMobile: 0400 765 945 \nSupervisor:  Danny Andrews\nbuilders@atozflooringsolutions.com.au\nAccounts Email:\nPO Email:\nEXPECTED COMPLETION DATE: \nSCOPE OF WORKS: \nItem Description\nQuantity\nUnit\nUnit Price\nExtd Price\nLine\nPlease note that all final trade invoices must include clear photographs of all safety items supplied or used in \nthe completion of the works listed, including scaffolding, edge rails, safety platforms, harnesses, etc.\nFAILURE TO PROVIDE IMAGES MAY DELAY THE PAYMENT OF THE INVOICE\nVinyl Flooring\nItem\n 1.000\n 4,652.73\n 4,652.73\n 1\nVinyl flooring replacement\n- Remove vinyl sheet flooring including coved skirting to facilitate wall sheeting \nreplacement to hallway\n- Slab preparation and skim coat to prepare surface for new vinyl install\n- Supply and install of expansion joint to suit joint location in slab\n- Supply and install vinyl sheet flooring including coved skirting to hallway, Match \nexisting Vinyl as close as possible\n 4,652.73\nNet Order:\nGST:\nTotal Order:\n 465.27\n 5,118.00\nPURCHASE ORDER CONDITIONS:\n1. \nThis Purchase Order is to be read in conjunction with the General Conditions, which are available at \nhttps://www.rizon.com.au/app/uploads/2021/01/PurchaseOrder-GeneralConditions.pdf  or click the link above. Please contact Rizon \nshould you require a hard copy of the General Conditions. Italicised words have the meanings defined in the General Conditions.\n2.\nThe Price is the Total Order amount above.\n3.\nThe Works are all of the works listed in the Scope of Works above.\n4.\nThe anticipated Commencement Date is the date no later than 10 days from the date of this Purchase Order or as otherwise notified by \nRizon in accordance with clause 2.3 of the General Conditions.\n5.\nThe anticipated Completion Date is 30 days after the Commencement Date adjusted in accordance with the clause 2.4 of the General \nConditions.\n6.\nThe maximum Material Deposit that Rizon will pay is equal is 10% of the value of the material cost unless otherwise agreed.\n7.\nPayment terms are in accordance with clauses 4.2, 4.3 and 4.4 of the General Conditions. \n8.\nSpecial Conditions in accordance with clause 18 of the General Conditions are set out below: \na.\nThe Purchase Order number must be quoted on all correspondence and notices under the General Conditions including \nProgress Claims (invoices) and only one Purchase Order number is to be included on a Progress Claim (invoice).\nb.\nProgress Claims are to be emailed in PDF format to accounts@rizon.com.au\nc.\nThe Subcontractor must comply with the Site Safety Requirements.\n9.\nBy accepting this PO you confirm that you will conform with all modern slavery obligations under Modern Slavery Act 2018, including in \nyour own operations and through your supply chain. Any suspected incidents of modern slavery are to be reported immediately to Rizon \nand the AFP.\nPage 2 of 2\nPrinted 06/02/2025 11:16 by Danny Andrews\n",
+  "alternate_contact_name": "",
+  "alternate_contact_phone": "",
+  "alternate_contact_email": "",
+  "alternate_contacts": [],
+  "commencement_date": "",
+  "installation_date": "",
+  "ship_to_name": "",
+  "ship_to_address": "",
+  "extra_emails": [
+    "claims@rizon.com.au",
+    "builders@atozflooringsolutions.com.au",
+    "accounts@rizon.com.au"
+  ]
+}
+
+--- SUMMARY ---
+PO Number: 187165/240/01
+Customer Name: ATOZFLOO
+Email: claims@rizon.com.au
+Phone: 0423398270
+Mobile: 
+Work Phone: 
+Home Phone: 
+Address: 
+City: 
+Job Number: 
+Supervisor Name: Danny Andrews
+Supervisor Mobile: 
+Description of Works: Item Description
+Quantity
+Unit
+Unit Price
+Extd Price
+Line
+Please note that all final trade invoices 
+Dollar Value: $465.27
+Alternate Contacts: []
+Commencement Date: 
+Installation Date: 
+Extra Phones: []
+Extra Emails: ['claims@rizon.com.au', 'builders@atozflooringsolutions.com.au', 'accounts@rizon.com.au']
+
+================= Campbell Construct TESTING PDF Example1.pdf =================
+[DEBUG] Supervisor regex matched but group(1) is None or regex did NOT match
+{
+  "customer_name": "Stephen Kelly",
+  "business_name": "",
+  "first_name": "Stephen",
+  "last_name": "Kelly",
+  "address": "2 Walker Avenue, Palm Beach",
+  "address1": "",
+  "address2": "",
+  "city": "",
+  "state": "",
+  "zip_code": "",
+  "country": "Australia",
+  "phone": "0407575264",
+  "mobile": "",
+  "work_phone": "",
+  "home_phone": "",
+  "email": "samb@campbellcc.com.au",
+  "customer_type": "Builders",
+  "extra_phones": [],
+  "po_number": "CCC55132-88512-Prov",
+  "scope_of_work": "",
+  "dollar_value": 700.0,
+  "job_number": "",
+  "actual_job_number": "",
+  "supervisor_name": "",
+  "supervisor_mobile": "",
+  "supervisor_email": "",
+  "description_of_works": "Furniture\nPRELIMINARIES\nFURNITURE REMOVALIST - Allowance for removalist to move furniture and store on site to facilitate carpet and internal linings repairs. NOTE - Customer to provide a box for small items. Cost does not include packing and unpacking of small boxed items.\nFloor Covers\nBEDROOM 1\nCARPET INSTALL - - new carpet and underlay to best match existing, based on manufacturers availability. Standard Residential Carpet -\nApproximately 30 m2. including waste\nNOTE - Excludes floor preparation and levelling. No allowance for acoustic materials if required, price adjustment will apply.\nNOTE - Includes protection measures to mitigate loss or damage to property during works- Including but not limited to standard building &\ncontent covering / drop-sheets to work area only.",
+  "material_breakdown": "",
+  "labor_breakdown": "",
+  "rooms": "",
+  "raw_text": " \n \n \nWORK ORDER\nJob Number: CCC55132\nOrder Date: 30/05/2025\n \n Contract No: CCC55132-88512\nCONTRACTOR \n JOB DETAILS\nName:\nCampbell Construction Co Pty Ltd\nJob Number: \nCCC55132\nABN: \n96 151 257 582\nClient Reference: H042246952 | AAMI\nAddress:\nLevel 2, Building B, 4-6 Innovation\nParkway, Birtinya, QLD, 4575\nCustomer:\nStephen Kelly\nCONTRACTOR'S REPRESENTATIVE\nSite Address:\n2 Walker Avenue, Palm Beach\nQLD 4221\nSupervisor's\nName:\nSam Barton\nSite Contact:\nStephanie Kelly - Daughter\nPhone:\n0448 782 398\nContact No:\n0409 196 095\nEmail:\nsamb@campbellcc.com.au\n \n \nCase Manager's\nName:\nChelsea Turner\n \n \nEmail:\nchelseat@campbellcc.com.au\n \n \n \n \n \n \nSUBCONTRACTOR\n \nName: \nA to Z Flooring Solutions Pty Ltd \n \n \nABN:\n74658650821\n \n \nPhone:\n0407575264\n \n \nEmail:\nbuilders@atozflooringsolutions.com.au  \n \n \nStart Date\n30/06/2025 \nCompletion Date\n30/06/2025 \nScope of Work:\nCCC55132-88512\nFurniture\nPRELIMINARIES\nFURNITURE REMOVALIST - Allowance for removalist to move furniture and store on site to facilitate carpet and internal linings repairs. \nNOTE - Customer to provide a box for small items. Cost does not include packing and unpacking of small boxed items.\nFloor Covers\nBEDROOM 1\nCARPET INSTALL - - new carpet and underlay to best match existing, based on manufacturers availability. Standard Residential Carpet -\nApproximately 30 m2. including waste\nNOTE - Excludes floor preparation and levelling. No allowance for acoustic materials if required, price adjustment will apply.\nNOTE - Includes protection measures to mitigate loss or damage to property during works- Including but not limited to standard building &\ncontent covering / drop-sheets to work area only.\nTotals\nTotals\n \n \n \nPage 1 of 3 pages\n \n \n \nSubtotal\n$700.00\nGST\n$70.00\nTotal\n$770.00\n \nPlease be advised that GST is included in the total amount of this work order regardless of if GST\nis listed as N/A.\nWork Order Conditions: \nThis Work Order is to be read together with and as subject to the current CCC Period Subcontract and its terms and\nconditions.\nPlease ensure that you read these Work Order Conditions upon receipt of this Work Order.\nWOC.1 This Work Order is required to engage the Subcontractor to complete the work described in the Scope of Work.\nWOC.2 You must confirm acceptance of these Work Order Conditions within 24 hours and before commencing the work.\nWOC.3 If you commence the work described in the Scope of Work without confirming your acceptance of these Work\nOrder Conditions you will be taken to have agreed to the Work Order Conditions, the CCC Period Subcontract and its\nterms and conditions.\nWOC.4 None of the work described in the Scope of Work may be subcontracted without the prior written consent of CCC.\nWOC.5 All work described in the Scope of Work must match existing (as close as possible). If alternate material or colour\nis required or requested, you must notify CCC and obtain a signed written approval from the Owner before work is\ncommenced.\nWOC.6 Any variation to the Scope of Work requested by the Owner must be approved in writing by CCC before the work\ncommences. If written approval is not received and the Owner is not satisfied with the completed work, you will be\nliable to rectify the work to the Owner's satisfaction, at your cost.\nWOC.7 All invoices must state the site address, job number, a description of the completed work, a breakdown of labour\n(hrs) and material costs and be sent to the CCC accounts payable team at invoices@campbellcc.com.au.\nWOC.8 Before and after photographs must be supplied with invoices (including any damages to the work area prior to\ncommencement of the work).\nWOC.9 All work must be completed in accordance with WHSE requirements, the Building Code of Australia, applicable\nAustralian Standards and manufacturer's recommendations. Completion of the work requires all forms, Warranties/and\nor Certification required by Building Regulation 2021 (eg. Form 43, Form 12, Form 30) to be provided to CCC.\nWOC.10 Payment of completed work generally in accordance with the CCC Period Subcontract will be authorised once\nthe work has been inspected by a CCC supervisor and all required documentation is received by CCC.\nWOC.11 You are responsible to understand and implement all WHSE requirements applicable to the work.\nWOC.12 High risk construction - a SWMS is required to be supplied for the following work;\n(a) asbestos removal\n(b) risk of person falling more than 2 metres\n(c) working on or near energised electrical services or installations\n(d) temporary load-bearing support for structural alterations or repairs\n(e) work in or near a confined space\n(f) tilt up or precast elements\n \n \n \nPage 2 of 3 pages\n \n \n \n(g) demolition of load bearing structures\n(h) working in area with movement of mobile plant\n(i) work in or near a trench deeper than 1.5m or a tunnel\nWOC.13 The Site Hazard Checklist must be kept onsite with your WHSE documents.\nWOC.14 All rubbish and debris must be removed from site or if supplied placed in the skip/bin or cage (DO NOT PUT\nWASTE IN ANY DOMESTIC BINS) and the site left in a safe, clean and tidy manner. A $200 cleaning fee will be deducted\nif the site is left untidy and CCC must engage a professional cleaner.\nWOC.15 For all Provisional Sum (PS) & Prime Cost (PC) items, these are to be submitted on a separate itemised invoice.\n \n \n \n \nPage 3 of 3 pages\n \nSite WHS Rules \n \n\u2022 \nComply with reasonable direction from the principal contractor or any PCBU on site \n\u2022 \nTake reasonable care for your own health and safety, and do not adversely affect the health and safety of \nother persons \n\u2022 \nSteel capped footwear to be worn at all times and appropriate construction clothing that meets Australian \nStandards \n\u2022 \nAll workers and contractors must complete a site safety induction by sign on to attendance register via QR \ncode when arriving to site prior to commencing any works (Initial site visit minimum) \n\u2022 \nNo illegal drugs or other substances are permitted on site or are to be consumed on site. If you are required \nto take strong prescription medication that warns against driving or using machinery, you must advise the \nprincipal contractor \n\u2022 \nAll PPE required by legislation, identified in a SWMS, SDS, or identified through the hazard identification and \nrisk management process must be worn and used in accordance with manufacturer\u2019s instructions and where \ndirected by the principal contractor and in accordance with site signage \n\u2022 \nA SWMS must be completed for all High-Risk Construction Work as defined in legislation and must meet the \nrequirements of a SWMS as defined in legislation \n\u2022 \nSubcontractors must ensure all hazards applicable to their work are identified and controls implemented \nthrough a Risk Management process \n\u2022 \nSmoking within enclosed construction areas, 4 meters of building entrances is prohibited and must only be \nundertaken in a designated area \n\u2022 \nWorkers must only perform work for which they have been trained in and have the appropriate licences (e.g. \nElectrical, High Risk Licence) \n\u2022 \nAll subcontractors are responsible for ensuring they and all persons working for or contracted by them are \ntrained, have the appropriate licences, and understand the safety requirements for the site. This must be \ndone prior to commencing work. \n\u2022 \nAll incidents must be reported immediately to the Site Supervisor (injury, illness, near miss, damage, loss that \noccurs to a person, asset or the environment) \n\u2022 \nReport any Hazards to the Site Supervisor, and ensure any hazards arising from your works do not affect other \npersons (contractors, visitors, workers, the public) \n\u2022 \nAll electrical equipment onsite must have current test/tag \n\u2022 \nSDS must be available for any hazardous/dangerous chemical used onsite \n \n\u2022 \nAll plant, equipment, materials and personal protective equipment must be inspected before use, in good \ncondition, be properly maintained, suitable for task and comply with the relevant legislative requirements \nand/or Australian Standards \n\u2022 \nAll waste to be disposed of in the appropriate bins and the site must be maintained to a reasonable standard \nof housekeeping, cleanliness and hygiene \n\u2022 \nScaffolding must not be altered by any worker \u2013 Only the Scaffolder who erected the scaffold can make \nalterations to the scaffold \n\u2022 \nNo fighting, bullying or aggressive behaviour \n\u2022 \nDo not walk through barricaded areas \n\u2022 \nFollow safe lifting procedures at all times \n\u2022 \nDo not use or interfere with any plant and equipment fitted with \u2018DANGER\u2019 or \u2018OUT OF SERVICE\u2019 locks or \ntags. No plant or equipment is to be repaired or maintained unless properly isolated/switched off and/or \nstopped \n\u2022 \nThe requirements of the site WHSE Management Plan and Emergency Plans must be read and adhered to \n",
+  "alternate_contact_name": "Stephanie Kelly",
+  "alternate_contact_phone": "",
+  "alternate_contact_email": "",
+  "alternate_contacts": [],
+  "commencement_date": "30/06/2025",
+  "installation_date": "30/06/2025",
+  "ship_to_name": "Stephanie Kelly - Daughter",
+  "ship_to_address": "2 Walker Avenue, Palm Beach",
+  "extra_emails": [
+    "chelseat@campbellcc.com.au",
+    "samb@campbellcc.com.au",
+    "builders@atozflooringsolutions.com.au",
+    "invoices@campbellcc.com.au"
+  ]
+}
+
+--- SUMMARY ---
+PO Number: CCC55132-88512-Prov
+Customer Name: Stephen Kelly
+Email: samb@campbellcc.com.au
+Phone: 0407575264
+Mobile: 
+Work Phone: 
+Home Phone: 
+Address: 2 Walker Avenue, Palm Beach
+City: 
+Job Number: 
+Supervisor Name: 
+Supervisor Mobile: 
+Description of Works: Furniture
+PRELIMINARIES
+FURNITURE REMOVALIST - Allowance for removalist to move furniture and store 
+Dollar Value: $700.00
+Alternate Contacts: []
+Commencement Date: 30/06/2025
+Installation Date: 30/06/2025
+Extra Phones: []
+Extra Emails: ['chelseat@campbellcc.com.au', 'samb@campbellcc.com.au', 'builders@atozflooringsolutions.com.au', 'invoices@campbellcc.com.au']
+
+================= Campbell Construct TESTING PDF Example2.pdf =================
+[DEBUG] Supervisor regex matched but group(1) is None or regex did NOT match
+{
+  "customer_name": "Rosalind Watson",
+  "business_name": "",
+  "first_name": "Rosalind",
+  "last_name": "Watson",
+  "address": "48 Seventh Avenue, Palm",
+  "address1": "",
+  "address2": "",
+  "city": "",
+  "state": "",
+  "zip_code": "",
+  "country": "Australia",
+  "phone": "0407575264",
+  "mobile": "",
+  "work_phone": "",
+  "home_phone": "",
+  "email": "samb@campbellcc.com.au",
+  "customer_type": "Builders",
+  "extra_phones": [],
+  "po_number": "CCC54801-87823-Prov",
+  "scope_of_work": "",
+  "dollar_value": 630.5,
+  "job_number": "",
+  "actual_job_number": "",
+  "supervisor_name": "",
+  "supervisor_mobile": "",
+  "supervisor_email": "",
+  "description_of_works": "Floor Covers\nMAIN BEDROOM\nCARPET INSTALL - Install only - new carpet and underlay to best match existing, based on manufacturers availability. Standard Residential\nCarpet - Approximately 18m2.\nNOTE - Excludes floor preparation and levelling. No allowance for acoustic materials if required, price adjustment will apply.\nNOTE - Includes protection measures to mitigate loss or damage to property during works- Including but not limited to standard building &\ncontent covering / drop-sheets to work area only.\nBEDROOM 2\nCARPET INSTALL - Install only - new carpet and underlay to best match existing, based on manufacturers availability. Standard Residential\nCarpet - Approximately 11.5m2.\nNOTE - Excludes floor preparation and levelling. No allowance for acoustic materials if required, price adjustment will apply.\nNOTE - Includes protection measures to mitigate loss or damage to property during works- Including but not limited to standard building &\ncontent covering / drop-sheets to work area only.",
+  "material_breakdown": "",
+  "labor_breakdown": "",
+  "rooms": "",
+  "raw_text": " \n \n \nWORK ORDER\nJob Number: CCC54801\nOrder Date: 30/05/2025\n \n Contract No: CCC54801-87823\nCONTRACTOR \n JOB DETAILS\nName:\nCampbell Construction Co Pty Ltd\nJob Number: \nCCC54801\nABN: \n96 151 257 582\nClient Reference: H042199003 I SUNCORP\nAddress:\nLevel 2, Building B, 4-6 Innovation\nParkway, Birtinya, QLD, 4575\nCustomer:\nRosalind Watson\nCONTRACTOR'S REPRESENTATIVE\nSite Address:\n48 Seventh Avenue, Palm\nBeach QLD 4221\nSupervisor's\nName:\nSam Barton\nSite Contact:\nRosalind Watson\nPhone:\n0448 782 398\nContact No:\n0427 037 917\nEmail:\nsamb@campbellcc.com.au\n \n \nCase Manager's\nName:\nChelsea Turner\n \n \nEmail:\nchelseat@campbellcc.com.au\n \n \n \n \n \n \nSUBCONTRACTOR\n \nName: \nA to Z Flooring Solutions Pty Ltd \n \n \nABN:\n74658650821\n \n \nPhone:\n0407575264\n \n \nEmail:\nbuilders@atozflooringsolutions.com.au  \n \n \nStart Date\n02/07/2025 \nCompletion Date\n02/07/2025 \nScope of Work:\nCCC54801-87823\nFloor Covers\nMAIN BEDROOM\nCARPET INSTALL - Install only - new carpet and underlay to best match existing, based on manufacturers availability. Standard Residential\nCarpet - Approximately 18m2.\nNOTE - Excludes floor preparation and levelling. No allowance for acoustic materials if required, price adjustment will apply.\nNOTE - Includes protection measures to mitigate loss or damage to property during works- Including but not limited to standard building &\ncontent covering / drop-sheets to work area only.\nBEDROOM 2\nCARPET INSTALL - Install only - new carpet and underlay to best match existing, based on manufacturers availability. Standard Residential\nCarpet - Approximately 11.5m2.\nNOTE - Excludes floor preparation and levelling. No allowance for acoustic materials if required, price adjustment will apply.\nNOTE - Includes protection measures to mitigate loss or damage to property during works- Including but not limited to standard building &\ncontent covering / drop-sheets to work area only.\nTotals\nTotals\n \n \n \nPage 1 of 3 pages\n \n \n \nSubtotal\n$630.50\nGST\n$63.05\nTotal\n$693.55\n \nPlease be advised that GST is included in the total amount of this work order regardless of if GST\nis listed as N/A.\nWork Order Conditions: \nThis Work Order is to be read together with and as subject to the current CCC Period Subcontract and its terms and\nconditions.\nPlease ensure that you read these Work Order Conditions upon receipt of this Work Order.\nWOC.1 This Work Order is required to engage the Subcontractor to complete the work described in the Scope of Work.\nWOC.2 You must confirm acceptance of these Work Order Conditions within 24 hours and before commencing the work.\nWOC.3 If you commence the work described in the Scope of Work without confirming your acceptance of these Work\nOrder Conditions you will be taken to have agreed to the Work Order Conditions, the CCC Period Subcontract and its\nterms and conditions.\nWOC.4 None of the work described in the Scope of Work may be subcontracted without the prior written consent of CCC.\nWOC.5 All work described in the Scope of Work must match existing (as close as possible). If alternate material or colour\nis required or requested, you must notify CCC and obtain a signed written approval from the Owner before work is\ncommenced.\nWOC.6 Any variation to the Scope of Work requested by the Owner must be approved in writing by CCC before the work\ncommences. If written approval is not received and the Owner is not satisfied with the completed work, you will be\nliable to rectify the work to the Owner's satisfaction, at your cost.\nWOC.7 All invoices must state the site address, job number, a description of the completed work, a breakdown of labour\n(hrs) and material costs and be sent to the CCC accounts payable team at invoices@campbellcc.com.au.\nWOC.8 Before and after photographs must be supplied with invoices (including any damages to the work area prior to\ncommencement of the work).\nWOC.9 All work must be completed in accordance with WHSE requirements, the Building Code of Australia, applicable\nAustralian Standards and manufacturer's recommendations. Completion of the work requires all forms, Warranties/and\nor Certification required by Building Regulation 2021 (eg. Form 43, Form 12, Form 30) to be provided to CCC.\nWOC.10 Payment of completed work generally in accordance with the CCC Period Subcontract will be authorised once\nthe work has been inspected by a CCC supervisor and all required documentation is received by CCC.\nWOC.11 You are responsible to understand and implement all WHSE requirements applicable to the work.\nWOC.12 High risk construction - a SWMS is required to be supplied for the following work;\n(a) asbestos removal\n(b) risk of person falling more than 2 metres\n(c) working on or near energised electrical services or installations\n(d) temporary load-bearing support for structural alterations or repairs\n(e) work in or near a confined space\n(f) tilt up or precast elements\n \n \n \nPage 2 of 3 pages\n \n \n \n(g) demolition of load bearing structures\n(h) working in area with movement of mobile plant\n(i) work in or near a trench deeper than 1.5m or a tunnel\nWOC.13 The Site Hazard Checklist must be kept onsite with your WHSE documents.\nWOC.14 All rubbish and debris must be removed from site or if supplied placed in the skip/bin or cage (DO NOT PUT\nWASTE IN ANY DOMESTIC BINS) and the site left in a safe, clean and tidy manner. A $200 cleaning fee will be deducted\nif the site is left untidy and CCC must engage a professional cleaner.\nWOC.15 For all Provisional Sum (PS) & Prime Cost (PC) items, these are to be submitted on a separate itemised invoice.\n \n \n \n \nPage 3 of 3 pages\n \nSite WHS Rules \n \n\u2022 \nComply with reasonable direction from the principal contractor or any PCBU on site \n\u2022 \nTake reasonable care for your own health and safety, and do not adversely affect the health and safety of \nother persons \n\u2022 \nSteel capped footwear to be worn at all times and appropriate construction clothing that meets Australian \nStandards \n\u2022 \nAll workers and contractors must complete a site safety induction by sign on to attendance register via QR \ncode when arriving to site prior to commencing any works (Initial site visit minimum) \n\u2022 \nNo illegal drugs or other substances are permitted on site or are to be consumed on site. If you are required \nto take strong prescription medication that warns against driving or using machinery, you must advise the \nprincipal contractor \n\u2022 \nAll PPE required by legislation, identified in a SWMS, SDS, or identified through the hazard identification and \nrisk management process must be worn and used in accordance with manufacturer\u2019s instructions and where \ndirected by the principal contractor and in accordance with site signage \n\u2022 \nA SWMS must be completed for all High-Risk Construction Work as defined in legislation and must meet the \nrequirements of a SWMS as defined in legislation \n\u2022 \nSubcontractors must ensure all hazards applicable to their work are identified and controls implemented \nthrough a Risk Management process \n\u2022 \nSmoking within enclosed construction areas, 4 meters of building entrances is prohibited and must only be \nundertaken in a designated area \n\u2022 \nWorkers must only perform work for which they have been trained in and have the appropriate licences (e.g. \nElectrical, High Risk Licence) \n\u2022 \nAll subcontractors are responsible for ensuring they and all persons working for or contracted by them are \ntrained, have the appropriate licences, and understand the safety requirements for the site. This must be \ndone prior to commencing work. \n\u2022 \nAll incidents must be reported immediately to the Site Supervisor (injury, illness, near miss, damage, loss that \noccurs to a person, asset or the environment) \n\u2022 \nReport any Hazards to the Site Supervisor, and ensure any hazards arising from your works do not affect other \npersons (contractors, visitors, workers, the public) \n\u2022 \nAll electrical equipment onsite must have current test/tag \n\u2022 \nSDS must be available for any hazardous/dangerous chemical used onsite \n \n\u2022 \nAll plant, equipment, materials and personal protective equipment must be inspected before use, in good \ncondition, be properly maintained, suitable for task and comply with the relevant legislative requirements \nand/or Australian Standards \n\u2022 \nAll waste to be disposed of in the appropriate bins and the site must be maintained to a reasonable standard \nof housekeeping, cleanliness and hygiene \n\u2022 \nScaffolding must not be altered by any worker \u2013 Only the Scaffolder who erected the scaffold can make \nalterations to the scaffold \n\u2022 \nNo fighting, bullying or aggressive behaviour \n\u2022 \nDo not walk through barricaded areas \n\u2022 \nFollow safe lifting procedures at all times \n\u2022 \nDo not use or interfere with any plant and equipment fitted with \u2018DANGER\u2019 or \u2018OUT OF SERVICE\u2019 locks or \ntags. No plant or equipment is to be repaired or maintained unless properly isolated/switched off and/or \nstopped \n\u2022 \nThe requirements of the site WHSE Management Plan and Emergency Plans must be read and adhered to \n",
+  "alternate_contact_name": "Rosalind Watson",
+  "alternate_contact_phone": "",
+  "alternate_contact_email": "",
+  "alternate_contacts": [],
+  "commencement_date": "02/07/2025",
+  "installation_date": "02/07/2025",
+  "ship_to_name": "Rosalind Watson",
+  "ship_to_address": "48 Seventh Avenue, Palm",
+  "extra_emails": [
+    "chelseat@campbellcc.com.au",
+    "samb@campbellcc.com.au",
+    "builders@atozflooringsolutions.com.au",
+    "invoices@campbellcc.com.au"
+  ]
+}
+
+--- SUMMARY ---
+PO Number: CCC54801-87823-Prov
+Customer Name: Rosalind Watson
+Email: samb@campbellcc.com.au
+Phone: 0407575264
+Mobile: 
+Work Phone: 
+Home Phone: 
+Address: 48 Seventh Avenue, Palm
+City: 
+Job Number: 
+Supervisor Name: 
+Supervisor Mobile: 
+Description of Works: Floor Covers
+MAIN BEDROOM
+CARPET INSTALL - Install only - new carpet and underlay to best match exis
+Dollar Value: $630.50
+Alternate Contacts: []
+Commencement Date: 02/07/2025
+Installation Date: 02/07/2025
+Extra Phones: []
+Extra Emails: ['chelseat@campbellcc.com.au', 'samb@campbellcc.com.au', 'builders@atozflooringsolutions.com.au', 'invoices@campbellcc.com.au']

@@ -44,10 +44,31 @@ class RfmsApi:
         self.max_retries = 2
         self.auth = None  # Will store the current auth tuple
 
+        # Validate required credentials
+        self._validate_credentials()
+
+    def _validate_credentials(self):
+        """Validate that all required credentials are present."""
+        missing = []
+        if not self.store_code:
+            missing.append("store_code")
+        if not self.api_key:
+            missing.append("api_key")
+        
+        if missing:
+            raise ValueError(f"Missing required RFMS API credentials: {', '.join(missing)}. "
+                           f"Please check your environment variables.")
+
     def _get_auth(self, for_handshake=False):
+        # Ensure credentials are still valid
+        if not self.store_code or not self.api_key:
+            raise ValueError("RFMS API credentials are not properly configured")
+            
         if for_handshake:
             return (self.store_code, self.api_key)
         else:
+            if not self.session_token:
+                raise ValueError("Session token is not available. Please ensure session is established.")
             return (self.store_code, self.session_token)
 
     def _get_headers(self, extra_headers=None, include_session=False):
@@ -485,7 +506,7 @@ class RfmsApi:
             "searchText": name,
             "includeCustomers": True,
             "includeInactive": True,
-            "storeNumber": "49"
+            "storeNumber": "1"
         }
         if start_index > 0:
             payload["startIndex"] = start_index
@@ -569,81 +590,18 @@ class RfmsApi:
         Returns:
             dict: Created customer object
         """
-        # Log valid customer values for reference
+        url = f"{self.base_url}/v2/customer"
+        
+        # Validate required fields
+        required_fields = ['customerType', 'entryType', 'customerAddress']
+        missing_fields = [field for field in required_fields if field not in customer_data]
+        
+        if missing_fields:
+            raise ValueError(f"Missing required customer data: {', '.join(missing_fields)}")
+        
         try:
-            valid_values = self.get_customer_values()
-            logger.info(f"[RFMS_API][CUSTOMER_VALUES] Valid customer values: {json.dumps(valid_values, indent=2)}")
-        except Exception as e:
-            logger.warning(f"[RFMS_API][CUSTOMER_VALUES] Could not fetch valid customer values: {e}")
-
-        url = f"{self.base_url}/api/v2/Customer"
-        required_fields = [
-            "business_name",
-            "first_name",
-            "last_name",
-            "address1",
-            "city",
-            "state",
-        ]
-        missing_fields = [
-            field
-            for field in required_fields
-            if not customer_data.get(field) and not customer_data.get("customer_name")
-        ]
-        if missing_fields and not customer_data.get("customer_name"):
-            raise ValueError(
-                f"Missing required customer data: {', '.join(missing_fields)}"
-            )
-        # Prepare ship to address
-        ship_to = customer_data.get("ship_to", {})
-        ship_to_address = {
-            "name": ship_to.get("name") or customer_data.get("business_name", "") or customer_data.get("customer_name", ""),
-            "firstName": ship_to.get("first_name") or customer_data.get("first_name", ""),
-            "lastName": ship_to.get("last_name") or customer_data.get("last_name", ""),
-            "address1": ship_to.get("address1") or customer_data.get("address1", ""),
-            "address2": ship_to.get("address2") or customer_data.get("address2", ""),
-            "city": ship_to.get("city") or customer_data.get("city", ""),
-            "state": ship_to.get("state") or customer_data.get("state", ""),
-            "postalCode": ship_to.get("zip_code") or customer_data.get("zip_code", ""),
-            "country": ship_to.get("country") or customer_data.get("country", "Australia"),
-        }
-        payload = {
-            "customer": {
-                "name": customer_data.get("business_name", "")
-                or customer_data.get("customer_name", ""),
-                "firstName": customer_data.get("first_name", ""),
-                "lastName": customer_data.get("last_name", ""),
-                "address1": customer_data.get("address1", ""),
-                "city": customer_data.get("city", ""),
-                "state": customer_data.get("state", ""),
-                "postalCode": customer_data.get("zip_code", ""),
-                "country": customer_data.get("country", "Australia"),
-                "phone": customer_data.get("phone", ""),
-                "email": customer_data.get("email", ""),
-                "customerType": "INSURANCE",
-                "entryType": "Customer",
-                "activeDate": datetime.now().strftime("%Y-%m-%d"),
-                "storeCode": 1,
-            },
-            "shipToAddress": ship_to_address
-        }
-        try:
-            headers = self._get_headers()
-            auth = self._get_auth()
-            logger.debug(
-                f"[RFMS API] Outgoing auth: (username: {auth[0]}, password: {'*' * len(str(auth[1]))})"
-            )
-            logger.debug(f"[RFMS API] Outgoing headers: {headers}")
-            logger.info(f"[RFMS_API][CREATE_CUSTOMER] Payload: {json.dumps(payload, indent=2)}")
-            response = requests.post(
-                url, headers=headers, auth=auth, json=payload, timeout=self.timeout
-            )
-            if response.status_code == 200:
-                data = response.json()
-                return data.get("result", {}).get("customer", {})
-            else:
-                logger.error(f"Error creating customer: {response.text}")
-                raise Exception(f"Error creating customer: {response.text}")
+            data = self.execute_request('POST', url, customer_data)
+            return data
         except Exception as e:
             logger.error(f"Error creating customer: {str(e)}")
             raise Exception(f"Error creating customer: {str(e)}")
@@ -739,7 +697,7 @@ class RfmsApi:
             )
             logger.debug(f"[RFMS API] Outgoing headers: {headers}")
             response = requests.post(
-                f"{self.base_url}/v2/Order", headers=headers, auth=auth, json=job_data
+                f"{self.base_url}/v2/order/create", headers=headers, auth=auth, json=job_data
             )
             if response.status_code == 200:
                 return response.json()
@@ -985,3 +943,28 @@ class RfmsApi:
         end_time = time.monotonic()
         logger.info(f"[TIMER] _format_customer_list duration: {end_time - start_time:.2f}s for {len(formatted_customers)} customers")
         return formatted_customers
+
+    def find_order_by_po_number(self, po_number):
+        """
+        Search for an order in RFMS by PO number.
+        Returns the order if found, or None if not found.
+        """
+        url = f"{self.base_url}/v2/order/find"
+        payload = {"poNumber": po_number}
+        headers = self._get_headers()
+        auth = self._get_auth()
+        try:
+            response = requests.post(url, headers=headers, auth=auth, json=payload, timeout=self.timeout)
+            if response.status_code == 200:
+                data = response.json()
+                if data.get("result"):
+                    logger.info(f"Order found for PO number {po_number}: {data['result']}")
+                    return data["result"]
+                logger.info(f"No order found for PO number {po_number}.")
+                return None
+            else:
+                logger.error(f"Order find failed: {response.status_code} {response.text}")
+                return None
+        except Exception as e:
+            logger.error(f"Error searching for order by PO number: {str(e)}")
+            return None
