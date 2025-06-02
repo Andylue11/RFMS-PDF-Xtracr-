@@ -42,13 +42,13 @@ def create_job(session_token):
             "ActionFlag": "Insert",
             "InvoiceType": None,
             "IsQuote": False,
-            "IsWebOrder": False,
+            "IsWebOrder": True,
             "Exported": False,
             "CanEdit": False,
             "LockTaxes": False,
             "CustomerSource": "Customer",
             "CustomerSeqNum": 5,  # SoldTo.customerId
-            "CustomerUpSeqNum": 1746,  # ShipTo.customerId
+            "CustomerUpSeqNum": "0",  # Fixed value
             "CustomerFirstName": "",
             "CustomerLastName": "",
             "CustomerAddress1": "",

@@ -1,43 +1,26 @@
-import os
-import sys
+import requests
 import json
 from datetime import datetime, timedelta
-import requests
-from dotenv import load_dotenv
-
-# Load environment variables
-load_dotenv('.env-test')
 
 # RFMS API Configuration
-BASE_URL = os.getenv('RFMS_BASE_URL')
-STORE_CODE = os.getenv('RFMS_STORE_CODE')
-STORE_NUMBER = os.getenv('RFMS_STORE_NUMBER', '49')  # Default to 49 if not set
-USERNAME = os.getenv('RFMS_USERNAME')
-API_KEY = os.getenv('RFMS_API_KEY')
+STORE_CODE = "store-5291f4e3dca04334afede9f642ec6157"
+API_KEY = "49bf22ea017f4b97aabc99def43c0b66"
+BASE_URL = "https://api.rfms.online/v2"
 
 def get_session_token():
-    """Get RFMS API session token."""
-    try:
-        response = requests.post(
-            f"{BASE_URL}/v2/session/begin",
-            auth=(STORE_CODE, API_KEY),
-            headers={'Content-Type': 'application/json'}
-        )
-        
-        if response.status_code == 200:
-            data = response.json()
-            return data.get('sessionToken')
-        else:
-            print(f"Failed to get session token. Status code: {response.status_code}")
-            print(f"Response: {response.text}")
-            return None
-    except Exception as e:
-        print(f"Error getting session token: {str(e)}")
-        return None
+    """Get session token from RFMS API."""
+    print("Getting session token...")
+    url = f"{BASE_URL}/Session/Begin"
+    headers = {
+        'Content-Type': 'application/json'
+    }
+    response = requests.post(url, auth=(STORE_CODE, API_KEY), headers=headers)
+    print(f"Session response: {response.json()}")
+    return response.json().get('sessionToken')
 
-def create_test_order(base_url, session_token, customer_id, dollar_value, commencement_date=None):
-    """Create a test order."""
-    print(f"\nCreating test order for customer ID: {customer_id}")
+def create_job(base_url, session_token, customer_id, dollar_value, commencement_date=None):
+    """Create a test job."""
+    print(f"\nCreating test job for customer ID: {customer_id}")
     
     # Generate a unique PO number for this test
     po_number = f"TEST-{datetime.now().strftime('%Y%m%d%H%M%S')}"
@@ -75,7 +58,7 @@ def create_test_order(base_url, session_token, customer_id, dollar_value, commen
         }
     }
     
-    payload = json.dumps({
+    payload = {
         "category": "Order",
         "poNumber": po_number,
         "adSource": 1,
@@ -107,8 +90,8 @@ def create_test_order(base_url, session_token, customer_id, dollar_value, commen
             "county": None
         },
         "storeNumber": 49,
-        "privateNotes": "PRIVATE - Test order with complete customer details",
-        "publicNotes": "PUBLIC - This is a test order with dummy data",
+        "privateNotes": "PRIVATE - Test job with complete customer details",
+        "publicNotes": "PUBLIC - This is a test job with dummy data",
         "salesperson1": "ZORAN VEKIC",
         "salesperson2": None,
         "UserOrderType": 12,
@@ -122,14 +105,15 @@ def create_test_order(base_url, session_token, customer_id, dollar_value, commen
         "TaxInclusive": False,
         "lines": [
             {
-                "productId": "PO#$$",
+                "productId": "00001",
+                "colorId": 000,
                 "quantity": float(dollar_value),
                 "priceLevel": "Price10",
-                "lineGroupId": 6
+                "lineGroupId": 1
             }
         ]
-    })
-
+    }
+    
     headers = {
         'Content-Type': 'application/json'
     }
@@ -138,32 +122,26 @@ def create_test_order(base_url, session_token, customer_id, dollar_value, commen
         f"{base_url}/order/create",
         auth=(STORE_CODE, session_token),
         headers=headers,
-        data=payload
+        json=payload
     )
-    print(f"Order creation response status: {response.status_code}")
+    print(f"Job creation response status: {response.status_code}")
     print(f"Response: {response.text}")
     return response.json()
 
 def main():
-    """Main function to run the test."""
-    print("Starting RFMS Order Creation Test")
-    print("--------------------------------")
-
     # Get session token
-    print("\nGetting session token...")
     session_token = get_session_token()
     if not session_token:
-        print("Failed to get session token. Exiting.")
-        sys.exit(1)
+        print("Failed to get session token")
+        return
 
-    # Create test order
-    print("\nCreating test order...")
-    result = create_test_order(BASE_URL, session_token, 1747, 1000.00)
+    # Test parameters
+    customer_id = "5"  # Test customer ID
+    dollar_value = "1000.00"  # Test dollar value
     
-    if result:
-        print("\nTest completed successfully!")
-    else:
-        print("\nTest failed!")
+    # Create test job
+    result = create_job(BASE_URL, session_token, customer_id, dollar_value)
+    print("\nResult:", json.dumps(result, indent=2))
 
 if __name__ == "__main__":
     main() 

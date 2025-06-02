@@ -1,3 +1,4 @@
+#method will be "SaveOrder"
 {
 "username": "zoran.vekic",
 "order": {
@@ -15,8 +16,8 @@
 "Exported": false,
 "CanEdit": false,
 "LockTaxes": false,
-"CustomerSource": "",
-"CustomerSeqNum": 02,
+"CustomerSource": "Customer",
+"CustomerSeqNum": "<RFMS CustomerId>",
 "CustomerUpSeqNum": 0,
 "CustomerFirstName": "",
 "CustomerLastName": "",
@@ -27,6 +28,9 @@
 "CustomerPostalCode": "",
 "CustomerCounty": "",
 "Phone1": "",
+"ShipToCustomerSource": "Customer",
+"ShipToCustomerSeqNum": "<RFMS CustomerId>",
+"ShipToCustomerUpSeqNum": 0,
 "ShipToFirstName": "",
 "ShipToLastName": "",
 "ShipToAddress1": "",
@@ -34,8 +38,8 @@
 "ShipToCity": "",
 "ShipToState": "",
 "ShipToPostalCode": "",
-"ShipToCounty": "",
 "Phone2": "",
+"Phone3": ""
 "ShipToLocked": false,
 "SalesPerson1": "ZORAN VEKIC",
 "SalesPerson2": "",
@@ -43,25 +47,25 @@
 "CommisionSplitPercent": 0.0,
 "Store": 01,
 "Email": "",
-"CustomNote": "",
-"Note": "",
+"CustomNote": "", # Best Contacts etc... 
+"Note": "", # Description of works
 "WorkOrderNote": "",
 "PickingTicketNote": null,
-"OrderDate": "",
-"MeasureDate": "",
-"PromiseDate": "",
-"PONumber": "",
+"OrderDate": "", 
+"MeasureDate": "", # Commencement date from extracted pdf data
+"PromiseDate": "", # Completion date from extracted pdf data if avaliable
+"PONumber": "", # PO Number from extracted pdf data
 "CustomerType": "INSURANCE",
-"JobNumber": "",
-"DateEntered": "",
+"JobNumber": "", # Supervisor name and phone number from extracted pdf data
+"DateEntered": "", #todays date
 "DatePaid": null,
 "DueDate": "",
 "Model": null,
-"PriceLevel": 0,
+"PriceLevel": 3,
 "TaxStatus": "Tax",
 "Occupied": false,
 "Voided": false,
-"AdSource": 0,
+"AdSource": 1,
 "TaxCode": null,
 "OverheadMarginBase": null,
 "TaxStatusLocked": false,
@@ -90,9 +94,9 @@
 "PreAuthorization": null,
 "SalesTax": 0.0,
 "GrandInvoiceTotal": 0.0,
-"MaterialOnly": 0.0,
+"MaterialOnly": 0.0, 
 "Labor": 0.0,
-"MiscCharges": 0.0,
+"MiscCharges": 0.0, # Dollar Value from extracted pdf data
 "InvoiceTotal": 0.0,
 "MiscTax": 0.0,
 "RecycleFee": 0.0,
@@ -101,7 +105,7 @@
 "DiscountRate": 0.0,
 "DiscountAmount": 0.0,
 "ApplyRecycleFee": false,
-"Attachements": null,
+"Attachements": null, # Saved PDF 
 "PendingAttachments": null,
 "Order": null,
 "LockInfo": null,

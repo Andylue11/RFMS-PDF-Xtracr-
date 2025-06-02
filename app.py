@@ -16,9 +16,10 @@ import os
 from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 import tempfile
 import json
+import requests
 
 # Load environment variables FIRST before any other imports that might use them
 load_dotenv(dotenv_path=".env")
@@ -794,7 +795,14 @@ def export_to_rfms():
                 "Order": None,
                 "LockInfo": None,
                 "Message": None,
-                "Lines": []
+                "Lines": [
+                    {
+                        "productId": "PO#$$",
+                        "quantity": float(job_data.get("dollar_value", 0)),
+                        "priceLevel": "Price10",
+                        "lineGroupId": 6
+                    }
+                ]
             },
             "products": None
         }

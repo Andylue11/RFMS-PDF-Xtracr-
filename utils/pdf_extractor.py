@@ -1556,7 +1556,7 @@ def extract_job_and_supervisor_details(text, extracted_data, template):
             extracted_data["supervisor_name"] = match.group(1).strip()
             logger.info(f"Found supervisor name: {extracted_data['supervisor_name']}")
             break
-
+    
     # Extract Job Number
     job_number_patterns = [
         r"Job\s+Number:?\s*([A-Za-z0-9-]+)",
