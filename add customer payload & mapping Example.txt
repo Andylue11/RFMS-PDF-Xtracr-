@@ -1,0 +1,41 @@
+import requests
+import json
+
+url = "https://api.rfms.online/v2/customer"
+
+payload = json.dumps({
+  "customerType": "INSURANCE", # HARD CODED
+  "entryType": "Customer", # HARD CODED
+  "customerAddress": {
+    "lastName": "DOE", # From ShipTo pdf extracted or ui updated data
+    "firstName": "JOHN", # From ShipTo pdf extracted or ui updated data
+    "address1": "1234 MAIN ST", # From ShipTo pdf extracted or ui updated data
+    "address2": "STE 33", # From ShipTo pdf extracted or ui updated data
+    "city": "ANYTOWN", # From ShipTo pdf extracted or ui updated data
+    "state": "CA", # From ShipTo pdf extracted or ui updated data
+    "postalCode": "91332" # From ShipTo pdf extracted or ui updated data
+  },
+  "shipToAddress": {
+    "lastName": "DOE", # From ShipTo pdf extracted or ui updated data
+    "firstName": "JOHN", # From ShipTo pdf extracted or ui updated data
+    "address1": "1234 MAIN ST", # From ShipTo pdf extracted or ui updated data
+    "address2": "STE 33", # From ShipTo pdf extracted or ui updated data
+    "city": "ANYTOWN", # From ShipTo pdf extracted or ui updated data
+    "state": "CA", # From ShipTo pdf extracted or ui updated data
+    "postalCode": "91332" # From ShipTo pdf extracted or ui updated data
+  },
+  "phone1": "661-555-1212", # From ShipTo pdf extracted or ui updated data
+  "phone2": "818-298-0000", # From ShipTo pdf extracted or ui updated data
+  "email": "john.doe@gmail.com", # From ShipTo pdf extracted or ui updated data
+  "taxStatus": "Tax", # HARD CODED
+  "taxMethod": "SalesTax", # HARD CODED
+  "preferredSalesperson1": "BOB", # From ui selected/default preferred salesperson data
+  "preferredSalesperson2": "" # HARD CODED
+})
+headers = {
+  'Content-Type': 'application/json'
+}
+
+response = requests.request("POST", url, headers=headers, data=payload)
+
+print(response.text)

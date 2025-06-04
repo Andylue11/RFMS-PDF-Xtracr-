@@ -1,0 +1,65 @@
+Create a Non-Web Order Using Category Field
+python
+import requests
+import json
+
+url = "https://api.rfms.online/v2/order/create"
+
+payload = json.dumps({
+  "category": "Order",
+  "poNumber": "", # Purchase order number from pdf extraction or ui updated
+  "estimatedDeliveryDate": "2020-10-11", # example of date format for pdf extracted data such as Completion date or ui updated date 
+  "jobNumber": "987ZEF", # Pdf extracted Supervisor name and phone number
+  "soldTo.customerId": "02", # "RFMS Customer ID" number filled in by user search for builder customer
+  "soldTo": {
+    "lastName": "DOE",  # From SoldTo pdf extracted or ui updated data
+    "firstName": "JOHN",  # From SoldTo pdf extracted or ui updated data
+    "address1": "1234 MAIN ST",  # From SoldTo pdf extracted or ui updated data
+    "address2": "STE 33",  # From SoldTo pdf extracted or ui updated data
+    "city": "ANYTOWN",  # From SoldTo pdf extracted or ui updated data
+    "state": "CA",  # From SoldTo pdf extracted or ui updated data
+    "zipCode": "91332",  # From SoldTo pdf extracted or ui updated data
+    "Phone1": "", # Phone3 from ui with fallback to ShipTo Phone1
+    "Phone2": "", # Phone4 from ui with fallback to ShipTo Phone2 
+    "Email": "" # Pdf extracted data or from ShipTo Email
+   },
+   "shipTo.": {
+     "lastName": "Adrian", # From ShipTo pdf extracted or ui updated data
+     "firstName": "Simpson", # From ShipTo pdf extracted or ui updated data
+     "address1": "1234 MAIN ST", # From ShipTo pdf extracted or ui updated data
+     "address2": "STE 33", # From ShipTo pdf extracted or ui updated data
+     "city": "CAPALABA", # From ShipTo pdf extracted or ui updated city/suburbdata
+     "state": "QLD", # From ShipTo pdf extracted or ui updated data
+     "zipCode": "4157" # From ShipTo pdf extracted or ui updated data
+   },
+   "storeNumber": 49, # hard coded
+   "privateNotes": "PRIVATE", # Best Contact, other contacts realestate, Tenants name and numbers extracted from pdf or add thru ui
+   "publicNotes": "PUBLIC", # From  pdf extracted or ui updated discription/scope of works
+   "salesperson1": "Zoran Vekic", # From user selection in ui
+   "adSource": 1, # hard coded
+   "UserOrderType": 12, # hard coded
+   "ServiceType": 9, # hard coded
+   "ContractType": 2, # hard coded
+   "PriceLevel": 5, # hard coded
+   "TaxStatus": "Tax", # hard coded
+   "Occupied": false, 
+   "Voided": false,
+   "TaxStatusLocked": false,
+   "TaxInclusive": false,
+   "lines": [
+    	{
+    		"productId": 213322, # Hard Coded
+    		"colorId": 2133, # Hard Coded
+                "quantity": 0.0, # Dollar Value from extracted pdf data or UI data
+    		"priceLevel": 10, # Hard Coded
+            	"lineGroupId": 4 # Hard Coded
+    	}
+  ]
+})
+headers = {
+  'Content-Type': 'application/json'
+}
+
+response = requests.request("POST", url, headers=headers, data=payload)
+
+print(response.text)
