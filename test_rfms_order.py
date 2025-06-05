@@ -119,7 +119,7 @@ def create_test_order(base_url, session_token, customer_id, dollar_value, commen
             "address2": customer_data.get('address2', test_data["sold_to"]["address"]["address2"]),
             "city": customer_data.get('city', test_data["sold_to"]["address"]["city"]),
             "state": customer_data.get('state', test_data["sold_to"]["address"]["state"]),
-            "zipCode": customer_data.get('postalCode', test_data["sold_to"]["address"]["postalCode"]),
+            "postalCode": customer_data.get('postalCode', test_data["sold_to"]["address"]["postalCode"]),
             "Phone1": customer_data.get('phone1', test_data["sold_to"]["phone"]),
             "Phone2": customer_data.get('phone2', test_data["ship_to"]["phone"]),
             "Email": customer_data.get('email', test_data["sold_to"]["email"])
@@ -131,7 +131,7 @@ def create_test_order(base_url, session_token, customer_id, dollar_value, commen
             "address2": test_data["ship_to"]["address"]["address2"],
             "city": test_data["ship_to"]["address"]["city"],
             "state": test_data["ship_to"]["address"]["state"],
-            "zipCode": test_data["ship_to"]["address"]["postalCode"]
+            "postalCode": test_data["ship_to"]["address"]["postalCode"]
         },
         "storeNumber": 49,
         "privateNotes": "PRIVATE",
