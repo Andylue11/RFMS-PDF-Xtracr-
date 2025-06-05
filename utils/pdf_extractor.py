@@ -295,6 +295,24 @@ TEMPLATE_CONFIGS = {
     }
 }
 
+def match_builder_to_template(builder_name: str) -> str:
+    """
+    Maps a builder name to the template key in TEMPLATE_CONFIGS.
+    """
+    builder_name = builder_name.lower().replace(" ", "")
+    if "profilebuild" in builder_name:
+        return "profile_build"
+    if "ambrose" in builder_name:
+        return "ambrose"
+    if "campbell" in builder_name:
+        return "campbell"
+    if "rizon" in builder_name:
+        return "rizon"
+    if "australianrestoration" in builder_name or "arc" in builder_name:
+        return "australian_restoration"
+    if "townsend" in builder_name:
+        return "townsend"
+    return "generic"
 
 def detect_template(text: str, builder_name: str = "") -> Dict[str, Any]:
     """
@@ -947,14 +965,14 @@ def clean_extracted_data(extracted_data):
         customer_name = extracted_data.get("customer_name", "")
         if isinstance(customer_name, str) and customer_name.strip():  # Check if not empty
             cleaned_name = re.sub(r"\n.*$", "", customer_name)
-        names = cleaned_name.split(maxsplit=1)
-        if len(names) > 0:
-            extracted_data["first_name"] = names[0]
-        if len(names) > 1:
-            extracted_data["last_name"] = names[1]
-        else:
-            # If only one name, use it as last name
-            extracted_data["last_name"] = ""
+            names = cleaned_name.split(maxsplit=1)
+            if len(names) > 0:
+                extracted_data["first_name"] = names[0]
+            if len(names) > 1:
+                extracted_data["last_name"] = names[1]
+            else:
+                # If only one name, use it as last name
+                extracted_data["last_name"] = ""
 
     # Clean up supervisor name
     supervisor_name = extracted_data.get("supervisor_name")
@@ -1037,16 +1055,16 @@ def clean_extracted_data(extracted_data):
         filtered_phones = []
         for phone in extracted_data["extra_phones"]:
             if isinstance(phone, str):
-            # Clean the phone
-            clean_phone = "".join(c for c in phone if c.isdigit())
+                # Clean the phone
+                clean_phone = "".join(c for c in phone if c.isdigit())
 
-            # Skip if in excluded list or already in customer's main numbers
-            if clean_phone not in clean_exclude_numbers and clean_phone not in [
-                        "".join(c for c in str(extracted_data.get("phone", "") or "") if c.isdigit()),
-                        "".join(c for c in str(extracted_data.get("mobile", "") or "") if c.isdigit()),
-                        "".join(c for c in str(extracted_data.get("home_phone", "") or "") if c.isdigit()),
-                        "".join(c for c in str(extracted_data.get("work_phone", "") or "") if c.isdigit()),
-            ]:
-                filtered_phones.append(phone)
+                # Skip if in excluded list or already in customer's main numbers
+                if clean_phone not in clean_exclude_numbers and clean_phone not in [
+                    "".join(c for c in str(extracted_data.get("phone", "") or "") if c.isdigit()),
+                    "".join(c for c in str(extracted_data.get("mobile", "") or "") if c.isdigit()),
+                    "".join(c for c in str(extracted_data.get("home_phone", "") or "") if c.isdigit()),
+                    "".join(c for c in str(extracted_data.get("work_phone", "") or "") if c.isdigit()),
+                ]:
+                    filtered_phones.append(phone)
 
         extracted_data["extra_phones"] = filtered_phones

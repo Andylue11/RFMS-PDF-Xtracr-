@@ -705,7 +705,7 @@ function setupBuilderSearch() {
                 const response = await fetchWithRetry('/api/customers/search', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ search_term: searchTerm })
+                    body: JSON.stringify({ term: searchTerm })
             });
                 const customers = await response.json();
                 if (customers.error) {
