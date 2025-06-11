@@ -672,37 +672,67 @@ class RfmsApi:
 
     def create_job(self, job_data):
         """
-        Create a new job in RFMS.
+        Create a new job in RFMS using comprehensive format.
+        Handles both new comprehensive format and legacy nested format.
 
         Args:
-            job_data (dict): Job data
+            job_data (dict): Job data - supports both formats:
+                            - Comprehensive: flat structure with soldTo/shipTo
+                            - Legacy: nested under 'order' key
 
         Returns:
             dict: Created job object
         """
         try:
-            customer_id = None
-            if job_data and 'order' in job_data:
+            # Handle both comprehensive format and legacy nested format
+            if 'order' in job_data:
+                # Legacy nested format
                 customer_id = job_data['order'].get('CustomerSeqNum')
-            logger.info(f"[RFMS_API][CREATE_JOB] Using customer ID: {customer_id}")
+                logger.info(f"[RFMS_API][CREATE_JOB] Using legacy nested format - Customer ID: {customer_id}")
+                payload = job_data  # Use as-is for legacy
+            else:
+                # New comprehensive format
+                customer_id = None
+                if 'soldTo' in job_data and isinstance(job_data['soldTo'], dict):
+                    customer_id = job_data['soldTo'].get('customerId')
+                logger.info(f"[RFMS_API][CREATE_JOB] Using comprehensive format - Customer ID: {customer_id}")
+                payload = job_data  # Use as-is for comprehensive format
+            
             if not customer_id:
-                raise ValueError("Missing customer ID in job_data['order']")
+                raise ValueError("Missing customer ID in job data")
+            
             session_token = self.session_token
             if not session_token:
                 raise Exception("Failed to get session token")
+            
             headers = self._get_headers()
             auth = self._get_auth()
-            logger.debug(
-                f"[RFMS API] Outgoing auth: (username: {auth[0]}, password: {'*' * len(str(auth[1]))})"
-            )
+            
+            logger.debug(f"[RFMS API] Outgoing auth: (username: {auth[0]}, password: {'*' * len(str(auth[1]))})")
             logger.debug(f"[RFMS API] Outgoing headers: {headers}")
+            logger.info(f"[RFMS API] Payload format: {'comprehensive' if 'soldTo' in job_data else 'legacy'}")
+            
             response = requests.post(
-                f"{self.base_url}/v2/order/create", headers=headers, auth=auth, json=job_data
+                f"{self.base_url}/v2/order/create", 
+                headers=headers, 
+                auth=auth, 
+                json=payload
             )
+            
+            logger.info(f"[RFMS API] Order creation response status: {response.status_code}")
+            logger.debug(f"[RFMS API] Order creation response: {response.text}")
+            
             if response.status_code == 200:
-                return response.json()
+                result = response.json()
+                if result.get("status") == "success":
+                    order_id = result.get("result")
+                    logger.info(f"[RFMS API] Successfully created order: {order_id}")
+                    return result
+                else:
+                    raise Exception(f"RFMS API returned error: {result.get('result', 'Unknown error')}")
             else:
-                raise Exception(f"Failed to create job: {response.text}")
+                raise Exception(f"Failed to create job - HTTP {response.status_code}: {response.text}")
+                
         except Exception as e:
             logger.error(f"Error creating job: {str(e)}")
             raise

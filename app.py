@@ -31,8 +31,8 @@ from models.customer import ApprovedCustomer
 from utils.pdf_extractor import extract_data_from_pdf
 from utils.rfms_api import RfmsApi
 from utils.email_utils import EmailSender
-# Import the new payload service (you'll create this)
-from utils import payload_service # NEW IMPORT
+# Import the payload service with comprehensive format support
+from utils import payload_service
 
 # Configure logging
 logging.basicConfig(
@@ -73,6 +73,8 @@ rfms_store_code = os.getenv("RFMS_STORE_CODE")
 rfms_username = os.getenv("RFMS_USERNAME")
 rfms_api_key = os.getenv("RFMS_API_KEY")
 
+logger.info(f"🚀 RFMS PDF Xtracr - Comprehensive Format Enabled")
+logger.info(f"📦 Using AZ002876 successful structure + comprehensive lines")
 logger.info(f"RFMS API Configuration:")
 logger.info(f"  Base URL: {rfms_base_url}")
 logger.info(f"  Store Code: {'Loaded' if rfms_store_code else 'Missing'}")
@@ -98,7 +100,7 @@ else:
         username=rfms_username,
         api_key=rfms_api_key,
     )
-    logger.info("RFMS API client initialized successfully")
+    logger.info("✅ RFMS API client initialized successfully with comprehensive format support")
 
 def ensure_rfms_api():
     if rfms_api_client is None:
@@ -388,12 +390,16 @@ def create_job_api():
 
 @app.route("/api/export-to-rfms", methods=["POST"])
 def export_to_rfms_api():
-    """Export customer, job, and order data to RFMS API."""
+    """Export customer, job, and order data to RFMS API using comprehensive format."""
     api_client = ensure_rfms_api()
     export_request_data = request.json
     if not export_request_data:
         logger.warning("No data provided for RFMS export")
         return jsonify({"error": "No data provided for export"}), 400
+    
+    # Log the format transition
+    logger.info("🔄 RFMS Export - Using Comprehensive Format (AZ002876 + Lines)")
+    logger.info("📋 Format Features: Customer fields + Phone optimization + Comprehensive lines")
     
     # Validate Description of Works (publicNotes) 5-word minimum
     description = ''
@@ -412,10 +418,23 @@ def export_to_rfms_api():
             logger.warning(f"Missing required section for export: {section}")
             return jsonify({"error": f"Missing required section: {section}"}), 400
             
-    logger.info("Starting export to RFMS via /api/export-to-rfms")
+    logger.info("🚀 Starting comprehensive format export to RFMS via /api/export-to-rfms")
+    
+    # Log key data for tracking
+    sold_to_id = export_request_data.get("sold_to", {}).get("id") or export_request_data.get("sold_to", {}).get("customer_source_id")
+    po_number = export_request_data.get("job_details", {}).get("po_number", "N/A")
+    supervisor_name = export_request_data.get("job_details", {}).get("supervisor_name", "N/A")
+    
+    logger.info(f"📊 Export Details: Customer ID={sold_to_id}, PO={po_number}, Supervisor={supervisor_name}")
+    
     try:
         # Delegate payload construction and actual export logic to the service
         result = payload_service.export_data_to_rfms(api_client, export_request_data, logger)
+        
+        # Log success with format information
+        order_id = result.get("order_id")
+        format_used = result.get("format_used", "comprehensive_lines_az002876_structure")
+        logger.info(f"✅ RFMS Export Success: Order {order_id} created using {format_used}")
         
         # Update PdfData entry to processed = True if applicable
         pdf_id = export_request_data.get("pdf_id") # Assuming you pass this from frontend
@@ -424,15 +443,16 @@ def export_to_rfms_api():
             if pdf_entry:
                 pdf_entry.processed = True
                 # Store RFMS job/quote IDs if available in result
-                # pdf_entry.rfms_job_id = result.get("job", {}).get("id") 
+                # pdf_entry.rfms_job_id = result.get("order_id") 
                 db.session.commit()
+                logger.info(f"📝 Updated PDF entry {pdf_id} as processed")
 
         return jsonify(result)
     except payload_service.PayloadError as pe: # Custom exception from service for bad data
-        logger.error(f"Payload construction error during RFMS export: {str(pe)}")
+        logger.error(f"❌ Payload construction error during RFMS export: {str(pe)}")
         return jsonify({"error": f"Data validation error: {str(pe)}"}), 400
     except Exception as e:
-        logger.error(f"Error during RFMS export: {str(e)}")
+        logger.error(f"❌ Error during comprehensive format RFMS export: {str(e)}")
         # Consider more specific error handling based on exceptions from RfmsApi
         return jsonify({"error": f"An unexpected error occurred during RFMS export: {str(e)}"}), 500
 

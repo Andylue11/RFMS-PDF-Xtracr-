@@ -12,7 +12,7 @@ payload = json.dumps({
 headers = {
   'Content-Type': 'application/json'
 }
-conn.request("POST", "/v2/customers/find", payload, headers)
+conn.request("POST", "/v2/order/find, payload, headers)
 res = conn.getresponse()
 data = res.read()
 print(data.decode("utf-8"))

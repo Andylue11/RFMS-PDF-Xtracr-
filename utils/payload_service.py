@@ -1,7 +1,7 @@
 # utils/payload_service.py
 import os
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 
 # Define custom exception for payload errors if needed
 class PayloadError(ValueError):
@@ -100,7 +100,8 @@ def build_rfms_customer_payload(data):
 
 def export_data_to_rfms(api_client, export_data, logger):
     """
-    Builds the payload for exporting order/job data to RFMS and makes the API call.
+    Builds the comprehensive RFMS payload and makes the API call.
+    Uses the new comprehensive format while maintaining mapping relationships.
     'export_data' is the JSON from the /api/export-to-rfms request.
     'api_client' is the initialized RfmsApi instance.
     'logger' is the Flask app logger.
@@ -113,25 +114,40 @@ def export_data_to_rfms(api_client, export_data, logger):
     ship_to_data = export_data["ship_to"]
     job_details_data = export_data["job_details"]
 
-    # Default values and phone logic
-    ship_to_first_name = ship_to_data.get("first_name", "").strip() or "Unknown"
+    # Extract phone numbers with proper fallbacks
+    supervisor_phone1 = (
+        job_details_data.get("supervisor_phone") or 
+        job_details_data.get("supervisor_mobile") or 
+        ship_to_data.get("pdf_phone1") or 
+        ship_to_data.get("phone") or 
+        "0447012125"  # Default fallback
+    )
+    
+    supervisor_phone2 = (
+        ship_to_data.get("pdf_phone2") or 
+        ship_to_data.get("phone2") or 
+        ship_to_data.get("mobile") or 
+        "0732341234"  # Default fallback
+    )
+
+    # Extract supervisor name with fallback
+    supervisor_name = job_details_data.get("supervisor_name", "")
+    if not supervisor_name:
+        supervisor_name = f"{sold_to_data.get('first_name', 'Unknown')} {sold_to_data.get('last_name', 'Supervisor')}"
+
+    # Default values for ship_to
+    ship_to_first_name = ship_to_data.get("first_name", "").strip() or "Site"
     ship_to_last_name = ship_to_data.get("last_name", "").strip() or "Customer"
     ship_to_address1 = (ship_to_data.get("address1", "") or ship_to_data.get("address", "")).strip() or "Address Required"
     ship_to_city = ship_to_data.get("city", "").strip() or "Brisbane"
     ship_to_state = ship_to_data.get("state", "").strip() or "QLD"
     ship_to_postal_code = ship_to_data.get("zip_code", "").strip() or "4000"
 
-    phone3_value = ship_to_data.get("phone3", "")
-    phone4_value = ship_to_data.get("phone4", "")
-    pdf_phone1 = ship_to_data.get("pdf_phone1", "") or ship_to_data.get("phone", "")
-    pdf_phone2 = ship_to_data.get("pdf_phone2", "") or ship_to_data.get("phone2", "") or ship_to_data.get("mobile", "")
-    job_phone1 = phone3_value if phone3_value else pdf_phone1
-    job_phone2 = phone4_value if phone4_value else pdf_phone2
-
-    # Custom note logic (expand as needed)
+    # Custom note logic for alternate contacts
     custom_note_lines = []
     alt_contact = export_data.get("alternate_contact", {})
     alt_contacts_list = export_data.get("alternate_contacts", [])
+    
     if alt_contact and (alt_contact.get("name") or alt_contact.get("phone") or alt_contact.get("email")):
         best_contact_str = f"Best Contact: {alt_contact.get('name', '')} {alt_contact.get('phone', '')}"
         if alt_contact.get("phone2"):
@@ -139,6 +155,7 @@ def export_data_to_rfms(api_client, export_data, logger):
         if alt_contact.get("email"):
             best_contact_str += f" ({alt_contact.get('email')})"
         custom_note_lines.append(best_contact_str)
+    
     for contact in alt_contacts_list:
         if contact.get("name") or contact.get("phone") or contact.get("email"):
             line = f"{contact.get('type', 'Contact')}: {contact.get('name', '')} {contact.get('phone', '')}"
@@ -147,163 +164,167 @@ def export_data_to_rfms(api_client, export_data, logger):
             if contact.get("email"):
                 line += f" ({contact.get('email')})"
             custom_note_lines.append(line)
+    
     custom_note = "\n".join(custom_note_lines).strip()
 
     # Environment/config values
-    store = int(os.getenv("RFMS_STORE", 1))
+    store_number = int(os.getenv("RFMS_STORE_NUMBER", "49"))
     username = os.getenv("RFMS_USERNAME", "zoran.vekic")
 
+    # Generate PO number and job number
+    po_number = job_details_data.get("po_number", f"PDF-{datetime.now().strftime('%Y%m%d%H%M%S')}")
+    job_number = f"{supervisor_name} {supervisor_phone1}".strip() or po_number
+
+    # Date calculations
+    current_date = datetime.now().strftime("%Y-%m-%d")
+    estimated_delivery = (
+        job_details_data.get("promise_date") or 
+        job_details_data.get("completion_date") or 
+        (datetime.now() + timedelta(days=5)).strftime("%Y-%m-%d")
+    )
+
+    # Build the comprehensive RFMS payload using our successful format
+    # This uses the AZ002876 structure + comprehensive lines format
     order_payload = {
-        "username": username,
-        "order": {
-            "useDocumentWebOrderFlag": False,
-            "originalMessageId": None,
-            "newInvoiceNumber": None,
-            "originalInvoiceNumber": None,
-            "SeqNum": 0,
-            "InvoiceNumber": "",
-            "OriginalQuoteNum": "",
-            "ActionFlag": "Insert",
-            "InvoiceType": None,
-            "IsQuote": False,
-            "IsWebOrder": False,
-            "Exported": False,
-            "CanEdit": True,
-            "LockTaxes": False,
-            "CustomerSource": "Customer",
-            "CustomerSeqNum": sold_to_customer_id,
-            "CustomerUpSeqNum": sold_to_customer_id,
-            "CustomerFirstName": sold_to_data.get("first_name", ""),
-            "CustomerLastName": sold_to_data.get("last_name", ""),
-            "CustomerAddress1": sold_to_data.get("address1", ""),
-            "CustomerAddress2": sold_to_data.get("address2", ""),
-            "CustomerCity": sold_to_data.get("city", ""),
-            "CustomerState": sold_to_data.get("state", ""),
-            "CustomerPostalCode": sold_to_data.get("zip_code", ""),
-            "CustomerCounty": "",
-            "Phone1": job_phone1,
-            "ShipToFirstName": ship_to_first_name,
-            "ShipToLastName": ship_to_last_name,
-            "ShipToAddress1": ship_to_address1,
-            "ShipToAddress2": ship_to_data.get("address2", ""),
-            "ShipToCity": ship_to_city,
-            "ShipToState": ship_to_state,
-            "ShipToPostalCode": ship_to_postal_code,
-            "Phone2": job_phone2,
-            "Phone3": ship_to_data.get("phone3", "") or ship_to_data.get("work_phone", ""),
-            "ShipToLocked": False,
-            "SalesPerson1": "ZORAN VEKIC",
-            "SalesPerson2": "",
-            "SalesRepLocked": False,
-            "CommisionSplitPercent": 0.0,
-            "Store": store,
-            "Email": ship_to_data.get("email", ""),
-            "CustomNote": custom_note,
-            "Note": job_details_data.get("description_of_works", "").strip(),
-            "WorkOrderNote": "",
-            "PickingTicketNote": None,
-            "OrderDate": "",
-            "MeasureDate": job_details_data.get("measure_date", "") or job_details_data.get("commencement_date", ""),
-            "PromiseDate": job_details_data.get("promise_date", "") or job_details_data.get("completion_date", ""),
-            "PONumber": job_details_data.get("po_number", ""),
-            "CustomerType": "INSURANCE",
-            "JobNumber": f"{job_details_data.get('supervisor_name', '')} {job_details_data.get('supervisor_phone', '') or job_details_data.get('supervisor_mobile', '')}".strip() or job_details_data.get("po_number", ""),
-            "DateEntered": datetime.now().strftime("%Y-%m-%d"),
-            "DatePaid": None,
-            "DueDate": "",
-            "Model": None,
-            "PriceLevel": 3,
-            "TaxStatus": "Tax",
-            "Occupied": False,
-            "Voided": False,
-            "AdSource": 1,
-            "TaxCode": None,
-            "OverheadMarginBase": None,
-            "TaxStatusLocked": False,
-            "Map": None,
-            "Zone": None,
-            "Phase": None,
-            "Tract": None,
-            "Block": None,
-            "Lot": None,
-            "Unit": None,
-            "Property": None,
-            "PSMemberNumber": 0,
-            "PSMemberName": None,
-            "PSBusinessName": None,
-            "TaxMethod": "",
-            "TaxInclusive": False,
-            "UserOrderType": 12,
-            "ServiceType": 9,
-            "ContractType": 2,
-            "Timeslot": 0,
-            "InstallStore": store,
-            "AgeFrom": None,
-            "Completed": None,
-            "ReferralAmount": 0.0,
-            "ReferralLocked": False,
-            "PreAuthorization": None,
-            "SalesTax": 0.0,
-            "GrandInvoiceTotal": 0.0,
-            "MaterialOnly": 0.0,
-            "Labor": 0.0,
-            "MiscCharges": float(job_details_data.get("dollar_value", 0)),
-            "InvoiceTotal": 0.0,
-            "MiscTax": 0.0,
-            "RecycleFee": 0.0,
-            "TotalPaid": 0.0,
-            "Balance": 0.0,
-            "DiscountRate": 0.0,
-            "DiscountAmount": 0.0,
-            "ApplyRecycleFee": False,
-            "Attachements": None,
-            "PendingAttachments": None,
-            "Order": None,
-            "LockInfo": None,
-            "Message": None,
-            "Lines": []
+        "category": "Order",  # Prevents weborders
+        "poNumber": po_number,
+        "jobNumber": job_number,
+        "storeNumber": store_number,
+        "salesperson1": "ZORAN VEKIC",
+        "salesperson2": "",
+        
+        # 🔑 SUCCESSFUL CUSTOMER STRUCTURE (AZ002854/AZ002876 format)
+        "soldTo": {
+            "customerId": sold_to_customer_id,
+            "firstName": sold_to_data.get("first_name", supervisor_name.split()[0] if supervisor_name else "Unknown"),
+            "lastName": sold_to_data.get("last_name", supervisor_name.split()[-1] if supervisor_name else "Customer"),
+            "address1": sold_to_data.get("address1", ""),
+            "address2": sold_to_data.get("address2", ""),
+            "city": sold_to_data.get("city", ""),
+            "state": sold_to_data.get("state", ""),
+            "postalCode": sold_to_data.get("zip_code", ""),
+            "phone1": supervisor_phone1,  # Primary phone (mobile) - ONLY in soldTo
+            "phone2": supervisor_phone2,  # Secondary phone (office) - ONLY in soldTo
+            "email": sold_to_data.get("email", f"{supervisor_name.lower().replace(' ', '.')}@example.com")
         },
-        "products": None
+        
+        "shipTo": {
+            "firstName": ship_to_first_name,
+            "lastName": ship_to_last_name,
+            "address1": ship_to_address1,
+            "address2": ship_to_data.get("address2", ""),
+            "city": ship_to_city,
+            "state": ship_to_state,
+            "postalCode": ship_to_postal_code
+            # NO phone fields in shipTo per successful AZ002876 format
+        },
+        
+        # 🔑 ALL SUCCESSFUL FIELDS from incremental testing
+        "privateNotes": f"PDF Extracted - Supervisor: {supervisor_name}",
+        "publicNotes": f"Customer Phones: Mobile {supervisor_phone1}, Office {supervisor_phone2}",
+        "workOrderNotes": f"Contact: {supervisor_name} - Mobile: {supervisor_phone1} | Office: {supervisor_phone2}",
+        "estimatedDeliveryDate": estimated_delivery,
+        
+        # 🔑 WORKING TYPE IDs (from successful tests)
+        "userOrderTypeId": 18,  # RESIDENTIAL INSURANCE 
+        "serviceTypeId": 8,     # SUPPLY & INSTALL
+        "contractTypeId": 1,    # 30 DAY ACCOUNT
+        "adSource": 1,
+        
+        # 🔥 COMPREHENSIVE LINES STRUCTURE (User's format)
+        "lines": [
+            {
+                "id": "",
+                "isUseTaxLine": False,
+                "notes": f"PDF Supervisor: {supervisor_name}",
+                "internalNotes": f"Contact: {supervisor_phone1}",
+                "productId": 213322,  # Default product ID
+                "colorId": 2133,      # Default color ID
+                "quantity": float(job_details_data.get("dollar_value", 1000.0)),
+                "serialNumber": "",
+                "ecProductId": None,
+                "ecColorId": None,
+                "delete": False,
+                "priceLevel": 10,
+                "lineStatus": "none",
+                "lineGroupId": 4
+            }
+        ]
     }
 
-    logger.info(f"Constructed Order Payload for RFMS: {json.dumps(order_payload, indent=2)}")
+    # Add custom notes if available
+    if custom_note:
+        order_payload["privateNotes"] += f"\n{custom_note}"
 
-    # Main job creation
+    logger.info(f"Constructed comprehensive RFMS Order Payload: {json.dumps(order_payload, indent=2)}")
+
+    # Main job creation using comprehensive format
     job_result = api_client.create_job(order_payload)
-    job_id = job_result.get("id")
+    job_id = job_result.get("result") or job_result.get("id")
+    
     if not job_id:
         raise Exception(f"Failed to create main job in RFMS. Response: {job_result}")
-    logger.info(f"Main job created in RFMS with ID: {job_id}")
+    
+    logger.info(f"Main job created in RFMS with comprehensive format - Order ID: {job_id}")
 
     final_result = {
         "success": True,
-        "message": "Successfully exported main job to RFMS",
+        "message": "Successfully exported main job to RFMS using comprehensive format",
         "job": job_result,
-        "sold_to_customer_id": sold_to_customer_id
+        "order_id": job_id,
+        "sold_to_customer_id": sold_to_customer_id,
+        "format_used": "comprehensive_lines_az002876_structure"
     }
 
-    # Handle billing group if applicable
+    # Handle billing group if applicable (second job)
     if export_data.get("billing_group") and export_data.get("second_job_details"):
         second_job_details = export_data["second_job_details"]
+        
+        # Create second order payload based on the successful structure
         second_order_payload = order_payload.copy()
-        second_order_payload["order"] = order_payload["order"].copy()
-        second_order_payload["order"]["PONumber"] = second_job_details.get("po_number", "")
-        second_order_payload["order"]["MiscCharges"] = float(second_job_details.get("dollar_value", 0))
-        second_order_payload["order"]["Note"] = second_job_details.get("description_of_works", "").strip()
-        second_order_payload["order"]["MeasureDate"] = second_job_details.get("measure_date", "") or second_job_details.get("commencement_date", "")
-        second_order_payload["order"]["PromiseDate"] = second_job_details.get("promise_date", "") or second_job_details.get("completion_date", "")
-        second_supervisor_name = second_job_details.get("supervisor_name", "")
-        second_supervisor_phone = second_job_details.get("supervisor_phone", "") or second_job_details.get("supervisor_mobile", "")
+        second_order_payload["poNumber"] = second_job_details.get("po_number", f"PDF2-{datetime.now().strftime('%Y%m%d%H%M%S')}")
+        
+        # Update quantity/dollar value for second job
+        second_order_payload["lines"] = [
+            {
+                "id": "",
+                "isUseTaxLine": False,
+                "notes": f"Second Job - PDF Supervisor: {supervisor_name}",
+                "internalNotes": f"Second Job Contact: {supervisor_phone1}",
+                "productId": 213322,
+                "colorId": 2133,
+                "quantity": float(second_job_details.get("dollar_value", 1000.0)),
+                "serialNumber": "",
+                "ecProductId": None,
+                "ecColorId": None,
+                "delete": False,
+                "priceLevel": 10,
+                "lineStatus": "none",
+                "lineGroupId": 4
+            }
+        ]
+        
+        # Update notes for second job
+        second_order_payload["publicNotes"] = second_job_details.get("description_of_works", "").strip()
+        second_supervisor_name = second_job_details.get("supervisor_name", supervisor_name)
+        second_supervisor_phone = second_job_details.get("supervisor_phone", "") or second_job_details.get("supervisor_mobile", supervisor_phone1)
         second_job_number = f"{second_supervisor_name} {second_supervisor_phone}".strip() or second_job_details.get("po_number", "")
-        second_order_payload["order"]["JobNumber"] = second_job_number
-        logger.info(f"Creating second job in RFMS (billing group): {second_order_payload['order'].get('PONumber')}")
+        second_order_payload["jobNumber"] = second_job_number
+        
+        logger.info(f"Creating second job in RFMS (billing group): {second_order_payload['poNumber']}")
         second_job_result = api_client.create_job(second_order_payload)
-        second_job_id = second_job_result.get("id")
+        second_job_id = second_job_result.get("result") or second_job_result.get("id")
+        
         if not second_job_id:
             raise Exception(f"Failed to create second job in RFMS. Response: {second_job_result}")
+        
         logger.info(f"Second job created in RFMS with ID: {second_job_id}")
+        
+        # Add to billing group
         billing_group_result = api_client.add_to_billing_group([job_id, second_job_id])
         final_result["second_job"] = second_job_result
+        final_result["second_order_id"] = second_job_id
         final_result["billing_group"] = billing_group_result
-        final_result["message"] = "Successfully exported main job, second job, and created billing group."
+        final_result["message"] = "Successfully exported main job, second job, and created billing group using comprehensive format."
+    
     return final_result 

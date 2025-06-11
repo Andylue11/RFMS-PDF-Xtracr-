@@ -11,13 +11,12 @@
 "ActionFlag": "Insert",
 "InvoiceType": null,
 "IsQuote": false,
+
 "IsWebOrder": true,
 "Exported": false,
 "CanEdit": false,
 "LockTaxes": false,
-"CustomerSource": "",
-"CustomerSeqNum": 02,
-"CustomerUpSeqNum": 0,
+
 "CustomerFirstName": "",
 "CustomerLastName": "",
 "CustomerAddress1": "",
