@@ -728,7 +728,7 @@ class RfmsApi:
                     order_id = result.get("result")
                     logger.info(f"[RFMS API] Successfully created order: {order_id}")
                     return result
-                else:
+            else:
                     raise Exception(f"RFMS API returned error: {result.get('result', 'Unknown error')}")
             else:
                 raise Exception(f"Failed to create job - HTTP {response.status_code}: {response.text}")
